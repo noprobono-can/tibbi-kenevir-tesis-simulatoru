@@ -187,7 +187,7 @@ function readState() {
     preVegDays: +el("preVegDays").value,
     rootDays: +el("rootDays").value,
     dryDays: +el("dryDays").value,
-    dryCleanDays: +el("dryCleanDays").value,
+    dryCleanDays: Math.max(1, Math.min(7, +el("dryCleanDays").value)),
     yieldG: +el("yieldG").value,
     genetics: +el("genetics").value,
     priceKg: +el("priceKg").value,
@@ -225,27 +225,33 @@ function applyPreset(key) {
   render();
 }
 
-function assignDryBatches(events, dryRooms, dryW, cleanW) {
+function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
   const weeks = 52;
-  const span = Math.max(1, dryW + cleanW);
+  const days = weeks * 7;
+  const dryD = Math.max(1, Math.round(dryDays));
+  const cleanD = Math.max(1, Math.min(7, Math.round(cleanDays)));
+  const span = dryD + cleanD;
   const ordered = events.slice().sort(function (a, b) {
-    const aw = a.w + span > weeks ? 0 : 1;
-    const bw = b.w + span > weeks ? 0 : 1;
+    const aStart = a.w * 7;
+    const bStart = b.w * 7;
+    const aw = aStart + span > days ? 0 : 1;
+    const bw = bStart + span > days ? 0 : 1;
     if (aw !== bw) return aw - bw;
     return a.w - b.w || a.room - b.room;
   });
 
   function place(limit) {
-    const occ = Array.from({ length: limit }, function () { return Array(weeks).fill(null); });
-    const labels = Array.from({ length: limit }, function () { return Array(weeks).fill("idle"); });
+    const occDays = Array.from({ length: limit }, function () { return Array(days).fill(null); });
+    const kindDays = Array.from({ length: limit }, function () { return Array(days).fill("idle"); });
     let unassigned = 0;
     ordered.forEach(function (ev) {
       const tag = "C" + ev.room;
+      const start = ev.w * 7;
       let placed = -1;
       for (let d = 0; d < limit; d++) {
         let free = true;
         for (let i = 0; i < span; i++) {
-          if (occ[d][(ev.w + i) % weeks] != null) { free = false; break; }
+          if (occDays[d][(start + i) % days] != null) { free = false; break; }
         }
         if (free) { placed = d; break; }
       }
@@ -253,22 +259,36 @@ function assignDryBatches(events, dryRooms, dryW, cleanW) {
         unassigned += 1;
         return;
       }
-      for (let i = 0; i < dryW; i++) {
-        const t = (ev.w + i) % weeks;
-        occ[placed][t] = tag;
-        labels[placed][t] = "gmp";
+      for (let i = 0; i < dryD; i++) {
+        const t = (start + i) % days;
+        occDays[placed][t] = tag;
+        kindDays[placed][t] = "gmp";
       }
-      for (let i = 0; i < cleanW; i++) {
-        const t = (ev.w + dryW + i) % weeks;
-        occ[placed][t] = tag;
-        labels[placed][t] = "clean";
+      for (let i = 0; i < cleanD; i++) {
+        const t = (start + dryD + i) % days;
+        occDays[placed][t] = tag;
+        kindDays[placed][t] = "clean";
       }
     });
+    const occ = Array.from({ length: limit }, function () { return Array(weeks).fill(null); });
+    const labels = Array.from({ length: limit }, function () { return Array(weeks).fill("idle"); });
     let peak = 0;
-    for (let w = 0; w < weeks; w++) {
+    for (let t = 0; t < days; t++) {
       let n = 0;
-      for (let d = 0; d < limit; d++) if (labels[d][w] === "gmp" || labels[d][w] === "clean") n++;
+      for (let d = 0; d < limit; d++) if (kindDays[d][t] !== "idle") n++;
       if (n > peak) peak = n;
+    }
+    for (let d = 0; d < limit; d++) {
+      for (let w = 0; w < weeks; w++) {
+        let hasGmp = false, hasClean = false, tag = null;
+        for (let i = 0; i < 7; i++) {
+          const t = w * 7 + i;
+          if (kindDays[d][t] === "gmp") { hasGmp = true; tag = occDays[d][t]; }
+          else if (kindDays[d][t] === "clean") { hasClean = true; if (!tag) tag = occDays[d][t]; }
+        }
+        labels[d][w] = hasGmp ? "gmp" : hasClean ? "clean" : "idle";
+        occ[d][w] = tag;
+      }
     }
     return { occ: occ, labels: labels, unassigned: unassigned, peak: peak };
   }
@@ -293,8 +313,6 @@ function assignDryBatches(events, dryRooms, dryW, cleanW) {
 function buildCalendar(s) {
   const weeks = 52;
   const flowerW = Math.max(1, Math.round(s.flowerDays / 7));
-  const dryW = Math.max(1, Math.round(s.dryDays / 7));
-  const cleanW = Math.max(0, Math.round((s.dryCleanDays || 7) / 7));
   const periodW = 52 / s.harvestsPerRoom;
   const staggerW = periodW / s.flowerRooms;
   const rooms = [];
@@ -324,7 +342,7 @@ function buildCalendar(s) {
     seen[key] = true;
     unique.push(ev);
   });
-  const assigned = assignDryBatches(unique, s.dryRooms, dryW, cleanW);
+  const assigned = assignDryBatches(unique, s.dryRooms, s.dryDays || 14, s.dryCleanDays || 7);
   const idleWeeks = Array(weeks).fill(true);
   assigned.dryRows.forEach((row) => {
     row.forEach((cell, w) => { if (cell === "gmp" || cell === "clean") idleWeeks[w] = false; });
