@@ -11,12 +11,12 @@ const PRESETS = {
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
-    dryRooms: 2, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
+    dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
     dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
-    dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
+    dryRooms: 5, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
     dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true
   }
 };
@@ -212,6 +212,7 @@ function applyPreset(key) {
     return;
   }
   customMode = false;
+  pinDryRooms = false;
   const p = PRESETS[key];
   Object.entries(p).forEach(([k, v]) => {
     if (k === "extraction") el("extraction").checked = v;
@@ -224,22 +225,21 @@ function applyPreset(key) {
   render();
 }
 
-function assignDryBatches(rooms, dryRooms, dryW, cleanW) {
+function assignDryBatches(events, dryRooms, dryW, cleanW) {
   const weeks = 52;
   const span = Math.max(1, dryW + cleanW);
-  const events = [];
-  rooms.forEach(function (row, r) {
-    row.forEach(function (cell, w) {
-      if (cell === "harvest") events.push({ w: w, room: r + 1 });
-    });
+  const ordered = events.slice().sort(function (a, b) {
+    const aw = a.w + span > weeks ? 0 : 1;
+    const bw = b.w + span > weeks ? 0 : 1;
+    if (aw !== bw) return aw - bw;
+    return a.w - b.w || a.room - b.room;
   });
-  events.sort(function (a, b) { return a.w - b.w || a.room - b.room; });
 
   function place(limit) {
     const occ = Array.from({ length: limit }, function () { return Array(weeks).fill(null); });
     const labels = Array.from({ length: limit }, function () { return Array(weeks).fill("idle"); });
     let unassigned = 0;
-    events.forEach(function (ev) {
+    ordered.forEach(function (ev) {
       const tag = "C" + ev.room;
       let placed = -1;
       for (let d = 0; d < limit; d++) {
@@ -273,10 +273,11 @@ function assignDryBatches(rooms, dryRooms, dryW, cleanW) {
     return { occ: occ, labels: labels, unassigned: unassigned, peak: peak };
   }
 
-  const needed = place(40);
   let drySuggest = 1;
-  for (let d = 0; d < needed.occ.length; d++) {
-    if (needed.occ[d].some(function (x) { return x != null; })) drySuggest = d + 1;
+  const cap = Math.min(40, Math.max(1, ordered.length));
+  for (let n = 1; n <= cap; n++) {
+    if (place(n).unassigned === 0) { drySuggest = n; break; }
+    drySuggest = n;
   }
   const used = place(Math.max(1, dryRooms));
   return {
@@ -285,7 +286,7 @@ function assignDryBatches(rooms, dryRooms, dryW, cleanW) {
     unassigned: used.unassigned,
     drySuggest: drySuggest,
     peakDry: used.peak,
-    events: events
+    events: ordered
   };
 }
 
@@ -297,18 +298,33 @@ function buildCalendar(s) {
   const periodW = 52 / s.harvestsPerRoom;
   const staggerW = periodW / s.flowerRooms;
   const rooms = [];
+  const events = [];
   for (let r = 0; r < s.flowerRooms; r++) {
     const row = Array(weeks).fill("empty");
     const offset = r * staggerW;
+    const harvestAt = [];
     for (let start = offset; start < weeks; start += periodW) {
-      const s0 = Math.round(start);
-      for (let w = 0; w < flowerW && s0 + w < weeks; w++) row[s0 + w] = "flower";
-      const h = s0 + flowerW - 1;
-      if (h < weeks) row[h] = "harvest";
+      const s0 = ((Math.round(start) % weeks) + weeks) % weeks;
+      for (let w = 0; w < flowerW; w++) {
+        const t = (s0 + w) % weeks;
+        if (row[t] !== "harvest") row[t] = "flower";
+      }
+      const h = (s0 + flowerW - 1) % weeks;
+      harvestAt.push(h);
+      events.push({ w: h, room: r + 1 });
     }
+    harvestAt.forEach(function (h) { row[h] = "harvest"; });
     rooms.push(row);
   }
-  const assigned = assignDryBatches(rooms, s.dryRooms, dryW, cleanW);
+  const unique = [];
+  const seen = {};
+  events.forEach(function (ev) {
+    const key = ev.room + ":" + ev.w;
+    if (seen[key]) return;
+    seen[key] = true;
+    unique.push(ev);
+  });
+  const assigned = assignDryBatches(unique, s.dryRooms, dryW, cleanW);
   const idleWeeks = Array(weeks).fill(true);
   assigned.dryRows.forEach((row) => {
     row.forEach((cell, w) => { if (cell === "gmp" || cell === "clean") idleWeeks[w] = false; });
@@ -378,7 +394,7 @@ function simulate(s) {
   }
   alerts.push({ t: "ok", m: "Kurutma kural\u0131: her \u00e7i\u00e7ek odas\u0131 hasad\u0131 kendi kurutma odas\u0131na gider. Oda " + (s.dryDays || 14) + " g\u00fcn kurur, sonra " + (s.dryCleanDays || 7) + " g\u00fcn temizlenir; bu s\u00fcrede ba\u015fka hasat giremez." });
   if (cal.unassigned > 0) {
-    alerts.push({ t: "bad", m: cal.unassigned + " \u00e7i\u00e7ek odas\u0131 hasad\u0131 kurutmaya s\u0131\u011fmad\u0131. Her hasat ayr\u0131 oda ister \u2014 en az " + drySuggest + " kurutma odas\u0131 gerekir." });
+    alerts.push({ t: "bad", m: "Kurutma yetersiz: " + s.dryRooms + " oda var, " + cal.unassigned + " hasat s\u0131rada bekliyor. " + s.flowerRooms + " \u00e7i\u00e7ek odas\u0131 i\u00e7in " + drySuggest + " kurutma odas\u0131 gerekir." });
   } else if (s.dryRooms > drySuggest + 1) {
     alerts.push({ t: "warn", m: "Kurutma odas\u0131 (" + s.dryRooms + ") ihtiyac\u0131n (" + drySuggest + ") \u00fczerinde \u2014 GMP maliyeti artar." });
   } else {
@@ -582,15 +598,29 @@ function renderLabels(s, m) {
   });
   const hint = el("capacityHint");
   if (hint && m) {
-    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 " + fmt(m.plantsPerRoom) + " bitki/oda \u00b7 her \u00e7i\u00e7ek hasad\u0131 ayr\u0131 kurutma";
+    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 " + fmt(m.plantsPerRoom) + " bitki/oda \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
   }
 }
 
 let week = 0, playing = false, timer = null, lastM = null;
+let pinDryRooms = false;
+
+function ensureDryRooms(need) {
+  if (pinDryRooms) return false;
+  const cur = Math.max(1, +el("dryRooms").value);
+  const next = Math.min(20, Math.max(cur, need));
+  if (next === cur) return false;
+  el("dryRooms").value = String(next);
+  return true;
+}
 
 function render() {
-  const s = readState();
-  const m = simulate(s);
+  let s = readState();
+  let m = simulate(s);
+  if (ensureDryRooms(m.drySuggest)) {
+    s = readState();
+    m = simulate(s);
+  }
   lastM = m;
   renderLabels(s, m);
   renderKpis(m, s);
@@ -632,6 +662,8 @@ window.addEventListener("DOMContentLoaded", function () {
     i.addEventListener("input", function () {
       customMode = true;
       highlightPreset("custom");
+      if (i.id === "dryRooms") pinDryRooms = true;
+      else if (i.id === "flowerRooms" || i.id === "harvestsPerRoom" || i.id === "flowerDays" || i.id === "dryDays" || i.id === "dryCleanDays") pinDryRooms = false;
       week = 0;
       render();
     });
