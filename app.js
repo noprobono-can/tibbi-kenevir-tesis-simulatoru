@@ -2,22 +2,22 @@ const PRESETS = {
   pilot: {
     plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, extraction: false
+    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, saleablePct: 80, extraction: false
   },
   dengeli: {
     plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, saleablePct: 85, extraction: true
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 2, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true
   }
 };
 
@@ -26,6 +26,83 @@ const fmt = (n, d = 0) => Number(n).toLocaleString("tr-TR", { maximumFractionDig
 const eur = (n) => "\u20AC" + fmt(n, 0);
 const m2 = (n) => fmt(n, 0) + " m\u00B2";
 const round1 = (n) => Math.round(n * 10) / 10;
+
+const OPEX_U = {
+  potL: 12, cocoShare: 0.7, perlitShare: 0.3,
+  cocoEurL: 0.225, perlitEurL: 0.12, potEur: 1.2,
+  wasteEurKg: 0.05, mixKgM3: 350,
+  waterLPerM2Day: 8, drain: 0.2, eventsDay: 6,
+  waterEurM3: 1.2, fertEurL: 0.08, autoEurEvent: 0.35,
+  hno3EurL: 1.5, alk: 7.5, acidFactor: 0.0014,
+  junior: 4, senior: 7, manager: 11,
+  potPrepH: 0.05, transplantH: 0.033,
+  dripperHRoomDay: 0.5, calibHRoomWeek: 0.5,
+  disposalHM3: 0.5, cipHRoomWeek: 1, gmpHHarvest: 1.5,
+  hasEcSensor: 1, manualEcHRoomDay: 0.5,
+  dripperEur: 0.5, dripperPerPlant: 1,
+  stakeEur: 0.15, stakePerPlant: 1.5,
+  ipmEurCycle: 150, ppeEurRoomMonth: 50, labEurRoomMonth: 30,
+  dryingEurHarvest: 200, labelEurHarvest: 20,
+  activeRatio: 0.85
+};
+
+function cloneBufferFor(saleable) {
+  if (saleable <= 0.82) return 0.15;
+  if (saleable <= 0.86) return 0.12;
+  return 0.1;
+}
+
+function computeOpex(s, plantsYear, harvestsYear) {
+  const U = OPEX_U;
+  const rooms = s.flowerRooms;
+  const area = s.flowerArea;
+  const activeDays = 52 * 7 * U.activeRatio;
+  const pots = plantsYear;
+  const mixL = pots * U.potL;
+  const cocoL = mixL * U.cocoShare;
+  const perlitL = mixL * U.perlitShare;
+  const wasteKg = mixL * U.mixKgM3 / 1000;
+  const substrate = cocoL * U.cocoEurL + perlitL * U.perlitEurL + pots * U.potEur + wasteKg * U.wasteEurKg;
+
+  const netL = U.waterLPerM2Day * area * activeDays;
+  const brutL = netL * (1 + U.drain);
+  const water = (brutL / 1000) * U.waterEurM3;
+  const fert = brutL * U.fertEurL;
+  const acid = brutL * U.alk * U.acidFactor / 1000 * U.hno3EurL;
+  const auto = U.eventsDay * activeDays * rooms * U.autoEurEvent;
+  const waterFert = water + fert + acid + auto;
+
+  const potPrepH = pots * U.potPrepH;
+  const transplantH = pots * U.transplantH;
+  const dripperH = activeDays * U.dripperHRoomDay * rooms;
+  const manualEcH = (1 - U.hasEcSensor) * activeDays * U.manualEcHRoomDay * rooms;
+  const calibH = 52 * U.calibHRoomWeek * rooms;
+  const cipH = 52 * U.cipHRoomWeek * rooms;
+  const gmpH = harvestsYear * U.gmpHHarvest;
+  const disposalH = (mixL / 1000) * U.disposalHM3;
+  const laborH = potPrepH + transplantH + dripperH + manualEcH + calibH + cipH + gmpH + disposalH;
+  const labor = potPrepH * U.junior + transplantH * U.junior + dripperH * U.junior + manualEcH * U.junior
+    + calibH * U.senior + cipH * U.junior + gmpH * U.manager + disposalH * U.junior;
+
+  const dripper = pots * U.dripperPerPlant * U.dripperEur;
+  const stake = pots * U.stakePerPlant * U.stakeEur;
+  const ipm = harvestsYear * U.ipmEurCycle;
+  const ppe = rooms * 12 * U.ppeEurRoomMonth;
+  const lab = rooms * 12 * U.labEurRoomMonth;
+  const drying = harvestsYear * U.dryingEurHarvest;
+  const label = harvestsYear * U.labelEurHarvest;
+  const materials = dripper + stake + ipm + ppe + lab + drying + label;
+  const total = substrate + waterFert + labor + materials;
+  const buffer = cloneBufferFor(s.saleablePct);
+  const clonesWeek = plantsYear * (1 + buffer) / 52;
+
+  return {
+    substrate: substrate, waterFert: waterFert, labor: labor, materials: materials, total: total,
+    laborH: laborH, water: water, fert: fert, acid: acid, auto: auto,
+    dripper: dripper, stake: stake, ipm: ipm, ppe: ppe, lab: lab, drying: drying, label: label,
+    clonesWeek: clonesWeek, mixL: mixL, brutL: brutL
+  };
+}
 
 function maxFlowerDays(harvests) {
   return Math.floor(365 / harvests) - 7;
@@ -114,6 +191,7 @@ function readState() {
     yieldG: +el("yieldG").value,
     genetics: +el("genetics").value,
     priceKg: +el("priceKg").value,
+    saleablePct: Math.max(0.8, Math.min(0.88, +el("saleablePct").value / 100)),
     extraction: el("extraction").checked,
     usable: 0.85
   };
@@ -258,7 +336,8 @@ function simulate(s) {
   const cyclesPerRoom = s.harvestsPerRoom;
   const staggerOk = s.flowerDays + turnaround <= cycleFlower + 0.5;
   const harvestsYear = s.flowerRooms * s.harvestsPerRoom;
-  const kgYear = plantsYear * s.yieldG / 1000;
+  const kgGross = plantsYear * s.yieldG / 1000;
+  const kgYear = kgGross * s.saleablePct;
   const revenue = kgYear * s.priceKg;
 
   const motherProd = 18, motherBank = 12, quarantine = 4, tissue = 8, cuttings = 16;
@@ -277,11 +356,13 @@ function simulate(s) {
   const extractCapex = s.extraction ? 120000 : 0;
   const stability = s.genetics * 8000;
   const capex = gacpCapex + gmpCapex + officeM2 * 1400 + extractCapex + stability;
-  const staffBase = 4 + Math.ceil(s.flowerArea / 120);
+  const ox = computeOpex(s, plantsYear, harvestsYear);
+  const opexYear = ox.total;
+  const staffBase = Math.max(2, Math.ceil(ox.laborH / 1800));
   const harvestCrew = staffBase + Math.ceil(plantsPerRoom / 80);
-  const opexYear = staffBase * 28000 + s.flowerArea * 380 + (s.extraction ? 18000 : 0) + 24000;
   const ebitda = revenue - opexYear;
   const payback = ebitda > 0 ? capex / ebitda : Infinity;
+  const opexPerG = kgYear > 0 ? opexYear / (kgYear * 1000) : 0;
   const cal = buildCalendar(s);
   const cycleDays = s.rootDays + s.preVegDays + s.vegDays + s.flowerDays;
   const drySuggest = cal.drySuggest;
@@ -309,14 +390,15 @@ function simulate(s) {
   if (cal.gmpIdleWeeks > 8) {
     alerts.push({ t: "warn", m: "GMP kurutma " + cal.gmpIdleWeeks + " hafta bo\u015f kal\u0131yor." });
   }
+  alerts.push({ t: "ok", m: "OPEX Cannactive v2: substrate, su/g\u00fcbre, i\u015f\u00e7ilik, malzeme. Enerji/HVAC, G&A ve d\u0131\u015f COA bu modelde yok." });
 
   return {
     roomM2: roomM2, usableFlower: usableFlower, plantsPerRoom: plantsPerRoom, density: density,
-    plantsYear: plantsYear, plantsInFlower: plantsInFlower, kgYear: kgYear, revenue: revenue,
+    plantsYear: plantsYear, plantsInFlower: plantsInFlower, kgYear: kgYear, kgGross: kgGross, revenue: revenue,
     staggerOk: staggerOk, gacpM2: gacpM2, gmpM2: gmpM2, totalBuilt: totalBuilt, drySuggest: drySuggest,
     preVeg: preVeg, veg: veg, motherProd: motherProd, motherBank: motherBank, capex: capex,
     gacpCapex: gacpCapex, gmpCapex: gmpCapex, extractCapex: extractCapex, stability: stability,
-    opexYear: opexYear, ebitda: ebitda, payback: payback, staffBase: staffBase, harvestCrew: harvestCrew,
+    opexYear: opexYear, opex: ox, opexPerG: opexPerG, ebitda: ebitda, payback: payback, staffBase: staffBase, harvestCrew: harvestCrew,
     cycleDays: cycleDays, cyclesPerRoom: cyclesPerRoom, harvestsYear: harvestsYear,
     cycleFlower: cycleFlower, cal: cal, alerts: alerts
   };
@@ -327,9 +409,9 @@ function renderKpis(m, s) {
     ["Y\u0131ll\u0131k bitki", fmt(s.plantsYear), fmt(m.plantsInFlower, 0) + " \u00e7i\u00e7ekte \u00b7 " + fmt(s.plantsPerM2, 1) + " /m\u00B2", ""],
     ["Oda alan\u0131", m2(s.roomM2), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
     ["Kurutma", String(s.dryRooms), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
-    ["Kuru \u00e7i\u00e7ek", fmt(m.kgYear, 0) + " kg", fmt(s.yieldG) + " g/bitki", ""],
-    ["Has\u0131lat", eur(m.revenue), eur(s.priceKg) + "/kg", ""],
-    ["CAPEX", eur(m.capex), "geri \u00f6deme " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
+    ["Kuru \u00e7i\u00e7ek", fmt(m.kgYear, 0) + " kg", "sat\u0131labilir " + fmt(s.saleablePct * 100, 0) + "% \u00b7 br\u00fct " + fmt(m.kgGross, 0) + " kg", ""],
+    ["Has\u0131lat", eur(m.revenue), eur(s.priceKg) + "/kg \u00b7 OPEX " + eur(m.opexYear), ""],
+    ["CAPEX", eur(m.capex), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
   ];
   el("kpis").innerHTML = items.map(([label, value, sub, cls]) =>
     "<article class=\"kpi " + cls + "\"><div class=\"label\">" + label + "</div><div class=\"value\">" + value + "</div><div class=\"sub\">" + sub + "</div></article>"
@@ -436,9 +518,14 @@ function renderTables(m, s) {
     "<tr><td>Pilot ekstraksiyon</td><td class=\"num\">" + eur(m.extractCapex) + "</td></tr>" +
     "<tr><td>Stabilite</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
     "<tr><td><strong>Toplam CAPEX</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
-    "<tr><td>Y\u0131ll\u0131k OPEX (taslak)</td><td class=\"num\">" + eur(m.opexYear) + "</td></tr>" +
+    "<tr><td>Substrate (pot+coco+perlit)</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
+    "<tr><td>Su + g\u00fcbre + asit + otomasyon</td><td class=\"num\">" + eur(m.opex.waterFert) + "</td></tr>" +
+    "<tr><td>\u0130\u015f\u00e7ilik</td><td class=\"num\">" + eur(m.opex.labor) + "</td></tr>" +
+    "<tr><td>Malzeme (IPM, dripper, kurutma)</td><td class=\"num\">" + eur(m.opex.materials) + "</td></tr>" +
+    "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
+    "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
     "<tr><td>Has\u0131lat</td><td class=\"num\">" + eur(m.revenue) + "</td></tr>" +
-    "<tr><td>EBITDA</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr></table>";
+    "<tr><td>Marj (has\u0131lat \u2212 OPEX)</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr></table>";
 
   el("ops").innerHTML =
     "<table><tr><th>Operasyon</th><th></th></tr>" +
@@ -449,7 +536,9 @@ function renderTables(m, s) {
     "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear, 1) + "</td></tr>" +
     "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
     "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
-    "<tr><td>Kadro / hasat g\u00fcn\u00fc</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
+    "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
+    "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
+    "<tr><td>Clone / hafta (bufferli)</td><td class=\"num\">" + fmt(m.opex.clonesWeek, 0) + "</td></tr>" +
     "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
 
   el("alerts").innerHTML = m.alerts.map(function (a) { return "<div class=\"alert " + a.t + "\">" + a.m + "</div>"; }).join("");
@@ -484,7 +573,8 @@ function renderLabels(s, m) {
     dryCleanDays: s.dryCleanDays + " g\u00fcn",
     yieldG: s.yieldG + " g",
     genetics: String(s.genetics),
-    priceKg: eur(s.priceKg)
+    priceKg: eur(s.priceKg),
+    saleablePct: "%" + fmt(s.saleablePct * 100, 0)
   };
   Object.keys(map).forEach(function (k) {
     const n = el("v-" + k);

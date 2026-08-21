@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <header class="app-header">
@@ -77,6 +77,8 @@
           <input id="genetics" type="range" min="2" max="8" step="1" value="4" /></div>
         <div class="control"><header><span>Toptan fiyat</span><span id="v-priceKg">€3.500</span></header>
           <input id="priceKg" type="range" min="500" max="8000" step="50" value="3500" /></div>
+        <div class="control"><header><span>Satılabilir oran</span><span id="v-saleablePct">%85</span></header>
+          <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
         <label class="check"><input id="extraction" type="checkbox" checked /> Pilot ekstraksiyon odası</label>
       </section>
     </aside>
@@ -114,12 +116,12 @@
 
       <div class="grid-3">
         <section class="panel"><h2>Uyarılar</h2><div class="alerts" id="alerts"></div></section>
-        <section class="panel"><h2>Ekonomi</h2><div id="econ"></div></section>
+        <section class="panel"><h2>Ekonomi (OPEX v2)</h2><div id="econ"></div></section>
         <section class="panel"><h2>Operasyon</h2><div id="ops"></div></section>
       </div>
     </main>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
