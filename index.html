@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <header class="app-header">
@@ -53,7 +53,7 @@
         <div class="control"><header><span>Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
           <input id="flowerArea" type="range" min="50" max="9000" step="10" value="280" /></div>
         <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
-          <input id="dryRooms" type="range" min="1" max="12" step="1" value="2" /></div>
+          <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
         <p class="hint" id="capacityHint"></p>
       </section>
 
@@ -68,7 +68,9 @@
         <div class="control"><header><span>Köklendirme</span><span id="v-rootDays">14 gün</span></header>
           <input id="rootDays" type="range" min="7" max="21" step="1" value="14" /></div>
         <div class="control"><header><span>Kurutma süresi</span><span id="v-dryDays">14 gün</span></header>
-          <input id="dryDays" type="range" min="7" max="21" step="1" value="14" /></div>
+          <input id="dryDays" type="range" min="7" max="21" step="7" value="14" /></div>
+        <div class="control"><header><span>Kurutma temizlik</span><span id="v-dryCleanDays">7 gün</span></header>
+          <input id="dryCleanDays" type="range" min="7" max="14" step="7" value="7" /></div>
         <div class="control"><header><span>Verim / bitki</span><span id="v-yieldG">180 g</span></header>
           <input id="yieldG" type="range" min="80" max="280" step="5" value="180" /></div>
         <div class="control"><header><span>Genetik sayısı</span><span id="v-genetics">4</span></header>
@@ -94,6 +96,7 @@
           <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
           <span><i class="swatch" style="background:#6f9e62"></i>Anaç / veg</span>
           <span><i class="swatch" style="background:#5b8aa8"></i>GMP kurutma</span>
+          <span><i class="swatch" style="background:#8aaeb8"></i>Kurutma temizlik</span>
           <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>
           <span><i class="swatch" style="background:#c9b56a"></i>Ofis</span>
         </div>
@@ -117,6 +120,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

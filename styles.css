@@ -175,6 +175,7 @@ svg.plan { width: 100%; max-width: 100%; height: auto; display: block; }
 .cell { height: 16px; border-radius: 3px; background: #1a221e; min-width: 0; }
 .cell.flower { background: var(--flower); }
 .cell.dry, .cell.gmp { background: var(--gmp); }
+.cell.clean { background: #8aaeb8; }
 .cell.harvest { background: var(--gold); }
 .cell.empty { background: #1a221e; }
 .cell.idle { background: #3a2a22; }
