@@ -119,6 +119,8 @@ button, input { font-family: inherit; }
   background: rgba(184, 150, 90, 0.12);
 }
 .presets small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.presets button[data-key="custom"] { border-style: dashed; }
+
 
 .control { margin: 12px 0 14px; }
 .control header {

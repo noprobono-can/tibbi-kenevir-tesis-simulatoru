@@ -1,23 +1,23 @@
 const PRESETS = {
   pilot: {
-    plantsYear: 3060, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
+    plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, yieldG: 160, genetics: 3, extraIndoor: 0, extraction: false
+    dryDays: 14, yieldG: 160, genetics: 3, priceKg: 3500, extraction: false
   },
   dengeli: {
-    plantsYear: 5360, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
+    plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, yieldG: 180, genetics: 4, extraIndoor: 0, extraction: true
+    dryDays: 14, yieldG: 180, genetics: 4, priceKg: 3500, extraction: true
   },
   yuksek: {
-    plantsYear: 16320, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
+    plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 2, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, yieldG: 170, genetics: 4, extraIndoor: 0, extraction: true
+    dryDays: 14, yieldG: 170, genetics: 4, priceKg: 3500, extraction: true
   },
   faz2: {
-    plantsYear: 19300, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
+    plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, yieldG: 170, genetics: 5, extraIndoor: 400, extraction: true
+    dryDays: 14, yieldG: 170, genetics: 5, priceKg: 3500, extraction: true
   }
 };
 
@@ -25,20 +25,16 @@ const el = (id) => document.getElementById(id);
 const fmt = (n, d = 0) => Number(n).toLocaleString("tr-TR", { maximumFractionDigits: d, minimumFractionDigits: d });
 const eur = (n) => "\u20AC" + fmt(n, 0);
 const m2 = (n) => fmt(n, 0) + " m\u00B2";
+const round1 = (n) => Math.round(n * 10) / 10;
 
 function maxFlowerDays(harvests) {
   return Math.floor(365 / harvests) - 7;
 }
 
-function suggestedDryRooms(flowerRooms) {
-  if (flowerRooms <= 3) return 1;
-  if (flowerRooms <= 9) return 2;
-  return 1 + Math.ceil((flowerRooms - 3) / 6);
-}
-
 function syncLayout(source) {
-  const rooms = Math.max(1, +el("flowerRooms").value);
-  const harvests = Math.min(7, Math.max(4, +el("harvestsPerRoom").value));
+  const rooms = Math.max(1, Math.min(30, +el("flowerRooms").value));
+  el("flowerRooms").value = String(rooms);
+  const harvests = round1(Math.min(7, Math.max(4, +el("harvestsPerRoom").value)));
   el("harvestsPerRoom").value = String(harvests);
   el("flowerArea").min = String(rooms * 50);
   el("flowerArea").max = String(rooms * 300);
@@ -62,15 +58,39 @@ function syncLayout(source) {
   if (+el("flowerDays").value > cap) el("flowerDays").value = String(cap);
 }
 
+function syncDensity(source) {
+  const flowerArea = +el("flowerArea").value;
+  const harvests = +el("harvestsPerRoom").value;
+  const usable = flowerArea * 0.85;
+  let density = round1(Math.min(12, Math.max(2, +el("plantsPerM2").value)));
+  let plantsYear = +el("plantsYear").value;
+  if (source === "plantsYear") {
+    density = plantsYear / harvests / usable;
+    density = round1(Math.min(12, Math.max(2, density)));
+    plantsYear = Math.round(density * usable * harvests);
+  } else {
+    plantsYear = Math.round(density * usable * harvests);
+  }
+  plantsYear = Math.min(100000, Math.max(400, plantsYear));
+  if (plantsYear >= 100000 && usable * harvests > 0) {
+    density = round1(Math.min(12, plantsYear / harvests / usable));
+  }
+  el("plantsPerM2").value = String(density);
+  el("plantsYear").value = String(plantsYear);
+}
+
 function readState() {
   const ae = document.activeElement && document.activeElement.id;
-  const src = ae === "flowerArea" ? "flowerArea" : (ae === "roomM2" ? "roomM2" : (ae === "flowerRooms" ? "flowerRooms" : ""));
-  syncLayout(src);
+  const layoutSrc = ae === "flowerArea" ? "flowerArea" : (ae === "roomM2" ? "roomM2" : (ae === "flowerRooms" ? "flowerRooms" : ""));
+  syncLayout(layoutSrc);
+  syncDensity(ae === "plantsYear" ? "plantsYear" : "keepDensity");
   const flowerRooms = Math.max(1, +el("flowerRooms").value);
-  const harvestsPerRoom = Math.min(7, Math.max(4, +el("harvestsPerRoom").value));
+  const harvestsPerRoom = round1(+el("harvestsPerRoom").value);
   const flowerArea = +el("flowerArea").value;
+  const plantsPerM2 = +el("plantsPerM2").value;
   return {
-    plantsYear: Math.max(flowerRooms * harvestsPerRoom, +el("plantsYear").value),
+    plantsYear: Math.max(400, +el("plantsYear").value),
+    plantsPerM2: plantsPerM2,
     harvestsPerRoom: harvestsPerRoom,
     flowerArea: flowerArea,
     roomM2: flowerArea / flowerRooms,
@@ -83,23 +103,100 @@ function readState() {
     dryDays: +el("dryDays").value,
     yieldG: +el("yieldG").value,
     genetics: +el("genetics").value,
-    extraIndoor: +el("extraIndoor").value,
     priceKg: +el("priceKg").value,
     extraction: el("extraction").checked,
     usable: 0.85
   };
 }
 
+function highlightPreset(key) {
+  document.querySelectorAll(".presets button").forEach((b) => b.classList.toggle("active", b.dataset.key === key));
+}
+
+function matchingPreset(s) {
+  const keys = ["plantsYear", "harvestsPerRoom", "flowerRooms", "roomM2", "dryRooms", "flowerDays", "yieldG", "priceKg", "plantsPerM2"];
+  const tol = { plantsYear: 80, harvestsPerRoom: 0.08, flowerRooms: 0, roomM2: 2, dryRooms: 0, flowerDays: 0, yieldG: 0, priceKg: 25, plantsPerM2: 0.15 };
+  for (const key of Object.keys(PRESETS)) {
+    const p = PRESETS[key];
+    const ok = keys.every((k) => Math.abs((s[k] || 0) - (p[k] || 0)) <= (tol[k] || 0));
+    if (ok && !!s.extraction === !!p.extraction) return key;
+  }
+  return "custom";
+}
+
 function applyPreset(key) {
+  if (key === "custom") {
+    highlightPreset("custom");
+    return;
+  }
   const p = PRESETS[key];
   Object.entries(p).forEach(([k, v]) => {
     if (k === "extraction") el("extraction").checked = v;
     else if (el(k)) el(k).value = v;
   });
-  document.querySelectorAll(".presets button").forEach((b) => b.classList.toggle("active", b.dataset.key === key));
+  highlightPreset(key);
   syncLayout("roomM2");
+  syncDensity("plantsYear");
   week = 0;
   render();
+}
+
+function assignDryBatches(rooms, dryRooms, dryW) {
+  const weeks = 52;
+  const harvestsByWeek = Array.from({ length: weeks }, () => []);
+  rooms.forEach((row, r) => {
+    row.forEach((cell, w) => {
+      if (cell === "harvest") harvestsByWeek[w].push(r + 1);
+    });
+  });
+
+  function place(limit) {
+    const occ = Array.from({ length: limit }, () => Array(weeks).fill(null));
+    const labels = Array.from({ length: limit }, () => Array(weeks).fill("idle"));
+    let unassigned = 0;
+    harvestsByWeek.forEach((roomList, w) => {
+      if (!roomList.length) return;
+      const batchId = "H" + (w + 1);
+      let placed = -1;
+      for (let d = 0; d < limit; d++) {
+        let free = true;
+        for (let t = w; t < w + dryW && t < weeks; t++) {
+          if (occ[d][t] != null) { free = false; break; }
+        }
+        if (free) { placed = d; break; }
+      }
+      if (placed < 0) {
+        unassigned += 1;
+        return;
+      }
+      for (let t = w; t < w + dryW && t < weeks; t++) {
+        occ[placed][t] = batchId;
+        labels[placed][t] = "gmp";
+      }
+    });
+    let peak = 0;
+    for (let w = 0; w < weeks; w++) {
+      let n = 0;
+      for (let d = 0; d < limit; d++) if (occ[d][w] != null) n++;
+      if (n > peak) peak = n;
+    }
+    return { occ: occ, labels: labels, unassigned: unassigned, peak: peak };
+  }
+
+  const needed = place(24);
+  let drySuggest = 1;
+  for (let d = 0; d < needed.occ.length; d++) {
+    if (needed.occ[d].some((x) => x != null)) drySuggest = d + 1;
+  }
+  const used = place(Math.max(1, dryRooms));
+  return {
+    dryOcc: used.occ,
+    dryRows: used.labels,
+    unassigned: used.unassigned,
+    drySuggest: drySuggest,
+    peakDry: used.peak,
+    harvestsByWeek: harvestsByWeek
+  };
 }
 
 function buildCalendar(s) {
@@ -120,22 +217,20 @@ function buildCalendar(s) {
     }
     rooms.push(row);
   }
-  const dryLoad = Array(weeks).fill(0);
-  rooms.forEach((row) => {
-    row.forEach((cell, w) => {
-      if (cell === "harvest") {
-        for (let d = 0; d < dryW && w + d < weeks; d++) dryLoad[w + d] += 1;
-      }
-    });
+  const assigned = assignDryBatches(rooms, s.dryRooms, dryW);
+  const idleWeeks = Array(weeks).fill(true);
+  assigned.dryRows.forEach((row) => {
+    row.forEach((cell, w) => { if (cell === "gmp") idleWeeks[w] = false; });
   });
-  const dryRow = dryLoad.map((n) => (n > 0 ? "gmp" : "idle"));
-  const peakDry = Math.max.apply(null, dryLoad.concat([0]));
   return {
     rooms: rooms,
-    dryLoad: dryLoad,
-    dryRow: dryRow,
-    peakDry: peakDry,
-    gmpIdleWeeks: dryRow.filter((x) => x === "idle").length
+    dryRows: assigned.dryRows,
+    dryOcc: assigned.dryOcc,
+    drySuggest: assigned.drySuggest,
+    peakDry: assigned.peakDry,
+    unassigned: assigned.unassigned,
+    harvestsByWeek: assigned.harvestsByWeek,
+    gmpIdleWeeks: idleWeeks.filter(Boolean).length
   };
 }
 
@@ -145,7 +240,7 @@ function simulate(s) {
   const plantsYear = s.plantsYear;
   const plantsInFlower = plantsYear / s.harvestsPerRoom;
   const plantsPerRoom = Math.round(plantsInFlower / s.flowerRooms);
-  const density = usableFlower > 0 ? plantsInFlower / usableFlower : 0;
+  const density = s.plantsPerM2;
   const turnaround = 7;
   const cycleFlower = 365 / s.harvestsPerRoom;
   const cyclesPerRoom = s.harvestsPerRoom;
@@ -157,8 +252,7 @@ function simulate(s) {
   const motherProd = 18, motherBank = 12, quarantine = 4, tissue = 8, cuttings = 16;
   const preVeg = Math.max(20, Math.round(plantsPerRoom * 0.05));
   const veg = Math.max(28, Math.round(plantsPerRoom * 0.12));
-  const extra = s.extraIndoor;
-  const gacpM2 = motherProd + motherBank + quarantine + tissue + cuttings + preVeg + veg + s.flowerArea + 40 + extra;
+  const gacpM2 = motherProd + motherBank + quarantine + tissue + cuttings + preVeg + veg + s.flowerArea + 40;
   const dryM2 = s.dryRooms * 28;
   const extractM2 = s.extraction ? 24 : 0;
   const gmpM2 = dryM2 + 24 + 20 + 30;
@@ -178,23 +272,24 @@ function simulate(s) {
   const payback = ebitda > 0 ? capex / ebitda : Infinity;
   const cal = buildCalendar(s);
   const cycleDays = s.rootDays + s.preVegDays + s.vegDays + s.flowerDays;
-  const drySuggest = suggestedDryRooms(s.flowerRooms);
+  const drySuggest = cal.drySuggest;
 
   const alerts = [];
   if (!staggerOk) {
-    alerts.push({ t: "bad", m: s.harvestsPerRoom + " hasat/oda/y\u0131l i\u00e7in \u00e7i\u00e7eklenme en fazla " + maxFlowerDays(s.harvestsPerRoom) + " g\u00fcn olabilir." });
+    alerts.push({ t: "bad", m: fmt(s.harvestsPerRoom, 1) + " hasat/oda/y\u0131l i\u00e7in \u00e7i\u00e7eklenme en fazla " + maxFlowerDays(s.harvestsPerRoom) + " g\u00fcn olabilir." });
   } else {
-    alerts.push({ t: "ok", m: "Her oda y\u0131lda " + s.harvestsPerRoom + " hasat (\u00e7evrim " + fmt(cycleFlower, 0) + " g\u00fcn)." });
+    alerts.push({ t: "ok", m: "Her oda y\u0131lda " + fmt(s.harvestsPerRoom, 1) + " hasat (\u00e7evrim " + fmt(cycleFlower, 1) + " g\u00fcn)." });
   }
   if (roomM2 > 300.5) {
     alerts.push({ t: "bad", m: "Oda alan\u0131 \u00fcst s\u0131n\u0131r\u0131 300 m\u00B2." });
   }
-  if (cal.peakDry > s.dryRooms) {
-    alerts.push({ t: "bad", m: "Kurutma yetersiz: tepe y\u00fck " + cal.peakDry + " oda, se\u00e7ilen " + s.dryRooms + "." });
+  alerts.push({ t: "ok", m: "Kurutma kural\u0131: bir odaya yaln\u0131z ayn\u0131 haftan\u0131n hasad\u0131 girer. \u0130\u00e7eride ba\u015fka \u00e7i\u00e7ek odas\u0131 partisi varken yeni \u00fcr\u00fcn ikinci odaya gider." });
+  if (cal.unassigned > 0) {
+    alerts.push({ t: "bad", m: cal.unassigned + " hasat partisi kurutmaya s\u0131\u011fmad\u0131. Ayn\u0131 odaya farkl\u0131 hasat giremez \u2014 en az " + drySuggest + " kurutma odas\u0131 gerekir." });
   } else if (s.dryRooms > drySuggest + 1) {
-    alerts.push({ t: "warn", m: "Kurutma odas\u0131 (" + s.dryRooms + ") \u00f6nerilenin (" + drySuggest + ") \u00fczerinde \u2014 GMP maliyeti artar." });
+    alerts.push({ t: "warn", m: "Kurutma odas\u0131 (" + s.dryRooms + ") ihtiyac\u0131n (" + drySuggest + ") \u00fczerinde \u2014 GMP maliyeti artar." });
   } else {
-    alerts.push({ t: "ok", m: "Kurutma: " + s.dryRooms + " oda \u00b7 tepe e\u015fzamanl\u0131 y\u00fck " + cal.peakDry + "." });
+    alerts.push({ t: "ok", m: "Kurutma: " + s.dryRooms + " oda yeterli (ihtiya\u00e7 " + drySuggest + ", tepe " + cal.peakDry + ")." });
   }
   if (density > 10) {
     alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 indoor i\u00e7in y\u00fcksek." });
@@ -211,15 +306,15 @@ function simulate(s) {
     gacpCapex: gacpCapex, gmpCapex: gmpCapex, extractCapex: extractCapex, stability: stability,
     opexYear: opexYear, ebitda: ebitda, payback: payback, staffBase: staffBase, harvestCrew: harvestCrew,
     cycleDays: cycleDays, cyclesPerRoom: cyclesPerRoom, harvestsYear: harvestsYear,
-    cycleFlower: cycleFlower, cal: cal, extra: extra, alerts: alerts
+    cycleFlower: cycleFlower, cal: cal, alerts: alerts
   };
 }
 
 function renderKpis(m, s) {
   const items = [
-    ["Y\u0131ll\u0131k bitki", fmt(s.plantsYear), fmt(m.plantsInFlower, 0) + " \u00e7i\u00e7ekte \u00b7 " + s.harvestsPerRoom + " hasat/oda", ""],
+    ["Y\u0131ll\u0131k bitki", fmt(s.plantsYear), fmt(m.plantsInFlower, 0) + " \u00e7i\u00e7ekte \u00b7 " + fmt(s.plantsPerM2, 1) + " /m\u00B2", ""],
     ["Oda alan\u0131", m2(s.roomM2), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
-    ["Kurutma", String(s.dryRooms), "tepe " + m.cal.peakDry + " \u00b7 \u00f6neri " + m.drySuggest, m.cal.peakDry > s.dryRooms ? "warn" : ""],
+    ["Kurutma", String(s.dryRooms), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
     ["Kuru \u00e7i\u00e7ek", fmt(m.kgYear, 0) + " kg", fmt(s.yieldG) + " g/bitki", ""],
     ["Has\u0131lat", eur(m.revenue), eur(s.priceKg) + "/kg", ""],
     ["CAPEX", eur(m.capex), "geri \u00f6deme " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
@@ -230,23 +325,41 @@ function renderKpis(m, s) {
 }
 
 function renderPlan(m, s, currentWeek) {
-  const W = 1180, H = 560;
+  const W = 1180;
   const gap = 8;
-  const flowerW = Math.min(150, 720 / s.flowerRooms - gap);
+  const fCols = Math.min(10, s.flowerRooms);
+  const fRows = Math.ceil(s.flowerRooms / fCols);
+  const flowerW = Math.min(108, 1100 / fCols - gap);
+  const flowerH = 88;
+  const flowerY0 = 280;
+  const H = flowerY0 + fRows * (flowerH + gap) + 28;
   const rooms = [];
   for (let i = 0; i < s.flowerRooms; i++) {
     const st = m.cal.rooms[i] ? m.cal.rooms[i][currentWeek] : "empty";
+    const col = i % fCols;
+    const row = Math.floor(i / fCols);
     rooms.push({
       id: "\u00c7i\u00e7ek " + (i + 1),
-      x: 40 + i * (flowerW + gap),
-      y: 330, w: flowerW, h: 150, tag: m2(m.roomM2),
+      x: 40 + col * (flowerW + gap),
+      y: flowerY0 + row * (flowerH + gap),
+      w: flowerW, h: flowerH, tag: m2(m.roomM2),
       fill: st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#3a2c24"
     });
   }
   const gmpDry = [];
+  const dCols = 6;
   for (let i = 0; i < s.dryRooms; i++) {
-    const busy = (m.cal.dryLoad[currentWeek] || 0) > i;
-    gmpDry.push({ id: "Kurutma " + (i + 1), x: 640 + i * 118, y: 48, w: 108, h: 90, fill: busy ? "#5b8aa8" : "#243038", tag: "GMP" });
+    const batch = m.cal.dryOcc[i] ? m.cal.dryOcc[i][currentWeek] : null;
+    const col = i % dCols;
+    const row = Math.floor(i / dCols);
+    gmpDry.push({
+      id: "Kurutma " + (i + 1),
+      x: 640 + col * 88,
+      y: 48 + row * 50,
+      w: 82, h: 44,
+      fill: batch ? "#5b8aa8" : "#243038",
+      tag: batch ? batch : "bo\u015f"
+    });
   }
   const blocks = [
     { id: "Ofis / QMS", x: 40, y: 48, w: 130, h: 90, fill: "#c9b56a", tag: "\u0130dare" },
@@ -255,19 +368,22 @@ function renderPlan(m, s, currentWeek) {
     { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", tag: "GMP" },
     { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", tag: "GMP" }
   ].concat(gmpDry).concat([
-    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 120, fill: "#6f9e62", tag: "GACP" },
-    { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 56, fill: "#587c4e", tag: "GACP" },
-    { id: "Karantina", x: 168, y: 232, w: 48, h: 56, fill: "#8b6bb0", tag: "R&D" },
-    { id: "Doku k\u00fclt.", x: 220, y: 232, w: 48, h: 56, fill: "#8b6bb0", tag: "R&D" },
-    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 120, fill: "#7aa56e", tag: "GACP" },
-    { id: "Pre-veg", x: 394, y: 168, w: 120, h: 120, fill: "#88b57a", tag: m2(m.preVeg) },
-    { id: "Veg", x: 522, y: 168, w: 150, h: 120, fill: "#88b57a", tag: m2(m.veg) },
-    { id: s.extraction ? "Ekstraksiyon" : "Trim at\u0131k", x: 980, y: 168, w: 150, h: 120, fill: s.extraction ? "#8b6bb0" : "#2a332e", tag: s.extraction ? "pilot" : "\u2014" }
+    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", tag: "GACP" },
+    { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 48, fill: "#587c4e", tag: "GACP" },
+    { id: "Karantina", x: 168, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
+    { id: "Doku k\u00fclt.", x: 220, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
+    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", tag: "GACP" },
+    { id: "Pre-veg", x: 394, y: 168, w: 120, h: 100, fill: "#88b57a", tag: m2(m.preVeg) },
+    { id: "Veg", x: 522, y: 168, w: 150, h: 100, fill: "#88b57a", tag: m2(m.veg) },
+    {
+      id: s.extraction ? "Ekstraksiyon" : "Trim at\u0131k",
+      x: 980, y: 168, w: 150, h: 100,
+      fill: s.extraction ? "#8b6bb0" : "#2a332e",
+      tag: s.extraction ? "pilot" : "\u2014"
+    }
   ]).concat(rooms);
-  if (s.extraIndoor > 0) {
-    blocks.push({ id: "Yedek indoor +" + s.extraIndoor + " m\u00B2", x: 40, y: 500, w: 420, h: 40, fill: "#2f4a34", tag: "mod\u00fcl" });
-  }
-  const svg = blocks.map((b) =>
+  const drawn = blocks;
+  const svg = drawn.map((b) =>
     "<g class=\"room\"><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
     "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 22) + "\" fill=\"#0c1210\" font-size=\"12\" font-weight=\"600\">" + b.id + "</text>" +
     "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 40) + "\" fill=\"#0c1210\" font-size=\"11\" opacity=\"0.75\">" + b.tag + "</text></g>"
@@ -288,7 +404,12 @@ function renderCalendar(m) {
   const rows = m.cal.rooms.map(function (row, i) {
     return "<div class=\"week-row\"><b>\u00c7i\u00e7ek " + (i + 1) + "</b>" + row.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " " + c); }).join("") + "</div>";
   }).join("");
-  const dry = "<div class=\"week-row\"><b>Kurutma</b>" + m.cal.dryRow.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " y\u00fck " + m.cal.dryLoad[w]); }).join("") + "</div>";
+  const dry = m.cal.dryRows.map(function (row, i) {
+    return "<div class=\"week-row\"><b>Kurutma " + (i + 1) + "</b>" + row.map(function (c, w) {
+      const batch = m.cal.dryOcc[i][w] || "";
+      return cell(w, c, "H" + (w + 1) + " " + (batch || "bo\u015f"));
+    }).join("") + "</div>";
+  }).join("");
   el("calendar").innerHTML = "<div class=\"cal-grid\">" + head + rows + dry + "</div>";
 }
 
@@ -307,11 +428,11 @@ function renderTables(m, s) {
   el("ops").innerHTML =
     "<table><tr><th>Operasyon</th><th></th></tr>" +
     "<tr><td>Oda alan\u0131</td><td class=\"num\">" + m2(m.roomM2) + "</td></tr>" +
+    "<tr><td>Bitki / m\u00B2</td><td class=\"num\">" + fmt(s.plantsPerM2, 1) + "</td></tr>" +
     "<tr><td>Bitki / oda</td><td class=\"num\">" + fmt(m.plantsPerRoom) + "</td></tr>" +
-    "<tr><td>Yo\u011funluk</td><td class=\"num\">" + fmt(m.density, 1) + " /m\u00B2</td></tr>" +
-    "<tr><td>Hasat / oda / y\u0131l</td><td class=\"num\">" + s.harvestsPerRoom + "</td></tr>" +
-    "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear) + "</td></tr>" +
-    "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 tepe " + m.cal.peakDry + "</td></tr>" +
+    "<tr><td>Hasat / oda / y\u0131l</td><td class=\"num\">" + fmt(s.harvestsPerRoom, 1) + "</td></tr>" +
+    "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear, 1) + "</td></tr>" +
+    "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
     "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
     "<tr><td>Kadro / hasat g\u00fcn\u00fc</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
     "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
@@ -323,7 +444,7 @@ function renderTables(m, s) {
     ["Pre-veg", s.preVegDays + " g\u00fcn"],
     ["Veg", s.vegDays + " g\u00fcn"],
     ["\u00c7i\u00e7ek", s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda"],
-    ["Hasat", s.harvestsPerRoom + " / oda / y\u0131l"],
+    ["Hasat", fmt(s.harvestsPerRoom, 1) + " / oda / y\u0131l"],
     ["Kurutma", s.dryDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda"]
   ];
   el("flow").innerHTML = nodes.map(function (pair, i) {
@@ -334,7 +455,8 @@ function renderTables(m, s) {
 function renderLabels(s, m) {
   const map = {
     plantsYear: fmt(s.plantsYear),
-    harvestsPerRoom: String(s.harvestsPerRoom),
+    plantsPerM2: fmt(s.plantsPerM2, 1),
+    harvestsPerRoom: fmt(s.harvestsPerRoom, 1),
     flowerArea: m2(s.flowerArea),
     roomM2: m2(s.roomM2),
     dryRooms: String(s.dryRooms),
@@ -346,7 +468,6 @@ function renderLabels(s, m) {
     dryDays: s.dryDays + " g\u00fcn",
     yieldG: s.yieldG + " g",
     genetics: String(s.genetics),
-    extraIndoor: m2(s.extraIndoor),
     priceKg: eur(s.priceKg)
   };
   Object.keys(map).forEach(function (k) {
@@ -355,7 +476,7 @@ function renderLabels(s, m) {
   });
   const hint = el("capacityHint");
   if (hint && m) {
-    hint.textContent = "Oda " + m2(s.roomM2) + " (max 300) \u00b7 " + fmt(m.plantsPerRoom) + " bitki/oda \u00b7 " + s.harvestsPerRoom + " hasat/oda/y\u0131l \u00b7 \u00e7evrim " + fmt(365 / s.harvestsPerRoom, 0) + " g\u00fcn";
+    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 " + fmt(m.plantsPerRoom) + " bitki/oda \u00b7 " + fmt(s.harvestsPerRoom, 1) + " hasat/oda/y\u0131l \u00b7 kurutma kar\u0131\u015fmaz";
   }
 }
 
@@ -402,7 +523,11 @@ window.addEventListener("DOMContentLoaded", function () {
     b.addEventListener("click", function () { applyPreset(b.dataset.key); });
   });
   document.querySelectorAll("input").forEach(function (i) {
-    i.addEventListener("input", function () { week = 0; render(); });
+    i.addEventListener("input", function () {
+      week = 0;
+      render();
+      highlightPreset(matchingPreset(readState()));
+    });
   });
   el("playBtn").addEventListener("click", play);
   el("exportBtn").addEventListener("click", exportJson);
