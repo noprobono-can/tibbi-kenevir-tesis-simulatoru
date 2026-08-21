@@ -30,32 +30,34 @@
       <section class="panel">
         <h2>Senaryolar</h2>
         <div class="presets">
-          <button data-key="pilot" type="button">Pilot<small>180 m² · 3 oda · 1 kurutma</small></button>
-          <button data-key="dengeli" type="button" class="active">Dengeli<small>280 m² · 4 oda · 2 kurutma</small></button>
-          <button data-key="yuksek" type="button">Yüksek kapasite<small>640 m² · 8 oda · 2 kurutma</small></button>
-          <button data-key="faz2" type="button">Genişleme<small>840 m² · 12 oda · 3 kurutma</small></button>
+          <button data-key="pilot" type="button">Pilot<small>3 oda · 4 hasat/yıl · 3.060 bitki</small></button>
+          <button data-key="dengeli" type="button" class="active">Dengeli<small>4 oda · 5 hasat/yıl · 5.360 bitki</small></button>
+          <button data-key="yuksek" type="button">Yüksek kapasite<small>8 oda · 6 hasat/yıl · 16.320 bitki</small></button>
+          <button data-key="faz2" type="button">Genişleme<small>12 oda · 6 hasat/yıl · 19.300 bitki</small></button>
         </div>
       </section>
 
       <section class="panel">
         <h2>Kapasite</h2>
-        <div class="control"><header><span>Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
-          <input id="flowerArea" type="range" min="100" max="2500" step="10" value="280" /></div>
-        <div class="control"><header><span>Çiçekte bitki</span><span id="v-plantsInFlower">1.071</span></header>
-          <input id="plantsInFlower" type="range" min="50" max="8000" step="10" value="1070" /></div>
-        <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
-          <input id="dryRooms" type="range" min="1" max="8" step="1" value="2" /></div>
+        <div class="control"><header><span>Yıllık bitki</span><span id="v-plantsYear">5.360</span></header>
+          <input id="plantsYear" type="range" min="400" max="40000" step="40" value="5360" /></div>
+        <div class="control"><header><span>Hasat / oda / yıl</span><span id="v-harvestsPerRoom">5</span></header>
+          <input id="harvestsPerRoom" type="range" min="4" max="7" step="1" value="5" /></div>
         <div class="control"><header><span>Çiçek odası</span><span id="v-flowerRooms">4</span></header>
           <input id="flowerRooms" type="range" min="1" max="18" step="1" value="4" /></div>
+        <div class="control"><header><span>Oda alanı</span><span id="v-roomM2">70 m²</span></header>
+          <input id="roomM2" type="range" min="50" max="300" step="5" value="70" /></div>
+        <div class="control"><header><span>Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
+          <input id="flowerArea" type="range" min="50" max="5400" step="10" value="280" /></div>
+        <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
+          <input id="dryRooms" type="range" min="1" max="8" step="1" value="2" /></div>
         <p class="hint" id="capacityHint"></p>
       </section>
 
       <section class="panel">
         <h2>Üretim parametreleri</h2>
-        <div class="control"><header><span>Hasat aralığı</span><span id="v-harvestDays">21 gün</span></header>
-          <input id="harvestDays" type="range" min="7" max="28" step="7" value="21" /></div>
         <div class="control"><header><span>Çiçeklenme</span><span id="v-flowerDays">56 gün</span></header>
-          <input id="flowerDays" type="range" min="42" max="70" step="7" value="56" /></div>
+          <input id="flowerDays" type="range" min="35" max="84" step="1" value="56" /></div>
         <div class="control"><header><span>Vejetatif süre</span><span id="v-vegDays">24 gün</span></header>
           <input id="vegDays" type="range" min="10" max="35" step="1" value="24" /></div>
         <div class="control"><header><span>Pre-veg</span><span id="v-preVegDays">14 gün</span></header>
