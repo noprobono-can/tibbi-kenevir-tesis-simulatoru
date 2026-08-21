@@ -31,11 +31,20 @@ function maxFlowerDays(harvests) {
   return Math.floor(365 / harvests) - 7;
 }
 
+function clampHarvests() {
+  const harvests = round1(Math.min(7, Math.max(4, +el("harvestsPerRoom").value)));
+  el("harvestsPerRoom").value = String(harvests);
+  const cap = maxFlowerDays(harvests);
+  el("flowerDays").max = String(Math.max(35, cap));
+  el("flowerDays").min = "35";
+  if (+el("flowerDays").value > cap) el("flowerDays").value = String(cap);
+  return harvests;
+}
+
 function syncLayout(source) {
   const rooms = Math.max(1, Math.min(30, +el("flowerRooms").value));
   el("flowerRooms").value = String(rooms);
-  const harvests = round1(Math.min(7, Math.max(4, +el("harvestsPerRoom").value)));
-  el("harvestsPerRoom").value = String(harvests);
+  clampHarvests();
   el("flowerArea").min = String(rooms * 50);
   el("flowerArea").max = String(rooms * 300);
   let roomM2 = Math.min(300, Math.max(50, +el("roomM2").value));
@@ -45,17 +54,11 @@ function syncLayout(source) {
   } else if (source === "flowerArea") {
     roomM2 = Math.min(300, Math.max(50, flowerArea / rooms));
     flowerArea = rooms * roomM2;
-  } else {
-    flowerArea = rooms * roomM2;
   }
   flowerArea = Math.min(rooms * 300, Math.max(rooms * 50, flowerArea));
   roomM2 = flowerArea / rooms;
   el("flowerArea").value = String(Math.round(flowerArea));
   el("roomM2").value = String(Math.round(roomM2));
-  const cap = maxFlowerDays(harvests);
-  el("flowerDays").max = String(Math.max(35, cap));
-  el("flowerDays").min = "35";
-  if (+el("flowerDays").value > cap) el("flowerDays").value = String(cap);
 }
 
 function syncDensity(source) {
@@ -81,9 +84,15 @@ function syncDensity(source) {
 
 function readState() {
   const ae = document.activeElement && document.activeElement.id;
-  const layoutSrc = ae === "flowerArea" ? "flowerArea" : (ae === "roomM2" ? "roomM2" : (ae === "flowerRooms" ? "flowerRooms" : ""));
-  syncLayout(layoutSrc);
-  syncDensity(ae === "plantsYear" ? "plantsYear" : "keepDensity");
+  clampHarvests();
+  if (ae === "flowerArea" || ae === "roomM2" || ae === "flowerRooms") {
+    syncLayout(ae);
+    syncDensity("keepDensity");
+  } else if (ae === "plantsYear") {
+    syncDensity("plantsYear");
+  } else if (ae === "plantsPerM2" || ae === "harvestsPerRoom") {
+    syncDensity("keepDensity");
+  }
   const flowerRooms = Math.max(1, +el("flowerRooms").value);
   const harvestsPerRoom = round1(+el("harvestsPerRoom").value);
   const flowerArea = +el("flowerArea").value;
@@ -113,22 +122,17 @@ function highlightPreset(key) {
   document.querySelectorAll(".presets button").forEach((b) => b.classList.toggle("active", b.dataset.key === key));
 }
 
-function matchingPreset(s) {
-  const keys = ["plantsYear", "harvestsPerRoom", "flowerRooms", "roomM2", "dryRooms", "flowerDays", "yieldG", "priceKg", "plantsPerM2"];
-  const tol = { plantsYear: 80, harvestsPerRoom: 0.08, flowerRooms: 0, roomM2: 2, dryRooms: 0, flowerDays: 0, yieldG: 0, priceKg: 25, plantsPerM2: 0.15 };
-  for (const key of Object.keys(PRESETS)) {
-    const p = PRESETS[key];
-    const ok = keys.every((k) => Math.abs((s[k] || 0) - (p[k] || 0)) <= (tol[k] || 0));
-    if (ok && !!s.extraction === !!p.extraction) return key;
-  }
-  return "custom";
-}
+let customMode = false;
 
 function applyPreset(key) {
   if (key === "custom") {
+    customMode = true;
     highlightPreset("custom");
+    week = 0;
+    render();
     return;
   }
+  customMode = false;
   const p = PRESETS[key];
   Object.entries(p).forEach(([k, v]) => {
     if (k === "extraction") el("extraction").checked = v;
@@ -524,9 +528,10 @@ window.addEventListener("DOMContentLoaded", function () {
   });
   document.querySelectorAll("input").forEach(function (i) {
     i.addEventListener("input", function () {
+      customMode = true;
+      highlightPreset("custom");
       week = 0;
       render();
-      highlightPreset(matchingPreset(readState()));
     });
   });
   el("playBtn").addEventListener("click", play);
