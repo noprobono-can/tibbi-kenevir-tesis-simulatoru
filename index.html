@@ -15,13 +15,13 @@
       <div class="mark">T</div>
       <div>
         <h1>Tıbbi kenevir tesis simülatörü</h1>
-        <p>GACP üretim ve GMP işleme — oda, hasat ve ekonomi modeli</p>
+        <p>Tam indoor GACP üretim ve GMP işleme</p>
       </div>
     </div>
     <div class="header-meta">
+      <span class="chip">Indoor</span>
       <span class="chip">GACP</span>
       <span class="chip">GMP</span>
-      <span class="chip">Modüler yerleşim</span>
     </div>
   </header>
 
@@ -30,21 +30,28 @@
       <section class="panel">
         <h2>Senaryolar</h2>
         <div class="presets">
-          <button data-key="pilot" type="button">Pilot<small>3 oda · kompakt başlangıç</small></button>
-          <button data-key="dengeli" type="button" class="active">Dengeli<small>4 oda · 3 haftada hasat</small></button>
-          <button data-key="yuksek" type="button">Yüksek kapasite<small>8 oda · iki haftada hasat</small></button>
-          <button data-key="faz2" type="button">Genişleme<small>12 oda · ekstra sera</small></button>
+          <button data-key="pilot" type="button">Pilot<small>180 m² · 3 oda · 1 kurutma</small></button>
+          <button data-key="dengeli" type="button" class="active">Dengeli<small>280 m² · 4 oda · 2 kurutma</small></button>
+          <button data-key="yuksek" type="button">Yüksek kapasite<small>640 m² · 8 oda · 2 kurutma</small></button>
+          <button data-key="faz2" type="button">Genişleme<small>840 m² · 12 oda · 3 kurutma</small></button>
         </div>
       </section>
 
       <section class="panel">
-        <h2>Üretim parametreleri</h2>
+        <h2>Kapasite</h2>
+        <div class="control"><header><span>Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
+          <input id="flowerArea" type="range" min="100" max="2500" step="10" value="280" /></div>
+        <div class="control"><header><span>Çiçekte bitki</span><span id="v-plantsInFlower">1.071</span></header>
+          <input id="plantsInFlower" type="range" min="50" max="8000" step="10" value="1070" /></div>
+        <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
+          <input id="dryRooms" type="range" min="1" max="8" step="1" value="2" /></div>
         <div class="control"><header><span>Çiçek odası</span><span id="v-flowerRooms">4</span></header>
-          <input id="flowerRooms" type="range" min="3" max="18" step="1" value="4" /></div>
-        <div class="control"><header><span>Oda alanı</span><span id="v-roomM2">70 m²</span></header>
-          <input id="roomM2" type="range" min="50" max="150" step="1" value="70" /></div>
-        <div class="control"><header><span>Yoğunluk</span><span id="v-density">4,5 /m²</span></header>
-          <input id="density" type="range" min="3" max="12" step="0.1" value="4.5" /></div>
+          <input id="flowerRooms" type="range" min="1" max="18" step="1" value="4" /></div>
+        <p class="hint" id="capacityHint"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Üretim parametreleri</h2>
         <div class="control"><header><span>Hasat aralığı</span><span id="v-harvestDays">21 gün</span></header>
           <input id="harvestDays" type="range" min="7" max="28" step="7" value="21" /></div>
         <div class="control"><header><span>Çiçeklenme</span><span id="v-flowerDays">56 gün</span></header>
@@ -55,14 +62,14 @@
           <input id="preVegDays" type="range" min="7" max="21" step="1" value="14" /></div>
         <div class="control"><header><span>Köklendirme</span><span id="v-rootDays">14 gün</span></header>
           <input id="rootDays" type="range" min="7" max="21" step="1" value="14" /></div>
-        <div class="control"><header><span>Kurutma</span><span id="v-dryDays">14 gün</span></header>
+        <div class="control"><header><span>Kurutma süresi</span><span id="v-dryDays">14 gün</span></header>
           <input id="dryDays" type="range" min="7" max="21" step="1" value="14" /></div>
         <div class="control"><header><span>Verim / bitki</span><span id="v-yieldG">180 g</span></header>
           <input id="yieldG" type="range" min="80" max="280" step="5" value="180" /></div>
         <div class="control"><header><span>Genetik sayısı</span><span id="v-genetics">4</span></header>
           <input id="genetics" type="range" min="2" max="8" step="1" value="4" /></div>
-        <div class="control"><header><span>Ekstra sera</span><span id="v-extraGh">0 m²</span></header>
-          <input id="extraGh" type="range" min="0" max="2000" step="50" value="0" /></div>
+        <div class="control"><header><span>Yedek indoor alan</span><span id="v-extraIndoor">0 m²</span></header>
+          <input id="extraIndoor" type="range" min="0" max="2000" step="50" value="0" /></div>
         <div class="control"><header><span>Toptan fiyat</span><span id="v-priceKg">€3.500</span></header>
           <input id="priceKg" type="range" min="2000" max="8000" step="100" value="3500" /></div>
         <label class="check"><input id="extraction" type="checkbox" checked /> Pilot ekstraksiyon odası</label>
@@ -81,7 +88,7 @@
         <h2>Tesis yerleşimi</h2>
         <div class="plan-wrap" id="plan"></div>
         <div class="legend">
-          <span><i class="swatch" style="background:#d4783a"></i>Çiçek / üretim</span>
+          <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
           <span><i class="swatch" style="background:#6f9e62"></i>Anaç / veg</span>
           <span><i class="swatch" style="background:#5b8aa8"></i>GMP kurutma</span>
           <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>

@@ -217,6 +217,14 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .flow .node span { color: var(--muted); font-size: 12px; }
 .arrow { color: var(--gold-2); }
 
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 @media (max-width: 1180px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { position: static; max-height: none; }
