@@ -87,29 +87,17 @@ const CULTIVARS = [
   { id: "sbf", name: "Super Boof", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.12, stretch: 1.4, thc: "22-27%", origin: "K\u00fcresel", note: "Black Cherry Punch x Tropicana Cookies" }
 ];
 
+const CULTIVAR_BY_ID = {};
+CULTIVARS.forEach(function (c) { CULTIVAR_BY_ID[c.id] = c; });
+let roomBoard = [];
+let selectedRoom = 0;
+
+function cultivarOf(id) {
+  return CULTIVAR_BY_ID[id] || CULTIVARS[0];
+}
+
 function flowerRoomCount() {
   return Math.max(1, Math.round(+(el("flowerRooms") && el("flowerRooms").value) || 4));
-}
-
-function refreshRoomInputMax() {
-  const cap = flowerRoomCount();
-  CULTIVARS.forEach(function (c) {
-    const num = el("gr-" + c.id);
-    if (num) num.max = String(cap);
-  });
-}
-
-function readRoomCount(id) {
-  const num = el("gr-" + id);
-  if (!num) return 0;
-  return Math.max(0, Math.round(+num.value || 0));
-}
-
-function setRoomCount(id, n) {
-  const num = el("gr-" + id);
-  if (!num) return;
-  const cap = flowerRoomCount();
-  num.value = String(Math.max(0, Math.min(cap, Math.round(n))));
 }
 
 function uniqueCultivars(list) {
@@ -123,76 +111,65 @@ function uniqueCultivars(list) {
   return out;
 }
 
-function selectedCultivars() {
-  const list = CULTIVARS.filter(function (c) {
-    const n = el("g-" + c.id);
-    return n && n.checked;
+function fillRoomBoardEven(ids, n) {
+  n = Math.max(1, n);
+  ids = (ids && ids.length) ? ids : CULTIVARS.slice(0, 4).map(function (c) { return c.id; });
+  roomBoard = [];
+  const base = Math.floor(n / ids.length);
+  let rem = n % ids.length;
+  ids.forEach(function (id) {
+    const k = base + (rem > 0 ? 1 : 0);
+    if (rem > 0) rem -= 1;
+    for (let i = 0; i < k; i++) roomBoard.push({ cultivarId: id, dens: null });
   });
-  return list.length ? list : CULTIVARS.slice(0, 4);
+  while (roomBoard.length < n) roomBoard.push({ cultivarId: ids[0], dens: null });
+  roomBoard.length = n;
+  if (selectedRoom >= n) selectedRoom = Math.max(0, n - 1);
 }
 
-function evenSplitRooms(ids, rooms) {
-  const cap = Math.max(1, rooms);
-  CULTIVARS.forEach(function (c) {
-    const chk = el("g-" + c.id);
-    const num = el("gr-" + c.id);
-    const on = ids.indexOf(c.id) >= 0;
-    if (chk) chk.checked = on;
-    if (num) {
-      num.disabled = !on;
-      num.max = String(cap);
-      num.value = "0";
-    }
-  });
-  if (!ids.length) return;
-  const base = Math.floor(cap / ids.length);
-  let remnant = cap % ids.length;
-  ids.forEach(function (id) {
-    const v = base + (remnant > 0 ? 1 : 0);
-    if (remnant > 0) remnant -= 1;
-    setRoomCount(id, v);
-    const num = el("gr-" + id);
-    if (num) num.disabled = false;
-  });
+function ensureRoomBoard(n) {
+  n = Math.max(1, n);
+  if (!roomBoard.length) {
+    fillRoomBoardEven(CULTIVARS.slice(0, 4).map(function (c) { return c.id; }), n);
+    return;
+  }
+  const ids = uniqueCultivars(roomBoard.map(function (r) { return cultivarOf(r.cultivarId); })).map(function (c) { return c.id; });
+  while (roomBoard.length < n) {
+    const i = roomBoard.length;
+    const id = ids.length ? ids[i % ids.length] : CULTIVARS[0].id;
+    roomBoard.push({ cultivarId: id, dens: null });
+  }
+  if (roomBoard.length > n) roomBoard.length = n;
+  if (selectedRoom >= n) selectedRoom = Math.max(0, n - 1);
+}
+
+function selectedCultivars() {
+  ensureRoomBoard(flowerRoomCount());
+  const list = uniqueCultivars(roomBoard.map(function (r) { return cultivarOf(r.cultivarId); }));
+  return list.length ? list : CULTIVARS.slice(0, 4);
 }
 
 function applyGeneticsCount(n) {
   const take = Math.max(1, Math.min(CULTIVARS.length, Math.round(n) || 4));
-  const ids = CULTIVARS.slice(0, take).map(function (c) { return c.id; });
-  evenSplitRooms(ids, flowerRoomCount());
+  fillRoomBoardEven(CULTIVARS.slice(0, take).map(function (c) { return c.id; }), flowerRoomCount());
   if (el("genetics")) el("genetics").value = String(take);
 }
 
 function scaleRoomAllocation() {
-  const rooms = flowerRoomCount();
-  refreshRoomInputMax();
-  const ids = [];
-  const ns = [];
-  CULTIVARS.forEach(function (c) {
-    const chk = el("g-" + c.id);
-    if (!chk || !chk.checked) return;
-    ids.push(c.id);
-    ns.push(readRoomCount(c.id));
-  });
-  if (!ids.length) return;
-  const sum = ns.reduce(function (a, b) { return a + b; }, 0);
-  if (sum === rooms) return;
-  if (sum <= 0) {
-    evenSplitRooms(ids, rooms);
-    return;
-  }
-  let used = 0;
-  ids.forEach(function (id, i) {
-    const v = (i === ids.length - 1)
-      ? Math.max(0, rooms - used)
-      : Math.max(0, Math.round(ns[i] * rooms / sum));
-    if (i < ids.length - 1) used += v;
-    setRoomCount(id, v);
-    const chk = el("g-" + id);
-    const num = el("gr-" + id);
-    if (chk) chk.checked = v > 0;
-    if (num) num.disabled = v <= 0;
-  });
+  ensureRoomBoard(flowerRoomCount());
+}
+
+function applyGlobalDensToRooms(d) {
+  const v = Math.max(2, Math.min(12, +d || 5));
+  ensureRoomBoard(flowerRoomCount());
+  roomBoard.forEach(function (row) { row.dens = v; });
+}
+
+function densOfRoom(i, g, fallback) {
+  const row = roomBoard[i];
+  if (row && row.dens != null && row.dens > 0) return row.dens;
+  const d = g && g.dens;
+  return (d && d > 0) ? d : fallback;
 }
 
 function mixStats(list) {
@@ -214,7 +191,6 @@ function mixStats(list) {
 let densityOverride = false;
 
 function densOf(g, fallback) {
-  if (densityOverride) return fallback;
   const d = g && g.dens;
   return (d && d > 0) ? d : fallback;
 }
@@ -235,7 +211,7 @@ function buildRoomModels(s) {
   const rooms = [];
   for (let i = 0; i < n; i++) {
     const g = map[i] || null;
-    const dens = densOf(g, fbDens);
+    const dens = densOfRoom(i, g, fbDens);
     const plants = Math.max(1, Math.round(usable * dens));
     const yld = yieldOfCultivar(g, fbYield);
     const kgHarvest = plants * yld / 1000;
@@ -256,9 +232,9 @@ function buildRoomModels(s) {
 }
 
 function syncPlantsFromGenetics() {
-  if (densityOverride) return;
   if (!el("plantsYear") || !el("plantsPerM2") || !el("roomM2")) return;
   const rooms = flowerRoomCount();
+  ensureRoomBoard(rooms);
   const alloc = buildRoomMap(rooms);
   const roomM2 = Math.max(50, +el("roomM2").value || 70);
   const usable = roomM2 * 0.85;
@@ -267,7 +243,7 @@ function syncPlantsFromGenetics() {
   let plants = 0;
   for (let i = 0; i < rooms; i++) {
     const g = alloc.map[i];
-    const d = (g && g.dens) ? g.dens : fb;
+    const d = densOfRoom(i, g, fb);
     plants += Math.max(1, Math.round(usable * d));
   }
   const year = Math.round(plants * harvests);
@@ -288,8 +264,7 @@ function applyMixToSliders() {
   if (el("rootDays")) el("rootDays").value = String(st.rootDays);
   if (el("yieldG")) el("yieldG").value = String(st.yieldG);
   if (el("genetics")) el("genetics").value = String(uniqueCultivars(list).length);
-  if (!densityOverride && el("plantsPerM2") && st.dens) el("plantsPerM2").value = String(st.dens);
-  if (!densityOverride) syncPlantsFromGenetics();
+  syncPlantsFromGenetics();
 }
 
 function cultivarForRoom(list, i) {
@@ -298,77 +273,18 @@ function cultivarForRoom(list, i) {
 
 function buildRoomMap(flowerRooms) {
   const rooms = Math.max(1, flowerRooms || flowerRoomCount());
-  const rows = [];
-  CULTIVARS.forEach(function (c) {
-    const chk = el("g-" + c.id);
-    if (!chk || !chk.checked) return;
-    const n = readRoomCount(c.id);
-    if (n > 0) rows.push({ c: c, rooms: n });
-  });
-  const assigned = rows.reduce(function (s, r) { return s + r.rooms; }, 0);
+  ensureRoomBoard(rooms);
   const map = [];
-  if (!rows.length) {
-    const fb = selectedCultivars();
-    const n = Math.max(1, fb.length);
-    const base = Math.floor(rooms / n);
-    let remnant = rooms % n;
-    fb.forEach(function (c) {
-      const k = base + (remnant > 0 ? 1 : 0);
-      if (remnant > 0) remnant -= 1;
-      for (let i = 0; i < k; i++) map.push(c);
-    });
-    return { map: map, rows: rows, assigned: assigned, match: false, empty: true, fill: false, trim: false };
+  const counts = {};
+  for (let i = 0; i < rooms; i++) {
+    const g = cultivarOf(roomBoard[i].cultivarId);
+    map.push(g);
+    counts[g.id] = (counts[g.id] || 0) + 1;
   }
-  rows.forEach(function (r) {
-    for (let i = 0; i < r.rooms; i++) map.push(r.c);
+  const rows = Object.keys(counts).map(function (id) {
+    return { c: cultivarOf(id), rooms: counts[id] };
   });
-  let fill = false;
-  let trim = false;
-  if (map.length < rooms) {
-    fill = true;
-    const pad = rows[0].c;
-    while (map.length < rooms) map.push(pad);
-  } else if (map.length > rooms) {
-    trim = true;
-    map.length = rooms;
-  }
-  return { map: map, rows: rows, assigned: assigned, match: assigned === rooms, empty: false, fill: fill, trim: trim };
-}
-
-function syncGeneRooms(id) {
-  const chk = el("g-" + id);
-  const num = el("gr-" + id);
-  if (!chk || !num) return;
-  if (!chk.checked) {
-    num.value = "0";
-    num.disabled = true;
-    return;
-  }
-  num.disabled = false;
-  if (readRoomCount(id) <= 0) {
-    const others = CULTIVARS.reduce(function (s, c) {
-      if (c.id === id) return s;
-      const n = el("g-" + c.id);
-      if (!n || !n.checked) return s;
-      return s + readRoomCount(c.id);
-    }, 0);
-    setRoomCount(id, Math.max(1, flowerRoomCount() - others));
-  }
-}
-
-function onGeneRoomsInput(id) {
-  const num = el("gr-" + id);
-  const chk = el("g-" + id);
-  if (!num || !chk) return;
-  const v = Math.max(0, Math.min(flowerRoomCount(), Math.round(+num.value || 0)));
-  num.value = String(v);
-  if (v <= 0) {
-    chk.checked = false;
-    num.disabled = true;
-  } else {
-    chk.checked = true;
-    num.disabled = false;
-  }
+  return { map: map, rows: rows, assigned: map.length, match: true, empty: false, fill: false, trim: false };
 }
 
 function layoutFromFlower(s, stats) {
@@ -436,72 +352,141 @@ function sizeExtract(feedKg, crudeFrac) {
   };
 }
 
-function renderGeneticsUI() {
-  const box = el("geneticsBox");
-  if (!box || box.dataset.ready) return;
-  const groups = [
-    { t: "Tesis kar\u0131\u015f\u0131m\u0131", ids: ["wc", "km", "gg4", "gel", "jfg", "pm", "mac1"] },
-    { t: "Avrupa / t\u0131bbi klasik", ids: ["jh", "ww", "amh", "slh", "nl", "crp", "chs", "hk", "pk", "gth", "pp"] },
-    { t: "K\u00fcresel ticari", ids: ["runtz", "zkit", "gsc", "ogk", "sd", "gmo", "dsd", "jeal", "lcg", "apf", "bd", "cj", "sbf"] }
-  ];
-  const byId = {};
-  CULTIVARS.forEach(function (c) { byId[c.id] = c; });
-  function card(c, on) {
-    const rooms = on ? 1 : 0;
-    return "<div class=\"gene-row\">" +
-      "<label class=\"check\"><input type=\"checkbox\" id=\"g-" + c.id + "\"" + (on ? " checked" : "") + " />" +
-      "<span class=\"gene-body\">" + c.name +
-      "<small>" + c.origin + " \u00b7 " + c.flowerDays + "g \u00e7i\u00e7ek / " + c.vegDays + "g veg / " + c.rootDays + "g k\u00f6k / " +
-      c.yieldG + " g \u00b7 " + c.dens + "/m\u00B2 \u00b7 THC " + c.thc +
-      "<br>" + c.note + " \u00b7 ham ya\u011f ~%" + Math.round(c.extractY * 100) + "</small></span></label>" +
-      "<div class=\"gene-rooms\"><input type=\"number\" id=\"gr-" + c.id + "\" min=\"0\" max=\"30\" step=\"1\" value=\"" + rooms + "\"" + (on ? "" : " disabled") + " /><em>oda</em></div>" +
-      "</div>";
+function cultivarOptions(selectedId) {
+  return CULTIVARS.map(function (c) {
+    const sel = c.id === selectedId ? " selected" : "";
+    return "<option value=\"" + c.id + "\"" + sel + ">" + c.name + " \u00b7 " + c.dens.toFixed(1) + "/m\u00B2</option>";
+  }).join("");
+}
+
+function renderRoomCards(m, s) {
+  const box = el("roomCards");
+  if (!box) return;
+  ensureRoomBoard(s.flowerRooms);
+  const models = (m && m.roomModels) || [];
+  const ae = document.activeElement;
+  const dragging = ae && box.contains(ae) && ae.classList.contains("room-dens");
+  if (dragging) {
+    models.forEach(function (r, i) {
+      const card = box.querySelector('[data-room="' + i + '"]');
+      if (!card) return;
+      const st = card.querySelector(".stats");
+      if (st) st.innerHTML = "<span><strong>" + r.plants + "</strong> bitki</span><span><strong>" + fmt(r.kgHarvest, 1) + "</strong> kg/hasat</span>";
+      const lab = card.querySelector(".dens-lab");
+      if (lab) lab.textContent = fmt(r.dens, 1) + "/m\u00B2";
+      card.classList.toggle("on", i === selectedRoom);
+    });
+    return;
   }
-  const seen = {};
   let html = "";
-  groups.forEach(function (g) {
-    html += "<h3>" + g.t + "</h3>";
-    g.ids.forEach(function (id, i) {
-      const c = byId[id];
-      if (!c) return;
-      seen[id] = true;
-      html += card(c, g === groups[0] && i < 4);
-    });
-  });
-  CULTIVARS.forEach(function (c) {
-    if (!seen[c.id]) html += card(c, false);
-  });
+  for (let i = 0; i < roomBoard.length; i++) {
+    const row = roomBoard[i];
+    const g = cultivarOf(row.cultivarId);
+    const spec = models[i] || null;
+    const dens = spec ? spec.dens : densOfRoom(i, g, s.plantsPerM2);
+    const plants = spec ? spec.plants : Math.max(1, Math.round((s.roomM2 || 70) * 0.85 * dens));
+    const yld = spec ? spec.yieldG : yieldOfCultivar(g, s.yieldG || 160);
+    const kg = spec ? spec.kgHarvest : plants * yld / 1000;
+    const on = i === selectedRoom ? " on" : "";
+    const custom = row.dens != null ? " \u00b7 \u00f6zel" : "";
+    html += "<article class=\"room-card" + on + "\" data-room=\"" + i + "\">" +
+      "<header><b>\u00c7i\u00e7ek " + (i + 1) + "</b><span>" + m2(s.roomM2) + custom + "</span></header>" +
+      "<select class=\"room-cultivar\" data-room=\"" + i + "\">" + cultivarOptions(g.id) + "</select>" +
+      "<header><span>Bitki / m\u00B2</span><span class=\"dens-lab\">" + fmt(dens, 1) + "/m\u00B2</span></header>" +
+      "<input class=\"room-dens\" data-room=\"" + i + "\" type=\"range\" min=\"2\" max=\"12\" step=\"0.1\" value=\"" + dens + "\" />" +
+      "<div class=\"stats\"><span><strong>" + plants + "</strong> bitki</span><span><strong>" + fmt(kg, 1) + "</strong> kg/hasat</span></div>" +
+      "</article>";
+  }
   box.innerHTML = html;
+}
+
+function bindRoomCards() {
+  const box = el("roomCards");
+  if (!box || box.dataset.ready) return;
   box.dataset.ready = "1";
-  box.querySelectorAll("input[type=checkbox]").forEach(function (i) {
-    i.addEventListener("input", function () {
-      const id = i.id.replace(/^g-/, "");
-      syncGeneRooms(id);
-      customMode = true;
+  box.addEventListener("input", function (ev) {
+    const t = ev.target;
+    const i = +t.getAttribute("data-room");
+    if (isNaN(i) || i < 0) return;
+    ensureRoomBoard(flowerRoomCount());
+    if (!roomBoard[i]) return;
+    selectedRoom = i;
+    customMode = true;
+    highlightPreset("custom");
+    if (t.classList.contains("room-cultivar")) {
+      roomBoard[i].cultivarId = t.value;
+      roomBoard[i].dens = null;
       cycleOverride = false;
       densityOverride = false;
       pinDryRooms = false;
-      highlightPreset("custom");
       applyMixToSliders();
-      week = 0;
-      render();
-    });
-  });
-  box.querySelectorAll("input[type=number]").forEach(function (i) {
-    i.addEventListener("click", function (ev) { ev.stopPropagation(); });
-    i.addEventListener("input", function () {
-      const id = i.id.replace(/^gr-/, "");
-      onGeneRoomsInput(id);
-      customMode = true;
-      cycleOverride = false;
+    } else if (t.classList.contains("room-dens")) {
+      roomBoard[i].dens = Math.max(2, Math.min(12, +t.value || 5));
       densityOverride = false;
-      pinDryRooms = false;
-      highlightPreset("custom");
-      applyMixToSliders();
-      week = 0;
-      render();
+    }
+    week = 0;
+    render();
+  });
+  box.addEventListener("click", function (ev) {
+    const card = ev.target.closest("[data-room]");
+    if (!card || !box.contains(card)) return;
+    selectedRoom = +card.getAttribute("data-room");
+    box.querySelectorAll(".room-card").forEach(function (c) {
+      c.classList.toggle("on", +c.getAttribute("data-room") === selectedRoom);
+    });
+    const plan = el("plan");
+    if (plan) {
+      plan.querySelectorAll("[data-i]").forEach(function (n) {
+        n.classList.toggle("on", +n.getAttribute("data-i") === selectedRoom);
+      });
+    }
+  });
+}
+
+function bindPlanClicks() {
+  const wrap = el("plan");
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.dataset.ready = "1";
+  wrap.addEventListener("click", function (ev) {
+    const n = ev.target.closest("[data-i]");
+    if (!n || !wrap.contains(n)) return;
+    selectedRoom = +n.getAttribute("data-i");
+    wrap.querySelectorAll("[data-i]").forEach(function (g) {
+      g.classList.toggle("on", +g.getAttribute("data-i") === selectedRoom);
+    });
+    const box = el("roomCards");
+    if (box) {
+      box.querySelectorAll(".room-card").forEach(function (c) {
+        c.classList.toggle("on", +c.getAttribute("data-room") === selectedRoom);
+      });
+      const card = box.querySelector('[data-room="' + selectedRoom + '"]');
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+}
+
+function bindSideTabs() {
+  const tabs = document.querySelectorAll(".side-tabs [data-tab]");
+  if (!tabs.length) return;
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const tab = btn.getAttribute("data-tab");
+      tabs.forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === tab); });
+      document.querySelectorAll("[data-panel]").forEach(function (p) {
+        p.hidden = p.getAttribute("data-panel") !== tab;
+      });
     });
   });
+}
+
+function resetRoomDens() {
+  ensureRoomBoard(flowerRoomCount());
+  roomBoard.forEach(function (r) { r.dens = null; });
+  densityOverride = false;
+  customMode = true;
+  highlightPreset("custom");
+  week = 0;
+  render();
 }
 
 function computeOpex(s, plantsYear, harvestsYear) {
@@ -618,20 +603,24 @@ function syncDensity(source) {
 function readState() {
   const ae = document.activeElement && document.activeElement.id;
   clampHarvests();
+  ensureRoomBoard(flowerRoomCount());
   if (ae === "flowerArea" || ae === "roomM2" || ae === "flowerRooms") {
     syncLayout(ae);
-    if (densityOverride) syncDensity("keepDensity");
-    else syncPlantsFromGenetics();
+    syncPlantsFromGenetics();
   } else if (ae === "plantsYear") {
     densityOverride = true;
     syncDensity("plantsYear");
+    applyGlobalDensToRooms(+el("plantsPerM2").value);
   } else if (ae === "plantsPerM2") {
     densityOverride = true;
     syncDensity("keepDensity");
+    applyGlobalDensToRooms(+el("plantsPerM2").value);
   } else if (ae === "harvestsPerRoom") {
-    if (densityOverride) syncDensity("keepDensity");
-    else syncPlantsFromGenetics();
-  } else if (!densityOverride) {
+    if (densityOverride) {
+      syncDensity("keepDensity");
+      applyGlobalDensToRooms(+el("plantsPerM2").value);
+    } else syncPlantsFromGenetics();
+  } else {
     syncPlantsFromGenetics();
   }
   const flowerRooms = Math.max(1, +el("flowerRooms").value);
@@ -659,6 +648,7 @@ function readState() {
     cultivars: uniqueCultivars(alloc.map).length ? uniqueCultivars(alloc.map) : selectedCultivars(),
     roomMap: alloc.map,
     alloc: alloc,
+    roomBoard: roomBoard.map(function (r) { return { cultivarId: r.cultivarId, dens: r.dens }; }),
     priceKg: +el("priceKg").value,
     extractPriceKg: el("extractPriceKg") ? +el("extractPriceKg").value : 4200,
     saleablePct: Math.max(0.8, Math.min(0.88, +el("saleablePct").value / 100)),
@@ -1130,8 +1120,8 @@ function buildConceptSvg(m, s, currentWeek) {
       : (Math.round(s.roomM2) + " m\u00B2" + (short ? (" \u00b7 " + short) : ""));
     add(
       "\u00c7i\u00e7ek " + (i + 1),
-      col * (flower.w + gap),
-      y + row * (flower.h + gap),
+      col * (flower.w + gap + 0.45),
+      y + row * (flower.h + gap + 0.45),
       flower.w,
       flower.h,
       fill,
@@ -1144,8 +1134,8 @@ function buildConceptSvg(m, s, currentWeek) {
       last.plants = spec.plants;
     }
   }
-  const flowerW = fCols * flower.w + (fCols - 1) * gap;
-  const flowerH = fRows * flower.h + (fRows - 1) * gap;
+  const flowerW = fCols * flower.w + (fCols - 1) * (gap + 0.45);
+  const flowerH = fRows * flower.h + (fRows - 1) * (gap + 0.45);
 
   const dCount = Math.max(1, s.dryRooms);
   const dCols = Math.min(dCount, dCount <= 3 ? dCount : 3);
@@ -1342,12 +1332,12 @@ function downloadConceptPng() {
 
 function renderPlan(m, s, currentWeek) {
   const W = 1180;
-  const gap = 8;
+  const gap = 16;
   const fCount = Math.max(1, s.flowerRooms);
   const fCols = Math.min(10, fCount);
   const fRows = Math.ceil(fCount / fCols);
   const flowerW = Math.min(108, 1100 / fCols - gap);
-  const flowerH = 96;
+  const flowerH = 102;
   const flowerY0 = 280;
   const H = flowerY0 + fRows * (flowerH + gap) + 28;
   const rooms = [];
@@ -1361,6 +1351,7 @@ function renderPlan(m, s, currentWeek) {
     const dens = spec ? spec.dens : s.plantsPerM2;
     const plants = spec ? spec.plants : Math.round(s.roomM2 * 0.85 * dens);
     rooms.push({
+      i: i,
       id: "\u00c7i\u00e7ek " + (i + 1),
       x: 40 + col * (flowerW + gap),
       y: flowerY0 + row * (flowerH + gap),
@@ -1409,7 +1400,9 @@ function renderPlan(m, s, currentWeek) {
     }
   ]).concat(rooms);
   const svg = blocks.map(function (b) {
-    return "<g class=\"room\"><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
+    const di = (typeof b.i === "number") ? (" data-i=\"" + b.i + "\"") : "";
+    const on = (typeof b.i === "number" && b.i === selectedRoom) ? " on" : "";
+    return "<g class=\"room" + on + "\"" + di + "><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
       "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 22) + "\" fill=\"#0c1210\" font-size=\"12\" font-weight=\"600\">" + xmlEsc(b.id) + "</text>" +
       "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 40) + "\" fill=\"#0c1210\" font-size=\"11\" opacity=\"0.75\">" + xmlEsc(b.line2 || "") + "</text>" +
       (b.line3 ? ("<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 56) + "\" fill=\"#0c1210\" font-size=\"10\" opacity=\"0.7\">" + xmlEsc(b.line3) + "</text>") : "") +
@@ -1529,7 +1522,6 @@ function renderLabels(s, m) {
     const L = m.layout || {};
     hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 genetik oda modeli " + fmt(m.density, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
   }
-  refreshRoomInputMax();
   const mixEl = el("geneticsMix");
   if (mixEl && m && m.stats) {
     const dist = (s.alloc && s.alloc.rows && s.alloc.rows.length)
@@ -1570,6 +1562,7 @@ function render() {
   renderLabels(s, m);
   renderKpis(m, s);
   renderPlan(m, s, week);
+  renderRoomCards(m, s);
   renderCalendar(m);
   renderTables(m, s);
   el("weekLabel").textContent = "Hafta " + (week + 1);
@@ -1600,18 +1593,21 @@ function exportJson() {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-  renderGeneticsUI();
+  bindSideTabs();
+  bindRoomCards();
+  bindPlanClicks();
+  if (el("resetDensBtn")) el("resetDensBtn").addEventListener("click", resetRoomDens);
   document.querySelectorAll(".presets button").forEach(function (b) {
     b.addEventListener("click", function () { applyPreset(b.dataset.key); });
   });
   document.querySelectorAll("input").forEach(function (i) {
     i.addEventListener("input", function () {
+      if (i.classList && (i.classList.contains("room-dens") || i.classList.contains("room-cultivar"))) return;
       customMode = true;
       highlightPreset("custom");
       if (i.id === "dryRooms") pinDryRooms = true;
       if (i.id === "flowerDays" || i.id === "vegDays" || i.id === "preVegDays" || i.id === "rootDays" || i.id === "yieldG") cycleOverride = true;
       if (i.id === "plantsYear" || i.id === "plantsPerM2") densityOverride = true;
-      if (i.id && (i.id.indexOf("g-") === 0 || i.id.indexOf("gr-") === 0)) { cycleOverride = false; densityOverride = false; pinDryRooms = false; applyMixToSliders(); }
       else if (i.id === "flowerRooms") { pinDryRooms = false; scaleRoomAllocation(); }
       else if (i.id === "harvestsPerRoom" || i.id === "flowerDays" || i.id === "dryDays" || i.id === "dryCleanDays" || i.id === "dryTiers") pinDryRooms = false;
       week = 0;

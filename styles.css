@@ -293,3 +293,94 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   text-transform: uppercase;
   color: var(--muted);
 }
+
+.side-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.side-tabs button {
+  flex: 1;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.side-tabs button.on {
+  color: #16120a;
+  background: var(--gold-2);
+  border-color: var(--gold-2);
+  font-weight: 600;
+}
+
+.room-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.room-head h2 { margin: 0; }
+.room-head .secondary {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.room-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.room-card {
+  background: var(--panel-2, #1a221e);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.room-card.on {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 0 1px var(--gold-2);
+}
+.room-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.room-card header b { color: var(--ink); font-size: 13px; }
+.room-card select, .room-card input[type="range"] {
+  width: 100%;
+  margin: 4px 0 6px;
+}
+.room-card select {
+  background: #121816;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.room-card .stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.room-card .stats strong { color: var(--gold); font-weight: 600; }
+svg.plan .room.on .hit { stroke: #d4c49a; stroke-width: 2.4; }
+svg.plan .room[data-i] { cursor: pointer; }
+[hidden] { display: none !important; }

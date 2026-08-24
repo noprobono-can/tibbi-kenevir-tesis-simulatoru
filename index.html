@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
   <header class="app-header">
@@ -27,7 +27,12 @@
 
   <div class="layout">
     <aside class="sidebar">
-      <section class="panel">
+      <div class="side-tabs" role="tablist">
+        <button type="button" class="on" data-tab="tesis">Tesis</button>
+        <button type="button" data-tab="proses">Proses</button>
+      </div>
+
+      <section class="panel" data-panel="tesis">
         <h2>Senaryolar</h2>
         <div class="presets">
           <button data-key="pilot" type="button">Pilot<small>3 oda · 4 hasat/yıl · 3.060 bitki</small></button>
@@ -38,11 +43,11 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel" data-panel="tesis">
         <h2>Kapasite</h2>
-        <div class="control"><header><span>Yıllık bitki</span><span id="v-plantsYear">5.360</span></header>
+        <div class="control"><header><span>Yıllık bitki (türev)</span><span id="v-plantsYear">5.360</span></header>
           <input id="plantsYear" type="range" min="400" max="100000" step="40" value="5360" /></div>
-        <div class="control"><header><span>Bitki / m²</span><span id="v-plantsPerM2">4,5</span></header>
+        <div class="control"><header><span>Ortalama bitki / m²</span><span id="v-plantsPerM2">4,5</span></header>
           <input id="plantsPerM2" type="range" min="2" max="12" step="0.1" value="4.5" /></div>
         <div class="control"><header><span>Hasat / oda / yıl</span><span id="v-harvestsPerRoom">5,0</span></header>
           <input id="harvestsPerRoom" type="range" min="4" max="7" step="0.1" value="5" /></div>
@@ -56,11 +61,11 @@
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
         <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
           <input id="dryTiers" type="range" min="1" max="3" step="1" value="3" /></div>
-        <p class="hint">Kurutma katı ası katmanıdır: her oda tabanı en az çiçek odası / kat sayısıdır (3 katta üçte biri). Ası kapasitesi bir oda hasadına yeter. Veg, pre-veg ve çelik alanları çiçek m&#178; ile genetik süre oranından hesaplanır.</p>
+        <p class="hint">Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
-      <section class="panel">
+      <section class="panel" data-panel="proses" hidden>
         <h2>Üretim parametreleri</h2>
         <div class="control"><header><span>Çiçeklenme</span><span id="v-flowerDays">56 gün</span></header>
           <input id="flowerDays" type="range" min="35" max="84" step="1" value="56" /></div>
@@ -89,12 +94,6 @@
         <p class="hint">Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı kriyo-etanol hatta gider (C1D2). Satılamayan kütle önce ekstraksiyona yazılır.</p>
       </section>
 
-      <section class="panel">
-        <h2>Genetikler</h2>
-        <p class="hint">Her seçilen genetik için kaç çiçek odasında yetişeceğini yazın. Toplam, çiçek odası sayısına eşit olmalı. Her genetik kendi bitki/m² değeriyle odasını doldurur; takvim, verim ve hasılat oda ağırlıklı hesaplanır.</p>
-        <p class="hint" id="geneticsMix"></p>
-        <div id="geneticsBox" class="genetics"></div>
-      </section>
     </aside>
 
     <main>
@@ -108,7 +107,7 @@
           <span class="week-label" id="weekLabel">Hafta 1</span>
         </div>
         <h2>Tesis yerleşimi</h2>
-        <p class="hint">Ekrandaki şema genetik bitki/m² ile oda modelini gösterir. Ölçekli konsept kat planını PNG olarak indirin.</p>
+        <p class="hint">Her çiçek odası ayrı durur. Odaya tıklayın, genetik ve bitki/m² karttan değişir. Konsept kat planı PNG olarak iner.</p>
         <div class="plan-wrap" id="plan"></div>
         <div class="legend">
           <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
@@ -118,6 +117,15 @@
           <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>
           <span><i class="swatch" style="background:#c9b56a"></i>Ofis</span>
         </div>
+      </section>
+
+      <section class="panel" style="margin-bottom:14px">
+        <div class="room-head">
+          <h2>Çiçek odaları</h2>
+          <button type="button" class="secondary" id="resetDensBtn">Genetik bitki/m²</button>
+        </div>
+        <p class="hint" id="geneticsMix"></p>
+        <div class="room-cards" id="roomCards"></div>
       </section>
 
       <section class="panel" style="margin-bottom:14px">
@@ -138,6 +146,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
