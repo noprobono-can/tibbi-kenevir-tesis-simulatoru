@@ -161,7 +161,7 @@ input[type="range"] { width: 100%; accent-color: var(--gold-2); }
 
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 
-.plan-wrap { overflow: auto; background: #0d1411; border-radius: 12px; max-width: 100%; }
+.plan-wrap { overflow: auto; background: #0d1411; border-radius: 12px; max-width: 100%; min-height: 280px; }
 svg.plan { width: 100%; max-width: 100%; height: auto; display: block; }
 .room { cursor: pointer; }
 .room:hover .hit { filter: brightness(1.12); }

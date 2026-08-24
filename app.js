@@ -931,79 +931,292 @@ function renderKpis(m, s) {
   ).join("");
 }
 
-function renderPlan(m, s, currentWeek) {
-  const W = 1180;
-  const gap = 8;
-  const fCols = Math.min(10, s.flowerRooms);
-  const fRows = Math.ceil(s.flowerRooms / fCols);
-  const flowerW = Math.min(108, 1100 / fCols - gap);
-  const flowerH = 88;
-  const flowerY0 = 280;
-  const H = flowerY0 + fRows * (flowerH + gap) + 28;
+
+function xmlEsc(t) {
+  return String(t == null ? "" : t)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function mSize(area, aspect) {
+  const a = Math.max(6, Number(area) || 6);
+  const ratio = aspect || 1.25;
+  const w = Math.sqrt(a * ratio);
+  const h = a / w;
+  return { w: w, h: h, a: a };
+}
+
+function activePresetLabel() {
+  const b = document.querySelector(".presets button.active");
+  const key = b && b.getAttribute("data-key");
+  const names = {
+    pilot: "Pilot", dengeli: "Dengeli", yuksek: "Y\u00fcksek kapasite",
+    faz2: "Geni\u015fleme", custom: "\u00d6zel"
+  };
+  return names[key] || "\u00d6zel";
+}
+
+function buildConceptSvg(m, s, currentWeek) {
+  const PPM = 12;
+  const L = m.layout || {};
+  const ex = m.extract || {};
+  const hasEx = !!(ex.m2 && ex.m2 > 0);
   const rooms = [];
-  for (let i = 0; i < s.flowerRooms; i++) {
-    const st = m.cal.rooms[i] ? m.cal.rooms[i][currentWeek] : "empty";
+
+  function add(name, xm, ym, wm, hm, fill, tag, zone) {
+    rooms.push({
+      name: name, x: xm, y: ym, w: wm, h: hm,
+      fill: fill, tag: tag || "", zone: zone || ""
+    });
+  }
+
+  const office = mSize(36, 1.8);
+  const air = mSize(10, 0.65);
+  const mech = mSize(Math.max(18, Math.round((m.totalBuilt || 400) * 0.025)), 1.4);
+  const mother = mSize(m.motherProd || L.motherM2 || 18, 1.25);
+  const bank = mSize(m.motherBank || 10, 1.6);
+  const cut = mSize(L.cuttingsM2 || 16, 1.2);
+  const prev = mSize(m.preVeg || L.preVegM2 || 20, 1.3);
+  const veg = mSize(m.veg || L.vegM2 || 28, 1.35);
+  const flower = mSize(s.roomM2, 1.32);
+  const dry = mSize(L.dryRoomM2 || 24, 1.15);
+  const trim = mSize(L.trimM2 || 24, 1.5);
+  const pack = mSize(L.packM2 || 18, 1.35);
+  const ext = hasEx ? mSize(ex.m2, 1.6) : null;
+
+  const gap = 0.55;
+  const hall = 2.4;
+  let x = 0;
+  let y = 0;
+  const staffH = Math.max(7.2, office.h, air.h, mech.h);
+
+  add("Ofis / QMS", x, y, office.w, staffH, "#c9b56a", "36 m\u00B2 \u00b7 idare", "idare");
+  x += office.w + gap;
+  add("GACP giri\u015f", x, y, Math.max(4.2, air.w), staffH, "#a34a3a", "hava kilit", "akisi");
+  x += Math.max(4.2, air.w) + gap;
+  add("GMP giri\u015f", x, y, Math.max(4.2, air.w), staffH, "#8a3a42", "hava kilit", "akisi");
+  x += Math.max(4.2, air.w) + gap;
+  add("Mekanik / HVAC", x, y, mech.w, staffH, "#4a5550", Math.round(mech.a) + " m\u00B2", "mek");
+  const staffW = x + mech.w;
+
+  y = staffH + hall;
+  x = 0;
+  const propH = Math.max(mother.h, bank.h + 3.6, cut.h, prev.h, veg.h);
+  add("Ana\u00e7 \u00fcretim", x, y, mother.w, propH, "#6f9e62", Math.round(m.motherProd || mother.a) + " m\u00B2", "gacp");
+  x += mother.w + gap;
+  const bankH = Math.min(bank.h, propH * 0.52);
+  add("Ana\u00e7 bankas\u0131", x, y, Math.max(bank.w, 6.5), bankH, "#587c4e", "GACP", "gacp");
+  add("Karantina", x, y + bankH + 0.4, 4.2, propH - bankH - 0.4, "#8b6bb0", "R&D", "rd");
+  add("Doku k\u00fclt.", x + 4.4, y + bankH + 0.4, Math.max(4.2, Math.max(bank.w, 6.5) - 4.4), propH - bankH - 0.4, "#8b6bb0", "R&D", "rd");
+  x += Math.max(bank.w, 6.5) + gap;
+  add("\u00c7elik", x, y, cut.w, propH, "#7aa56e", Math.round(L.cuttingsM2 || cut.a) + " m\u00B2", "gacp");
+  x += cut.w + gap;
+  add("Pre-veg", x, y, prev.w, propH, "#88b57a", Math.round(m.preVeg || prev.a) + " m\u00B2", "gacp");
+  x += prev.w + gap;
+  add("Veg", x, y, veg.w, propH, "#88b57a", Math.round(m.veg || veg.a) + " m\u00B2", "gacp");
+  x += veg.w;
+  const propW = x;
+  const propY = y;
+  const propBottom = y + propH;
+
+  const fCount = Math.max(1, s.flowerRooms);
+  const fCols = Math.min(fCount, fCount <= 4 ? fCount : fCount <= 8 ? 4 : fCount <= 12 ? 6 : 8);
+  const fRows = Math.ceil(fCount / fCols);
+  y = propBottom + hall;
+  const flowerY = y;
+  const cultivars = (m.cal && (m.cal.roomCultivars || m.cal.roomCultivars)) || [];
+  const calRooms = (m.cal && m.cal.rooms) || [];
+  for (let i = 0; i < fCount; i++) {
     const col = i % fCols;
     const row = Math.floor(i / fCols);
-    const g = m.cal.roomCultivars && m.cal.roomCultivars[i];
-    const short = g ? g.name.split(" ")[0] : "";
-    rooms.push({
-      id: "\u00c7i\u00e7ek " + (i + 1),
-      x: 40 + col * (flowerW + gap),
-      y: flowerY0 + row * (flowerH + gap),
-      w: flowerW, h: flowerH, tag: m2(m.roomM2) + (short ? (" \u00b7 " + short) : ""),
-      fill: st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#3a2c24"
-    });
+    const g = cultivars[i];
+    const st = calRooms[i] ? calRooms[i][currentWeek] : "empty";
+    const fill = st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#6a4634";
+    const short = g && g.name ? g.name.split(" ")[0] : "";
+    add(
+      "\u00c7i\u00e7ek " + (i + 1),
+      col * (flower.w + gap),
+      y + row * (flower.h + gap),
+      flower.w,
+      flower.h,
+      fill,
+      Math.round(s.roomM2) + " m\u00B2" + (short ? (" \u00b7 " + short) : ""),
+      "cicek"
+    );
   }
-  const gmpDry = [];
-  const dCols = 6;
-  for (let i = 0; i < s.dryRooms; i++) {
-    const batch = m.cal.dryOcc[i] ? m.cal.dryOcc[i][currentWeek] : null;
-    const kind = m.cal.dryRows[i] ? m.cal.dryRows[i][currentWeek] : "idle";
+  const flowerW = fCols * flower.w + (fCols - 1) * gap;
+  const flowerH = fRows * flower.h + (fRows - 1) * gap;
+
+  const dCount = Math.max(1, s.dryRooms);
+  const dCols = Math.min(dCount, dCount <= 3 ? dCount : 3);
+  const dRows = Math.ceil(dCount / dCols);
+  const gmpX = Math.max(staffW, propW, flowerW) + hall;
+  const gmpY = staffH + hall;
+  const dryOcc = (m.cal && (m.cal.dryOcc || m.cal.dryOcc)) || [];
+  const dryRows = (m.cal && (m.cal.dryRows || m.cal.dryRows)) || [];
+  for (let i = 0; i < dCount; i++) {
     const col = i % dCols;
     const row = Math.floor(i / dCols);
-    const flowerNo = batch ? String(batch).replace("C", "") : "";
-    gmpDry.push({
-      id: "Kurutma " + (i + 1),
-      x: 640 + col * 88,
-      y: 48 + row * 50,
-      w: 82, h: 44,
-      fill: kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#243038",
-      tag: (kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f")) + " \u00b7 " + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2"
+    const kind = dryRows[i] ? dryRows[i][currentWeek] : "idle";
+    const fill = kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#2e3c42";
+    const batch = dryOcc[i] ? dryOcc[i][currentWeek] : null;
+    const who = batch ? (" \u00b7 \u00c7" + String(batch).replace("C", "")) : "";
+    add(
+      "Kurutma " + (i + 1),
+      gmpX + col * (dry.w + gap),
+      gmpY + row * (dry.h + gap),
+      dry.w,
+      dry.h,
+      fill,
+      Math.round(L.dryRoomM2 || dry.a) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat" + who,
+      "gmp"
+    );
+  }
+  const dryW = dCols * dry.w + (dCols - 1) * gap;
+  const dryH = dRows * dry.h + (dRows - 1) * gap;
+  let py = gmpY + dryH + gap;
+  add("Trim", gmpX, py, trim.w, trim.h, "#4d738a", Math.round(L.trimM2 || trim.a) + " m\u00B2", "gmp");
+  add("Paket", gmpX + trim.w + gap, py, pack.w, pack.h, "#4d738a", Math.round(L.packM2 || pack.a) + " m\u00B2", "gmp");
+  py += Math.max(trim.h, pack.h) + gap;
+  if (hasEx) {
+    add("Ekstraksiyon", gmpX, py, Math.max(ext.w, dryW), ext.h, "#8b6bb0", Math.round(ex.m2) + " m\u00B2 \u00b7 " + fmt(ex.kgDay, 1) + " kg/g", "ext");
+    py += ext.h;
+  }
+
+  const innerW = Math.max(staffW, propW, flowerW, gmpX + Math.max(dryW, trim.w + gap + pack.w));
+  const innerH = Math.max(flowerY + flowerH, py);
+
+  const padL = 40, padT = 86, padR = 268, padB = 96;
+  const W = Math.round(padL + innerW * PPM + padR);
+  const H = Math.round(padT + innerH * PPM + padB);
+
+  function X(mtr) { return Math.round(padL + mtr * PPM); }
+  function Y(mtr) { return Math.round(padT + mtr * PPM); }
+  function S(mtr) { return Math.max(8, Math.round(mtr * PPM)); }
+
+  const gacpX0 = X(0), gacpY0 = Y(staffH + hall * 0.35);
+  const gacpW = S(Math.max(propW, flowerW));
+  const gacpH = S(innerH - staffH - hall * 0.35);
+  const gmpX0 = X(gmpX - hall * 0.35);
+  const gmpY0 = Y(staffH + hall * 0.2);
+  const gmpW = S(innerW - gmpX + hall * 0.35);
+  const gmpH = S(innerH - staffH - hall * 0.2);
+
+  let svg = "";
+  svg += "<rect x=\"0\" y=\"0\" width=\"" + W + "\" height=\"" + H + "\" fill=\"#0c1210\"/>";
+  svg += "<rect x=\"18\" y=\"18\" width=\"" + (W - 36) + "\" height=\"" + (H - 36) + "\" rx=\"6\" fill=\"#101714\" stroke=\"#d4c49a\" stroke-width=\"1.2\"/>";
+  svg += "<rect x=\"18\" y=\"18\" width=\"" + (W - 36) + "\" height=\"52\" fill=\"#161d1a\" stroke=\"#d4c49a\" stroke-width=\"1.2\"/>";
+  svg += "<text x=\"36\" y=\"40\" fill=\"#d4c49a\" font-size=\"15\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.4\">TIBB\u0130 KENEV\u0130R TES\u0130S\u0130 \u00b7 KONSEPT D\u0130ZAYN</text>";
+  svg += "<text x=\"36\" y=\"58\" fill=\"#cfc6a8\" font-size=\"11\" font-family=\"Segoe UI, Arial, sans-serif\">Indoor GACP \u00fcretim + GMP i\u015fleme \u00b7 Senaryo: " + xmlEsc(activePresetLabel()) + " \u00b7 Hafta " + (currentWeek + 1) + " \u00b7 " + s.flowerRooms + " \u00e7i\u00e7ek odas\u0131 \u00b7 " + s.dryRooms + " kurutma \u00b7 toplam " + Math.round(m.totalBuilt) + " m\u00B2</text>";
+
+  svg += "<circle cx=\"" + (W - 48) + "\" cy=\"44\" r=\"14\" fill=\"none\" stroke=\"#d4c49a\" stroke-width=\"1.2\"/>";
+  svg += "<polygon points=\"" + (W - 48) + ",28 " + (W - 53) + ",46 " + (W - 43) + ",46\" fill=\"#d4c49a\"/>";
+  svg += "<text x=\"" + (W - 48) + "\" y=\"62\" text-anchor=\"middle\" fill=\"#d4c49a\" font-size=\"9\" font-family=\"Segoe UI, Arial, sans-serif\">K</text>";
+
+  svg += "<rect x=\"" + gacpX0 + "\" y=\"" + gacpY0 + "\" width=\"" + gacpW + "\" height=\"" + gacpH + "\" fill=\"rgba(111,158,98,0.08)\" stroke=\"rgba(111,158,98,0.35)\" stroke-dasharray=\"4 3\"/>";
+  svg += "<text x=\"" + (gacpX0 + 8) + "\" y=\"" + (gacpY0 + 16) + "\" fill=\"#8fbf84\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.2\">GACP \u00dcRET\u0130M</text>";
+  svg += "<rect x=\"" + gmpX0 + "\" y=\"" + gmpY0 + "\" width=\"" + gmpW + "\" height=\"" + gmpH + "\" fill=\"rgba(91,138,168,0.08)\" stroke=\"rgba(91,138,168,0.4)\" stroke-dasharray=\"4 3\"/>";
+  svg += "<text x=\"" + (gmpX0 + 8) + "\" y=\"" + (gmpY0 + 16) + "\" fill=\"#8eb4c8\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.2\">GMP \u0130\u015eLEME</text>";
+
+  rooms.forEach(function (b) {
+    const rx = X(b.x), ry = Y(b.y), rw = S(b.w), rh = S(b.h);
+    svg += "<g>";
+    svg += "<rect x=\"" + rx + "\" y=\"" + ry + "\" width=\"" + rw + "\" height=\"" + rh + "\" fill=\"" + b.fill + "\" stroke=\"#0c1210\" stroke-width=\"1.4\" opacity=\"0.94\"/>";
+    const fs = rw < 70 ? 9 : 11;
+    svg += "<text x=\"" + (rx + 7) + "\" y=\"" + (ry + 16) + "\" fill=\"#0c1210\" font-size=\"" + fs + "\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(b.name) + "</text>";
+    if (rh > 28) {
+      svg += "<text x=\"" + (rx + 7) + "\" y=\"" + (ry + 30) + "\" fill=\"#0c1210\" font-size=\"10\" opacity=\"0.78\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(b.tag) + "</text>";
+    }
+    svg += "</g>";
+  });
+
+  const ax = X(propW - veg.w * 0.5);
+  const ay = Y(propY + propH);
+  const bx = X(flowerW * 0.5);
+  const by = Y(flowerY);
+  svg += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"#d4c49a\" stroke-width=\"1.4\" marker-end=\"url(#arr)\"/>";
+  const cx = X(flowerW);
+  const cy = Y(flowerY + flowerH * 0.45);
+  const dx = X(gmpX);
+  const dy = Y(gmpY + dryH * 0.45);
+  svg += "<line x1=\"" + cx + "\" y1=\"" + cy + "\" x2=\"" + dx + "\" y2=\"" + dy + "\" stroke=\"#d4c49a\" stroke-width=\"1.4\" marker-end=\"url(#arr)\"/>";
+
+  const barM = 10;
+  const barX = 36, barY = H - 48;
+  svg += "<rect x=\"" + barX + "\" y=\"" + barY + "\" width=\"" + (barM * PPM) + "\" height=\"5\" fill=\"#d4c49a\"/>";
+  svg += "<text x=\"" + barX + "\" y=\"" + (barY - 6) + "\" fill=\"#d4c49a\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">\u00d6L\u00c7EK  \u00b7  10 m = " + (barM * PPM) + " px  \u00b7  1 m = " + PPM + " px</text>";
+  svg += "<text x=\"" + barX + "\" y=\"" + (barY + 22) + "\" fill=\"#8b9a90\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">Konsept kat plan\u0131 \u00b7 in\u015faat projesi de\u011fildir \u00b7 mahal alanlar\u0131 senaryo algoritmas\u0131ndan</text>";
+
+  const lx = W - 250, ly = padT;
+  svg += "<text x=\"" + lx + "\" y=\"" + ly + "\" fill=\"#d4c49a\" font-size=\"11\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1\">MAHAL CETVEL\u0130</text>";
+  const lines = [
+    "\u00c7i\u00e7ek odas\u0131: " + s.flowerRooms + " \u00d7 " + Math.round(s.roomM2) + " m\u00B2",
+    "Kurutma: " + s.dryRooms + " \u00d7 " + Math.round(L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat",
+    "Veg / pre-veg: " + Math.round(m.veg || 0) + " / " + Math.round(m.preVeg || 0) + " m\u00B2",
+    "Ana\u00e7: " + Math.round((m.motherProd || 0) + (m.motherBank || 0)) + " m\u00B2",
+    "Trim / paket: " + Math.round(L.trimM2 || 0) + " / " + Math.round(L.packM2 || 0) + " m\u00B2",
+    hasEx ? ("Ekstraksiyon: " + Math.round(ex.m2) + " m\u00B2") : "Ekstraksiyon: yok",
+    "GACP / GMP: " + Math.round(m.gacpM2) + " / " + Math.round(m.gmpM2) + " m\u00B2",
+    "Toplam kapal\u0131: " + Math.round(m.totalBuilt) + " m\u00B2",
+    "Y\u0131ll\u0131k bitki: " + fmt(s.plantsYear),
+    "CAPEX: " + eur(m.capex)
+  ];
+  if (s.alloc && s.alloc.rows && s.alloc.rows.length) {
+    lines.push("Genetik:");
+    s.alloc.rows.forEach(function (r) {
+      lines.push("  " + r.c.name.split(" ")[0] + " \u00b7 " + r.rooms + " oda");
     });
   }
-  const blocks = [
-    { id: "Ofis / QMS", x: 40, y: 48, w: 130, h: 90, fill: "#c9b56a", tag: "\u0130dare" },
-    { id: "GACP giri\u015f", x: 180, y: 48, w: 70, h: 90, fill: "#a34a3a", tag: "Ak\u0131\u015f" },
-    { id: "GMP giri\u015f", x: 258, y: 48, w: 70, h: 90, fill: "#a34a3a", tag: "Ak\u0131\u015f" },
-    { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", tag: m2(m.layout.trimM2) },
-    { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", tag: m2(m.layout.packM2) }
-  ].concat(gmpDry).concat([
-    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", tag: m2(m.motherProd) },
-    { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 48, fill: "#587c4e", tag: "GACP" },
-    { id: "Karantina", x: 168, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
-    { id: "Doku k\u00fclt.", x: 220, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
-    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", tag: m2(m.layout.cuttingsM2) },
-    { id: "Pre-veg", x: 394, y: 168, w: 120, h: 100, fill: "#88b57a", tag: m2(m.preVeg) },
-    { id: "Veg", x: 522, y: 168, w: 150, h: 100, fill: "#88b57a", tag: m2(m.veg) },
-    {
-      id: (m.extract && m.extract.m2) ? "Ekstraksiyon" : "Trim at\u0131k",
-      x: 980, y: 168, w: 150, h: 100,
-      fill: (m.extract && m.extract.m2) ? "#8b6bb0" : "#2a332e",
-      tag: (m.extract && m.extract.m2) ? (m.extract.m2 + " m\u00B2 \u00b7 " + fmt(m.extract.kgDay, 1) + " kg/g") : "\u2014"
-    }
-  ]).concat(rooms);
-  const drawn = blocks;
-  const svg = drawn.map((b) =>
-    "<g class=\"room\"><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
-    "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 22) + "\" fill=\"#0c1210\" font-size=\"12\" font-weight=\"600\">" + b.id + "</text>" +
-    "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 40) + "\" fill=\"#0c1210\" font-size=\"11\" opacity=\"0.75\">" + b.tag + "</text></g>"
-  ).join("");
-  el("plan").innerHTML =
-    "<svg class=\"plan\" viewBox=\"0 0 " + W + " " + H + "\" xmlns=\"http://www.w3.org/2000/svg\">" +
-    "<rect x=\"16\" y=\"16\" width=\"" + (W - 32) + "\" height=\"" + (H - 32) + "\" rx=\"18\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>" +
-    "<text x=\"40\" y=\"40\" fill=\"#d4c49a\" font-size=\"12\" letter-spacing=\"2\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>" +
-    svg + "</svg>";
+  lines.forEach(function (line, i) {
+    svg += "<text x=\"" + lx + "\" y=\"" + (ly + 18 + i * 15) + "\" fill=\"#cfc6a8\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(line) + "</text>";
+  });
+
+  const defs = "<defs><marker id=\"arr\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#d4c49a\"/></marker></defs>";
+  return "<svg class=\"plan\" xmlns=\"http://www.w3.org/2000/svg\" width=\"" + W + "\" height=\"" + H + "\" viewBox=\"0 0 " + W + " " + H + "\">" + defs + svg + "</svg>";
+}
+
+function downloadConceptPng() {
+  const svg = el("plan") && el("plan").querySelector("svg");
+  if (!svg) return;
+  const W = Math.max(800, parseInt(svg.getAttribute("width") || "1600", 10));
+  const H = Math.max(500, parseInt(svg.getAttribute("height") || "900", 10));
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("width", String(W));
+  clone.setAttribute("height", String(H));
+  const xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  img.onload = function () {
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#0c1210";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(function (blob) {
+      if (!blob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "tesis-konsept-dizayn.png";
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2500);
+    }, "image/png");
+  };
+  img.onerror = function () {
+    const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tesis-konsept-dizayn.svg";
+    a.click();
+  };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+}
+
+function renderPlan(m, s, currentWeek) {
+  el("plan").innerHTML = buildConceptSvg(m, s, currentWeek);
 }
 
 function renderCalendar(m) {
@@ -1195,5 +1408,6 @@ window.addEventListener("DOMContentLoaded", function () {
   });
   el("playBtn").addEventListener("click", play);
   el("exportBtn").addEventListener("click", exportJson);
+  if (el("conceptBtn")) el("conceptBtn").addEventListener("click", downloadConceptPng);
   applyPreset("dengeli");
 });
