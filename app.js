@@ -1098,8 +1098,8 @@ function renderLabels(s, m) {
     dryCleanDays: s.dryCleanDays + " g\u00fcn",
     yieldG: s.yieldG + " g",
     genetics: String(s.genetics),
-    priceKg: eur(s.priceKg),
-    extractPriceKg: eur(s.extractPriceKg || 0),
+    priceKg: eur(s.priceKg) + "/kg",
+    extractPriceKg: eur(s.extractPriceKg || 0) + "/kg",
     saleablePct: "%" + fmt(s.saleablePct * 100, 0),
     extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
     dryTiers: String(s.dryTiers || 3) + " kat"
