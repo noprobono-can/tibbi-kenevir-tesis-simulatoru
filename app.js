@@ -2,22 +2,22 @@ const PRESETS = {
   pilot: {
     plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 65, yieldSkill: "starter", genetics: 3, priceKg: 3500, extractPriceKg: 4200, saleablePct: 80, extraction: false, dryTiers: 3
+    dryDays: 14, dryCleanDays: 7, yieldG: 65, yieldSkill: "starter", genetics: 3, priceKg: 3500, extractPriceKg: 4200, saleablePct: 80, extraction: false, dryTiers: 3, trimM2: 24, packM2: 22
   },
   dengeli: {
     plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 105, yieldSkill: "mid", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 85, extraction: true, dryTiers: 3
+    dryDays: 14, dryCleanDays: 7, yieldG: 105, yieldSkill: "mid", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 85, extraction: true, dryTiers: 3, trimM2: 24, packM2: 30
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3
+    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 28, packM2: 61
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 5, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 5, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3
+    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 5, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 24, packM2: 89
   }
 };
 
@@ -51,6 +51,18 @@ const OPEX_U = {
   ipmEurCycle: 150, ppeEurRoomMonth: 50, labEurRoomMonth: 30,
   dryingEurHarvest: 200, labelEurHarvest: 20,
   activeRatio: 0.85
+};
+
+const GMP_FINISH = {
+  trimM2PerSt: 6,
+  packM2PerSt: 5,
+  trimKgDay: 6,
+  packKgDay: 8,
+  workDays: 5,
+  trimVaultPerM2: 1.8,
+  packVaultPerM2: 3,
+  trimVaultPerSt: 12,
+  packVaultPerSt: 16
 };
 
 function cloneBufferFor(saleable) {
@@ -427,8 +439,8 @@ function layoutFromFlower(s, stats) {
     cuttingsM2: Math.max(16, Math.round(flower * (rootDays / flowerDays) / 2.6)),
     preVegM2: Math.max(20, Math.round(flower * (preVegDays / flowerDays) / 1.8)),
     vegM2: Math.max(28, Math.round(flower * (vegDays / flowerDays) / 1.45)),
-    trimM2: Math.max(24, Math.round(room * 0.35)),
-    packM2: Math.max(18, Math.round(s.flowerRooms * 6 + flower * 0.02)),
+    trimM2: Math.max(18, Math.round(s.trimM2 != null ? s.trimM2 : Math.max(24, room * 0.35))),
+    packM2: Math.max(12, Math.round(s.packM2 != null ? s.packM2 : Math.max(18, s.flowerRooms * 6 + flower * 0.02))),
     flowerDays: flowerDays,
     vegDays: vegDays,
     preVegDays: preVegDays,
@@ -611,6 +623,42 @@ function bindPlanClicks() {
   });
 }
 
+function isPhoneView() {
+  return document.documentElement.getAttribute("data-view") === "phone";
+}
+
+function readStoredView() {
+  try {
+    const v = localStorage.getItem("tkts-view");
+    if (v === "phone" || v === "desktop") return v;
+  } catch (e) {}
+  return window.matchMedia("(max-width: 720px)").matches ? "phone" : "desktop";
+}
+
+function applyView(view, persist) {
+  const v = view === "phone" ? "phone" : "desktop";
+  document.documentElement.setAttribute("data-view", v);
+  document.documentElement.classList.toggle("view-phone", v === "phone");
+  document.documentElement.classList.toggle("view-desktop", v !== "phone");
+  document.querySelectorAll(".view-switch [data-view]").forEach(function (b) {
+    b.classList.toggle("on", b.getAttribute("data-view") === v);
+  });
+  if (persist !== false) {
+    try { localStorage.setItem("tkts-view", v); } catch (e) {}
+  }
+  if (lastM && lastS) {
+    renderKpis(lastM, lastS);
+    renderPlan(lastM, lastS, week);
+    renderCalendar(lastM);
+  }
+}
+
+function bindViewSwitch() {
+  document.querySelectorAll(".view-switch [data-view]").forEach(function (b) {
+    b.addEventListener("click", function () { applyView(b.getAttribute("data-view")); });
+  });
+}
+
 function bindSideTabs() {
   const tabs = document.querySelectorAll(".side-tabs [data-tab]");
   if (!tabs.length) return;
@@ -635,7 +683,7 @@ function resetRoomDens() {
   render();
 }
 
-function computeOpex(s, plantsYear, harvestsYear) {
+function computeOpex(s, plantsYear, harvestsYear, kgGross) {
   const U = OPEX_U;
   const rooms = s.flowerRooms;
   const area = s.flowerArea;
@@ -663,9 +711,12 @@ function computeOpex(s, plantsYear, harvestsYear) {
   const cipH = 52 * U.cipHRoomWeek * rooms;
   const gmpH = harvestsYear * U.gmpHHarvest;
   const disposalH = (mixL / 1000) * U.disposalHM3;
-  const laborH = potPrepH + transplantH + dripperH + manualEcH + calibH + cipH + gmpH + disposalH;
+  const trimH = (kgGross || 0) / (GMP_FINISH.trimKgDay / 8);
+  const packH = ((kgGross || 0) * (1 - (s.extractPct || 0))) / (GMP_FINISH.packKgDay / 8);
+  const laborH = potPrepH + transplantH + dripperH + manualEcH + calibH + cipH + gmpH + disposalH + trimH + packH;
   const labor = potPrepH * U.junior + transplantH * U.junior + dripperH * U.junior + manualEcH * U.junior
-    + calibH * U.senior + cipH * U.junior + gmpH * U.manager + disposalH * U.junior;
+    + calibH * U.senior + cipH * U.junior + gmpH * U.manager + disposalH * U.junior
+    + trimH * U.junior + packH * U.junior;
 
   const dripper = pots * U.dripperPerPlant * U.dripperEur;
   const stake = pots * U.stakePerPlant * U.stakeEur;
@@ -683,7 +734,8 @@ function computeOpex(s, plantsYear, harvestsYear) {
     substrate: substrate, waterFert: waterFert, labor: labor, materials: materials, total: total,
     laborH: laborH, water: water, fert: fert, acid: acid, auto: auto,
     dripper: dripper, stake: stake, ipm: ipm, ppe: ppe, lab: lab, drying: drying, label: label,
-    clonesWeek: clonesWeek, mixL: mixL, brutL: brutL
+    clonesWeek: clonesWeek, mixL: mixL, brutL: brutL,
+    trimH: trimH, packH: packH
   };
 }
 
@@ -779,6 +831,8 @@ function readState() {
     roomM2: flowerArea / flowerRooms,
     dryRooms: Math.max(1, +el("dryRooms").value),
     dryTiers: Math.max(1, Math.min(3, +el("dryTiers").value)),
+    trimM2: el("trimM2") ? Math.max(18, +el("trimM2").value) : Math.max(24, Math.round((flowerArea / flowerRooms) * 0.35)),
+    packM2: el("packM2") ? Math.max(12, +el("packM2").value) : Math.max(18, Math.round(flowerRooms * 6 + flowerArea * 0.02)),
     flowerRooms: flowerRooms,
     flowerDays: +el("flowerDays").value,
     vegDays: +el("vegDays").value,
@@ -880,6 +934,7 @@ function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
   function place(limit) {
     const occDays = Array.from({ length: limit }, function () { return Array(days).fill(null); });
     const kindDays = Array.from({ length: limit }, function () { return Array(days).fill("idle"); });
+    const jobs = [];
     let unassigned = 0;
     ordered.forEach(function (ev) {
       const tag = "C" + ev.room;
@@ -896,6 +951,7 @@ function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
         unassigned += 1;
         return;
       }
+      jobs.push({ room: ev.room, w: ev.w, dryIdx: placed, startDay: start, dryEndDay: start + dryD });
       for (let i = 0; i < dryD; i++) {
         const t = (start + i) % days;
         occDays[placed][t] = tag;
@@ -927,7 +983,7 @@ function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
         occ[d][w] = tag;
       }
     }
-    return { occ: occ, labels: labels, unassigned: unassigned, peak: peak };
+    return { occ: occ, labels: labels, unassigned: unassigned, peak: peak, jobs: jobs };
   }
 
   let drySuggest = 1;
@@ -943,8 +999,220 @@ function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
     unassigned: used.unassigned,
     drySuggest: drySuggest,
     peakDry: used.peak,
-    events: ordered
+    events: ordered,
+    jobs: used.jobs || []
   };
+}
+
+function finishTrimSpec(m2) {
+  const area = Math.max(12, Math.round(m2 || 0));
+  const stations = Math.max(1, Math.floor(area / GMP_FINISH.trimM2PerSt));
+  return {
+    m2: area,
+    stations: stations,
+    kgDay: stations * GMP_FINISH.trimKgDay,
+    vaultKg: Math.round(Math.max(stations * GMP_FINISH.trimVaultPerSt, area * GMP_FINISH.trimVaultPerM2))
+  };
+}
+
+function finishPackSpec(m2) {
+  const area = Math.max(12, Math.round(m2 || 0));
+  const stations = Math.max(1, Math.floor(area / GMP_FINISH.packM2PerSt));
+  return {
+    m2: area,
+    stations: stations,
+    kgDay: stations * GMP_FINISH.packKgDay,
+    vaultKg: Math.round(Math.max(stations * GMP_FINISH.packVaultPerSt, area * GMP_FINISH.packVaultPerM2))
+  };
+}
+
+function simulatePostDry(jobs, trimSp, packSp) {
+  const days = 364;
+  const arrivals = (jobs || []).map(function (j) {
+    return {
+      day: ((j.dryEndDay % days) + days) % days,
+      room: j.room,
+      kg: Math.max(0, j.kg || 0),
+      packKg: Math.max(0, j.packKg != null ? j.packKg : (j.kg || 0))
+    };
+  }).filter(function (a) { return a.kg > 0.01; });
+  const annualKg = arrivals.reduce(function (n, a) { return n + a.kg; }, 0);
+  const packAnnual = arrivals.reduce(function (n, a) { return n + a.packKg; }, 0);
+  const maxBatchKg = arrivals.reduce(function (n, a) { return Math.max(n, a.kg); }, 0);
+  const workFrac = GMP_FINISH.workDays / 7;
+  const avgFail = trimSp.kgDay * workFrac * days + 0.01 < annualKg;
+  const packAvgFail = packSp.kgDay * workFrac * days + 0.01 < packAnnual;
+  let tooBig = 0;
+  arrivals.forEach(function (a) {
+    if (a.kg > trimSp.vaultKg + 1) tooBig += 1;
+  });
+
+  let pending = [];
+  let trimQ = [];
+  let packGate = [];
+  let packQ = [];
+  const trimKg = Array(days).fill(0);
+  const packKgD = Array(days).fill(0);
+  const holdN = Array(days).fill(0);
+  let peakTrimQ = 0, peakPackQ = 0, maxHold = 0, holdLots = 0;
+  let maxTrimWait = 0, maxPackWait = 0;
+  const endWip = [0, 0, 0];
+
+  function vaultTrim() {
+    return trimQ.reduce(function (n, l) { return n + l.trimLeft; }, 0)
+      + packGate.reduce(function (n, l) { return n + l.packLeft; }, 0);
+  }
+  function vaultPack() {
+    return packQ.reduce(function (n, l) { return n + l.packLeft; }, 0);
+  }
+  function wipAll() {
+    let n = vaultTrim() + vaultPack();
+    pending.forEach(function (l) { n += l.kg; });
+    return n;
+  }
+
+  const byDay = Array.from({ length: days }, function () { return []; });
+  arrivals.forEach(function (a) { byDay[a.day].push(a); });
+  const horizon = days * 3;
+  for (let t = 0; t < horizon; t++) {
+    const d = t % days;
+    const year = Math.floor(t / days);
+    const measure = year === 2;
+    if (measure && d === 0) {
+      peakTrimQ = 0; peakPackQ = 0; maxHold = 0; holdLots = 0; maxTrimWait = 0; maxPackWait = 0;
+      for (let i = 0; i < days; i++) { trimKg[i] = 0; packKgD[i] = 0; holdN[i] = 0; }
+    }
+    const work = (t % 7) < GMP_FINISH.workDays;
+    byDay[d].forEach(function (a) {
+      pending.push({
+        room: a.room, kg: a.kg, packKg: a.packKg,
+        trimLeft: a.kg, packLeft: a.packKg,
+        dryEnd: t, released: -1, trimStart: -1, trimEnd: -1, packStart: -1, packEnd: -1
+      });
+    });
+    let i = 0;
+    while (i < pending.length) {
+      const l = pending[i];
+      if (vaultTrim() + l.kg <= trimSp.vaultKg + 1) {
+        l.released = t;
+        l.holdDays = t - l.dryEnd;
+        if (l.holdDays < 0) l.holdDays = 0;
+        if (measure) {
+          if (l.holdDays > maxHold) maxHold = l.holdDays;
+          if (l.holdDays > 0) holdLots += 1;
+        }
+        trimQ.push(l);
+        pending.splice(i, 1);
+      } else {
+        if (measure) holdN[d] += 1;
+        i += 1;
+      }
+    }
+    if (work) {
+      let cap = trimSp.kgDay;
+      while (cap > 1e-6 && trimQ.length) {
+        const l = trimQ[0];
+        if (l.trimStart < 0) l.trimStart = t;
+        const take = Math.min(cap, l.trimLeft);
+        l.trimLeft -= take;
+        cap -= take;
+        if (measure) trimKg[d] += take;
+        if (l.trimLeft <= 1e-6) {
+          l.trimLeft = 0;
+          l.trimEnd = t;
+          if (measure && l.trimEnd - l.dryEnd > maxTrimWait) maxTrimWait = l.trimEnd - l.dryEnd;
+          trimQ.shift();
+          if (l.packKg > 0.05) packGate.push(l);
+          else l.packEnd = t;
+        }
+      }
+      i = 0;
+      while (i < packGate.length) {
+        const l = packGate[i];
+        if (vaultPack() + l.packKg <= packSp.vaultKg + 1) {
+          packQ.push(l);
+          packGate.splice(i, 1);
+        } else i += 1;
+      }
+      cap = packSp.kgDay;
+      while (cap > 1e-6 && packQ.length) {
+        const l = packQ[0];
+        if (l.packStart < 0) l.packStart = t;
+        const take = Math.min(cap, l.packLeft);
+        l.packLeft -= take;
+        cap -= take;
+        if (measure) packKgD[d] += take;
+        if (l.packLeft <= 1e-6) {
+          l.packLeft = 0;
+          l.packEnd = t;
+          if (measure && l.packStart >= 0 && l.trimEnd >= 0 && l.packStart - l.trimEnd > maxPackWait) {
+            maxPackWait = l.packStart - l.trimEnd;
+          }
+          packQ.shift();
+        }
+      }
+    }
+    if (measure) {
+      if (vaultTrim() > peakTrimQ) peakTrimQ = vaultTrim();
+      if (vaultPack() > peakPackQ) peakPackQ = vaultPack();
+    }
+    if (d === days - 1) endWip[year] = wipAll();
+  }
+
+  const diverging = endWip[2] > endWip[1] + Math.max(8, annualKg * 0.05);
+  const trimWeeks = [];
+  const packWeeks = [];
+  for (let w = 0; w < 52; w++) {
+    let kt = 0, kp = 0, hd = 0;
+    for (let d = 0; d < 7; d++) {
+      const idx = w * 7 + d;
+      kt += trimKg[idx];
+      kp += packKgD[idx];
+      hd += holdN[idx];
+    }
+    trimWeeks.push(kt > 0.2 ? "trim" : (hd > 0 ? "hold" : "idle"));
+    packWeeks.push(kp > 0.2 ? "pack" : "idle");
+  }
+  return {
+    annualKg: annualKg,
+    maxBatchKg: maxBatchKg,
+    avgFail: avgFail,
+    packAvgFail: packAvgFail,
+    diverging: diverging,
+    tooBig: tooBig,
+    peakTrimQ: peakTrimQ,
+    peakPackQ: peakPackQ,
+    maxHold: maxHold,
+    holdLots: holdLots,
+    maxTrimWait: maxTrimWait,
+    maxPackWait: maxPackWait,
+    trimWeeks: trimWeeks,
+    packWeeks: packWeeks,
+    endWip: endWip[2]
+  };
+}
+
+function postDryClears(r) {
+  return !!(r && !r.avgFail && !r.packAvgFail && !r.diverging && !r.tooBig && r.maxHold <= 2 && r.maxPackWait <= 5);
+}
+
+function suggestFinishM2(jobs) {
+  if (!jobs || !jobs.length) return { trimNeed: 24, packNeed: 18 };
+  let trimNeed = 240;
+  for (let m2 = 18; m2 <= 240; m2 += 6) {
+    if (postDryClears(simulatePostDry(jobs, finishTrimSpec(m2), finishPackSpec(280)))) {
+      trimNeed = m2;
+      break;
+    }
+  }
+  let packNeed = 200;
+  for (let m2 = 12; m2 <= 200; m2 += 5) {
+    if (postDryClears(simulatePostDry(jobs, finishTrimSpec(trimNeed), finishPackSpec(m2)))) {
+      packNeed = m2;
+      break;
+    }
+  }
+  return { trimNeed: trimNeed, packNeed: packNeed };
 }
 
 function buildCalendar(s) {
@@ -981,7 +1249,8 @@ function buildCalendar(s) {
     gmpIdleWeeks: idleWeeks.filter(Boolean).length,
     harvestsByRoom: plan.byRoom,
     harvestEvents: plan.events.length,
-    harvestWant: plan.want
+    harvestWant: plan.want,
+    jobs: assigned.jobs || []
   };
 }
 
@@ -1029,6 +1298,24 @@ function simulate(s) {
   const crudeFrac = stats && stats.extractY ? stats.extractY : 0.12;
   const ex = sizeExtract(extractFeed, crudeFrac);
   const layout = layoutFromFlower(s, stats);
+  const finishJobs = (cal.jobs || []).map(function (j) {
+    const spec = roomModels[j.room - 1];
+    const kg = spec ? spec.kgHarvest : 0;
+    return {
+      room: j.room, w: j.w, dryIdx: j.dryIdx,
+      startDay: j.startDay, dryEndDay: j.dryEndDay,
+      kg: kg,
+      packKg: kg * (1 - (s.extractPct || 0))
+    };
+  });
+  const trimSp = finishTrimSpec(layout.trimM2);
+  const packSp = finishPackSpec(layout.packM2);
+  const post = simulatePostDry(finishJobs, trimSp, packSp);
+  const need = suggestFinishM2(finishJobs);
+  post.trimNeed = need.trimNeed;
+  post.packNeed = need.packNeed;
+  cal.trimWeeks = post.trimWeeks;
+  cal.packWeeks = post.packWeeks;
   const flowerRevenue = kgFlowerSold * s.priceKg;
   const extractSoldKg = ex.productKg != null ? ex.productKg : (ex.crudeKg || 0);
   const extractRevenue = extractSoldKg * (s.extractPriceKg || 0);
@@ -1053,7 +1340,7 @@ function simulate(s) {
   const extractCapex = ex.capex;
   const stability = (mix.length || s.genetics) * 8000;
   const capex = gacpCapex + gmpCapex + officeM2 * 1400 + extractCapex + stability;
-  const ox = computeOpex(s, plantsYear, harvestsYear);
+  const ox = computeOpex(s, plantsYear, harvestsYear, kgGross);
   ox.extract = ex.opex;
   ox.total += ex.opex;
   const opexYear = ox.total;
@@ -1120,6 +1407,18 @@ function simulate(s) {
   } else {
     alerts.push({ t: "ok", m: "Kurutma boyutu: \u00e7i\u00e7ek odas\u0131 " + Math.round(s.roomM2) + " m\u00B2 \u2192 " + layout.tiers + " katta taban " + layout.dryRoomM2 + " m\u00B2 (\u2265 oda/" + layout.tiers + "). As\u0131 e\u015fde\u011feri " + layout.hangEq + " m\u00B2." });
   }
+  alerts.push({ t: "ok", m: "Kurutma \u00e7\u0131k\u0131\u015f\u0131 trim \u2192 paket kuyru\u011funa gider (FIFO, 5 g\u00fcn/hafta). Trim " + trimSp.stations + " istasyon \u00d7 " + trimSp.kgDay + " kg/vardiya, kasa " + trimSp.vaultKg + " kg. Paket " + packSp.stations + " istasyon \u00d7 " + packSp.kgDay + " kg/vardiya, kasa " + packSp.vaultKg + " kg. Ekstrakt pay\u0131 paketlemeye girmez." });
+  if (post.tooBig) {
+    alerts.push({ t: "bad", m: "Bir \u00e7i\u00e7ek hasad\u0131 " + fmt(post.maxBatchKg, 0) + " kg; trim kasas\u0131 yaln\u0131z " + trimSp.vaultKg + " kg. Bu kadar \u00fcr\u00fcn k\u00fc\u00e7\u00fck trim odas\u0131na s\u0131\u011fmaz. Trim en az " + post.trimNeed + " m\u00B2 olmal\u0131." });
+  } else if (post.avgFail || post.packAvgFail || post.diverging) {
+    alerts.push({ t: "bad", m: "Y\u0131ll\u0131k " + fmt(post.annualKg, 0) + " kg kuru \u00e7i\u00e7ek bu hattan ge\u00e7emez (trim " + fmt(trimSp.kgDay * 5 / 7, 1) + " / paket " + fmt(packSp.kgDay * 5 / 7, 1) + " kg/takvim g\u00fcn\u00fc). \u00d6nerilen trim " + post.trimNeed + " m\u00B2, paket " + post.packNeed + " m\u00B2." });
+  } else if (post.maxHold > 3) {
+    alerts.push({ t: "bad", m: "Kurutma bitti ama trim/paket kasas\u0131 dolu \u2014 \u00fcr\u00fcn kuru odada tepe " + post.maxHold + " g\u00fcn bekler. Temizlik gecikir, sonraki hasat kilitlenir. Trim " + layout.trimM2 + " / paket " + layout.packM2 + " m\u00B2 yetersiz; \u00f6nerilen " + post.trimNeed + " / " + post.packNeed + " m\u00B2." });
+  } else if (layout.trimM2 < post.trimNeed - 1 || layout.packM2 < post.packNeed - 1) {
+    alerts.push({ t: "warn", m: "Trim " + layout.trimM2 + " m\u00B2 / paket " + layout.packM2 + " m\u00B2 tepe y\u00fcke dar (kuyruk " + fmt(post.peakTrimQ, 0) + " / " + fmt(post.peakPackQ, 0) + " kg). Rahat ak\u0131\u015f: trim " + post.trimNeed + " m\u00B2, paket " + post.packNeed + " m\u00B2." });
+  } else {
+    alerts.push({ t: "ok", m: "Trim/paket yeterli: tepe kuyruk " + fmt(post.peakTrimQ, 0) + " kg trim / " + fmt(post.peakPackQ, 0) + " kg paket. Kurutma \u00e7\u0131k\u0131\u015f\u0131 bekletmeden al\u0131n\u0131yor." });
+  }
   alerts.push({ t: "ok", m: "Yerle\u015fim: veg / pre-veg / \u00e7elik alan\u0131 = \u00e7i\u00e7ek m\u00B2 \u00d7 (a\u015fama s\u00fcresi / \u00e7i\u00e7ek s\u00fcresi) / yo\u011funluk katsay\u0131s\u0131. Ana\u00e7 genetik say\u0131s\u0131yla b\u00fcy\u00fcr." });
   if (s.alloc && s.alloc.rows && s.alloc.rows.length) {
     const dist = s.alloc.rows.map(function (r) { return r.c.name + " " + r.rooms + " oda"; }).join(", ");
@@ -1157,7 +1456,8 @@ function simulate(s) {
     cycleFlower: cycleFlower, cal: cal, alerts: alerts,
     layout: layout, extract: ex, kgFlowerSold: kgFlowerSold, extractFeed: extractFeed, yieldUse: yieldUse,
     flowerRevenue: flowerRevenue, extractRevenue: extractRevenue, kgById: kgById,
-    stats: stats, flowerDaysLong: flowerDaysLong, roomModels: roomModels, gM2Avg: gM2Avg, yieldRef: yieldRef
+    stats: stats, flowerDaysLong: flowerDaysLong, roomModels: roomModels, gM2Avg: gM2Avg, yieldRef: yieldRef,
+    postDry: post, trimSpec: trimSp, packSpec: packSp
   };
 }
 
@@ -1172,7 +1472,8 @@ function renderKpis(m, s) {
   const items = [
     ["Y\u0131ll\u0131k bitki", kpiMain(fmt(m.plantsYear), ""), fmt(m.plantsInFlower, 0) + " hasatta \u00b7 " + fmt(m.harvestsYear, 0) + " hasat/y\u0131l", ""],
     ["Oda alan\u0131", kpiMain(fmt(s.roomM2, 0), "m\u00B2"), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
-    ["Kurutma", kpiMain(String(s.dryRooms), ""), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
+    ["Kurutma", kpiMain(String(s.dryRooms), ""), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 trim kuyruk " + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + " kg \u00b7 trim/paket " + ((m.postDry && m.postDry.trimNeed) || 0) + "/" + ((m.postDry && m.postDry.packNeed) || 0) + " m\u00B2",
+      (m.cal.unassigned || (m.postDry && (m.postDry.tooBig || m.postDry.avgFail || m.postDry.diverging || (m.postDry.maxHold > 3)))) ? "warn" : ""],
     ["Kuru \u00e7i\u00e7ek", kpiMain(fmt(m.kgYear, 0), "kg"), fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg", ""],
     ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0), ""],
     ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
@@ -1331,8 +1632,8 @@ function buildConceptSvg(m, s, currentWeek) {
   const dryW = dCols * dry.w + (dCols - 1) * gap;
   const dryH = dRows * dry.h + (dRows - 1) * gap;
   let py = gmpY + dryH + gap;
-  add("Trim", gmpX, py, trim.w, trim.h, "#4d738a", Math.round(L.trimM2 || trim.a) + " m\u00B2", "gmp");
-  add("Paket", gmpX + trim.w + gap, py, pack.w, pack.h, "#4d738a", Math.round(L.packM2 || pack.a) + " m\u00B2", "gmp");
+  add("Trim", gmpX, py, trim.w, trim.h, "#4d738a", Math.round(L.trimM2 || trim.a) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g", "gmp");
+  add("Paket", gmpX + trim.w + gap, py, pack.w, pack.h, "#4d738a", Math.round(L.packM2 || pack.a) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g", "gmp");
   py += Math.max(trim.h, pack.h) + gap;
   if (hasEx) {
     add("Ekstraksiyon", gmpX, py, Math.max(ext.w, dryW), ext.h, "#8b6bb0", Math.round(ex.m2) + " m\u00B2 \u00b7 " + fmt(ex.kgDay, 1) + " kg/g", "ext");
@@ -1459,7 +1760,7 @@ function buildConceptSvg(m, s, currentWeek) {
     "Kurutma: " + s.dryRooms + " \u00d7 " + Math.round(L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat",
     "Veg / pre-veg: " + Math.round(m.veg || 0) + " / " + Math.round(m.preVeg || 0) + " m\u00B2",
     "Ana\u00e7: " + Math.round((m.motherProd || 0) + (m.motherBank || 0)) + " m\u00B2",
-    "Trim / paket: " + Math.round(L.trimM2 || 0) + " / " + Math.round(L.packM2 || 0) + " m\u00B2",
+    "Trim / paket: " + Math.round(L.trimM2 || 0) + " / " + Math.round(L.packM2 || 0) + " m\u00B2 (ihtiya\u00e7 " + ((m.postDry && m.postDry.trimNeed) || 0) + " / " + ((m.postDry && m.postDry.packNeed) || 0) + ")",
     hasEx ? ("Ekstraksiyon: " + Math.round(ex.m2) + " m\u00B2") : "Ekstraksiyon: yok",
     "GACP / GMP: " + Math.round(m.gacpM2) + " / " + Math.round(m.gmpM2) + " m\u00B2",
     "Toplam kapal\u0131: " + Math.round(m.totalBuilt) + " m\u00B2",
@@ -1560,7 +1861,7 @@ function wrapPlanText(str, widthPx, fontSize) {
 }
 
 function inkForFill(fill) {
-  const dark = { "#4a5550": 1, "#2e3c42": 1, "#243038": 1, "#2a332e": 1, "#3a2c24": 1, "#6a4634": 1, "#2a4a58": 1, "#a34a3a": 1, "#8a3a42": 1 };
+  const dark = { "#4a5550": 1, "#2e3c42": 1, "#243038": 1, "#2a332e": 1, "#3a2c24": 1, "#6a4634": 1, "#2a4a58": 1, "#a34a3a": 1, "#8a3a42": 1, "#a56a4a": 1, "#5d8a9c": 1, "#3d7a6a": 1 };
   return dark[fill] ? "#eef3ec" : "#0c1210";
 }
 
@@ -1579,23 +1880,24 @@ function splitRow(total, weights, gap) {
 }
 
 function renderPlan(m, s, currentWeek) {
-  const W = 1240;
-  const pad = 18;
-  const zoneGap = 12;
+  const phone = isPhoneView();
+  const W = phone ? 392 : 1240;
+  const pad = phone ? 12 : 18;
+  const zoneGap = phone ? 10 : 12;
   const boxGap = 8;
   const innerW = W - pad * 2;
-  const gacpW = Math.round(innerW * 0.46);
-  const gmpW = Math.round(innerW * 0.32);
-  const officeW = innerW - gacpW - gmpW - zoneGap * 2;
+  const gacpW = phone ? innerW : Math.round(innerW * 0.46);
+  const gmpW = phone ? innerW : Math.round(innerW * 0.32);
+  const officeW = phone ? innerW : (innerW - gacpW - gmpW - zoneGap * 2);
   const gacpX = pad;
-  const gmpX = gacpX + gacpW + zoneGap;
-  const officeX = gmpX + gmpW + zoneGap;
-  const titleY = 28;
-  const zoneY = 40;
+  const gmpX = phone ? pad : (gacpX + gacpW + zoneGap);
+  const officeX = phone ? pad : (gmpX + gmpW + zoneGap);
+  const titleY = phone ? 22 : 28;
+  const zoneY = phone ? 32 : 40;
   const labelH = 16;
-  const zonePad = 10;
-  const row1H = 56;
-  const row2H = 72;
+  const zonePad = phone ? 8 : 10;
+  const row1H = phone ? 52 : 56;
+  const row2H = phone ? 64 : 72;
   const L = m.layout || {};
   const fCount = Math.max(1, s.flowerRooms);
   const gacpInnerX = gacpX + zonePad;
@@ -1604,24 +1906,29 @@ function renderPlan(m, s, currentWeek) {
   const gmpInnerW = gmpW - zonePad * 2;
   const officeInnerX = officeX + zonePad;
   const officeInnerW = officeW - zonePad * 2;
-  const y0 = zoneY + labelH;
-  const fCols = Math.min(fCount, Math.max(1, Math.floor((gacpInnerW + boxGap) / (88 + boxGap))));
+  const gacpTop = zoneY;
+  const gacpY0 = gacpTop + labelH;
+  const fCols = Math.min(fCount, Math.max(1, Math.floor((gacpInnerW + boxGap) / ((phone ? 78 : 88) + boxGap))));
   const flowerW = Math.floor((gacpInnerW - (fCols - 1) * boxGap) / fCols);
-  const flowerH = Math.max(70, Math.min(92, Math.round(flowerW * 0.9)));
+  const flowerH = Math.max(phone ? 64 : 70, Math.min(92, Math.round(flowerW * 0.9)));
   const fRows = Math.ceil(fCount / fCols);
-  const flowerY = y0 + row1H + boxGap + row2H + boxGap;
-  const gacpH = flowerY + fRows * (flowerH + boxGap) - boxGap + zonePad - zoneY;
+  const flowerY = gacpY0 + row1H + boxGap + row2H + boxGap;
+  const gacpH = flowerY + fRows * (flowerH + boxGap) - boxGap + zonePad - gacpTop;
+  const gmpTop = phone ? (gacpTop + gacpH + zoneGap) : zoneY;
+  const gmpY0 = gmpTop + labelH;
   const dCount = Math.max(0, s.dryRooms);
   const dCols = Math.max(1, Math.min(Math.max(1, dCount), Math.max(1, Math.floor((gmpInnerW + boxGap) / (72 + boxGap)))));
   const dryW = dCount ? Math.floor((gmpInnerW - (dCols - 1) * boxGap) / dCols) : gmpInnerW;
   const dryH = 58;
   const dRows = dCount ? Math.ceil(dCount / dCols) : 0;
-  const dryY = y0 + 44 + boxGap;
-  const afterDry = dCount ? (dryY + dRows * (dryH + boxGap) - boxGap) : (y0 + 44);
-  const gmpH = afterDry + boxGap + row2H + boxGap + row2H + zonePad - zoneY;
-  const officeBoxH = 70;
+  const dryY = gmpY0 + 44 + boxGap;
+  const afterDry = dCount ? (dryY + dRows * (dryH + boxGap) - boxGap) : (gmpY0 + 44);
+  const gmpH = afterDry + boxGap + row2H + boxGap + row2H + zonePad - gmpTop;
+  const officeBoxH = phone ? 62 : 70;
   const officeH = 4 * officeBoxH + 3 * boxGap + zonePad + labelH;
-  const contentH = Math.max(gacpH, gmpH, officeH);
+  const officeTop = phone ? (gmpTop + gmpH + zoneGap) : zoneY;
+  const officeY0 = officeTop + labelH;
+  const contentH = phone ? (officeTop + officeH - zoneY) : Math.max(gacpH, gmpH, officeH);
   const H = zoneY + contentH + pad;
 
   const blocks = [];
@@ -1637,12 +1944,12 @@ function renderPlan(m, s, currentWeek) {
     });
   }
 
-  rowBoxes(gacpInnerX, y0, gacpInnerW, row1H, [
+  rowBoxes(gacpInnerX, gacpY0, gacpInnerW, row1H, [
     { id: "GACP giri\u015f", line2: "Hava kilit", fill: "#a34a3a", flex: 0.9 },
     { id: "Ana\u00e7 \u00fcretim", line2: m2(m.motherProd), fill: "#6f9e62", flex: 1.2 },
     { id: "Ana\u00e7 bankas\u0131", line2: m2(m.motherBank), fill: "#587c4e", flex: 1 }
   ]);
-  rowBoxes(gacpInnerX, y0 + row1H + boxGap, gacpInnerW, row2H, [
+  rowBoxes(gacpInnerX, gacpY0 + row1H + boxGap, gacpInnerW, row2H, [
     { id: "Karantina", line2: "R&D", fill: "#8b6bb0", flex: 0.85 },
     { id: "Doku k\u00fclt.", line2: "R&D", fill: "#8b6bb0", flex: 0.85 },
     { id: "\u00c7elik", line2: m2(L.cuttingsM2), fill: "#7aa56e", flex: 1 },
@@ -1672,7 +1979,7 @@ function renderPlan(m, s, currentWeek) {
     });
   }
 
-  rowBoxes(gmpInnerX, y0, gmpInnerW, 44, [
+  rowBoxes(gmpInnerX, gmpY0, gmpInnerW, 44, [
     { id: "GMP giri\u015f", line2: "Hava kilit", fill: "#8a3a42", flex: 1 }
   ]);
   for (let i = 0; i < dCount; i++) {
@@ -1693,9 +2000,25 @@ function renderPlan(m, s, currentWeek) {
     });
   }
   const gmpLowY = afterDry + boxGap;
+  const tw = (m.cal.trimWeeks && m.cal.trimWeeks[currentWeek]) || "idle";
+  const pw = (m.cal.packWeeks && m.cal.packWeeks[currentWeek]) || "idle";
+  const tSp = m.trimSpec || finishTrimSpec(L.trimM2);
+  const pSp = m.packSpec || finishPackSpec(L.packM2);
   rowBoxes(gmpInnerX, gmpLowY, gmpInnerW, row2H, [
-    { id: "Trim", line2: m2(L.trimM2), fill: "#4d738a", flex: 1 },
-    { id: "Paket", line2: m2(L.packM2), fill: "#4d738a", flex: 0.9 }
+    {
+      id: "Trim",
+      line2: m2(L.trimM2) + " \u00b7 " + tSp.kgDay + " kg/g",
+      line3: tw === "trim" ? "i\u015fleniyor" : (tw === "hold" ? "kasa dolu" : "bo\u015f"),
+      fill: tw === "hold" ? "#a56a4a" : (tw === "trim" ? "#5d8a9c" : "#2a4a58"),
+      flex: 1
+    },
+    {
+      id: "Paket",
+      line2: m2(L.packM2) + " \u00b7 " + pSp.kgDay + " kg/g",
+      line3: pw === "pack" ? "i\u015fleniyor" : "bo\u015f",
+      fill: pw === "pack" ? "#3d7a6a" : "#2a4a58",
+      flex: 0.9
+    }
   ]);
   const hasEx = !!(m.extract && m.extract.m2);
   rowBoxes(gmpInnerX, gmpLowY + row2H + boxGap, gmpInnerW, row2H, [
@@ -1714,22 +2037,22 @@ function renderPlan(m, s, currentWeek) {
     blocks.push({
       id: q.id, line2: q.line2, fill: q.fill,
       x: officeInnerX,
-      y: y0 + i * (officeBoxH + boxGap),
+      y: officeY0 + i * (officeBoxH + boxGap),
       w: officeInnerW, h: officeBoxH
     });
   });
 
-  const zoneH = contentH;
+  const deskH = Math.max(gacpH, gmpH, officeH);
   let svg = "";
-  svg += "<rect x=\"12\" y=\"12\" width=\"" + (W - 24) + "\" height=\"" + (H - 24) + "\" rx=\"16\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>";
-  svg += "<text x=\"" + pad + "\" y=\"" + titleY + "\" fill=\"#d4c49a\" font-size=\"12\" letter-spacing=\"1.4\" font-family=\"Segoe UI, Arial, sans-serif\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>";
+  svg += "<rect x=\"" + (phone ? 8 : 12) + "\" y=\"" + (phone ? 8 : 12) + "\" width=\"" + (W - (phone ? 16 : 24)) + "\" height=\"" + (H - (phone ? 16 : 24)) + "\" rx=\"" + (phone ? 12 : 16) + "\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>";
+  svg += "<text x=\"" + pad + "\" y=\"" + titleY + "\" fill=\"#d4c49a\" font-size=\"" + (phone ? 10 : 12) + "\" letter-spacing=\"1.4\" font-family=\"Segoe UI, Arial, sans-serif\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>";
   function zoneFrame(x, y, w, h, fill, stroke, label, lx) {
     svg += "<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + w + "\" height=\"" + h + "\" rx=\"12\" fill=\"" + fill + "\" stroke=\"" + stroke + "\" stroke-dasharray=\"4 3\"/>";
     svg += "<text x=\"" + (x + 10) + "\" y=\"" + (y + 14) + "\" fill=\"" + lx + "\" font-size=\"10\" letter-spacing=\"1.1\" font-family=\"Segoe UI, Arial, sans-serif\">" + label + "</text>";
   }
-  zoneFrame(gacpX, zoneY, gacpW, zoneH, "rgba(111,158,98,0.08)", "rgba(111,158,98,0.4)", "GACP \u00dcRET\u0130M", "#8fbf84");
-  zoneFrame(gmpX, zoneY, gmpW, zoneH, "rgba(91,138,168,0.08)", "rgba(91,138,168,0.45)", "GMP \u0130\u015eLEME", "#8eb4c8");
-  zoneFrame(officeX, zoneY, officeW, zoneH, "rgba(201,181,106,0.08)", "rgba(201,181,106,0.4)", "\u0130DARE / D\u0130\u011eER", "#d4c49a");
+  zoneFrame(gacpX, gacpTop, gacpW, phone ? gacpH : deskH, "rgba(111,158,98,0.08)", "rgba(111,158,98,0.4)", "GACP \u00dcRET\u0130M", "#8fbf84");
+  zoneFrame(gmpX, gmpTop, gmpW, phone ? gmpH : deskH, "rgba(91,138,168,0.08)", "rgba(91,138,168,0.45)", "GMP \u0130\u015eLEME", "#8eb4c8");
+  zoneFrame(officeX, officeTop, officeW, phone ? officeH : deskH, "rgba(201,181,106,0.08)", "rgba(201,181,106,0.4)", "\u0130DARE / D\u0130\u011eER", "#d4c49a");
   const defs = "<defs>" + blocks.map(function (b, i) {
     return "<clipPath id=\"pb" + i + "\"><rect x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\"/></clipPath>";
   }).join("") + "</defs>";
@@ -1786,7 +2109,15 @@ function renderCalendar(m) {
       return cell(w, c, "H" + (w + 1) + who + (c === "clean" ? " temizlik" : ""));
     }).join("") + "</div>";
   }).join("");
-  el("calendar").innerHTML = "<div class=\"cal-grid\">" + head + rows + dry + "</div>";
+  const trimRow = (m.cal.trimWeeks || Array(52).fill("idle")).map(function (c, w) {
+    return cell(w, c, "H" + (w + 1) + (c === "trim" ? " trim" : c === "hold" ? " kuru bekler" : " bo\u015f"));
+  }).join("");
+  const packRow = (m.cal.packWeeks || Array(52).fill("idle")).map(function (c, w) {
+    return cell(w, c, "H" + (w + 1) + (c === "pack" ? " paket" : " bo\u015f"));
+  }).join("");
+  el("calendar").innerHTML = "<div class=\"cal-grid\">" + head + rows + dry +
+    "<div class=\"week-row\"><b>Trim</b>" + trimRow + "</div>" +
+    "<div class=\"week-row\"><b>Paket</b>" + packRow + "</div></div>";
 }
 
 function renderTables(m, s) {
@@ -1826,6 +2157,9 @@ function renderTables(m, s) {
     "<tr><td>\u00c7elik / k\u00f6klendirme</td><td class=\"num\">" + m2(m.layout ? m.layout.cuttingsM2 : 0) + "</td></tr>" +
     "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
     "<tr><td>Kurutma taban / kat</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + "</td></tr>" +
+    "<tr><td>Trim alan\u0131</td><td class=\"num\">" + (m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.stations) || 0) + " ist. \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g \u00b7 kasa " + ((m.trimSpec && m.trimSpec.vaultKg) || 0) + " kg \u00b7 ihtiya\u00e7 " + ((m.postDry && m.postDry.trimNeed) || 0) + "</td></tr>" +
+    "<tr><td>Paket alan\u0131</td><td class=\"num\">" + (m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.stations) || 0) + " ist. \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g \u00b7 kasa " + ((m.packSpec && m.packSpec.vaultKg) || 0) + " kg \u00b7 ihtiya\u00e7 " + ((m.postDry && m.postDry.packNeed) || 0) + "</td></tr>" +
+    "<tr><td>Trim kuyruk / bekleme</td><td class=\"num\">" + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + " kg tepe \u00b7 " + ((m.postDry && m.postDry.maxHold) || 0) + " g\u00fcn kuru odada</td></tr>" +
     "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
     "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
@@ -1841,7 +2175,9 @@ function renderTables(m, s) {
     ["Veg", s.vegDays + " g\u00fcn"],
     ["\u00c7i\u00e7ek", s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda"],
     ["Hasat", fmt(m.cyclesPerRoom, 0) + " / oda / y\u0131l"],
-    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat"]
+    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat"],
+    ["Trim", (m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g"],
+    ["Paket", (m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g"]
   ];
   el("flow").innerHTML = nodes.map(function (pair, i) {
     return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node\"><strong>" + pair[0] + "</strong><span>" + pair[1] + "</span></div>";
@@ -1870,7 +2206,9 @@ function renderLabels(s, m) {
     extractPriceKg: eur(s.extractPriceKg || 0) + "/kg",
     saleablePct: "%" + fmt(s.saleablePct * 100, 0),
     extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
-    dryTiers: String(s.dryTiers || 3) + " kat"
+    dryTiers: String(s.dryTiers || 3) + " kat",
+    trimM2: m2(s.trimM2 != null ? s.trimM2 : (m && m.layout ? m.layout.trimM2 : 24)),
+    packM2: m2(s.packM2 != null ? s.packM2 : (m && m.layout ? m.layout.packM2 : 18))
   };
   Object.keys(map).forEach(function (k) {
     const n = el("v-" + k);
@@ -1879,7 +2217,7 @@ function renderLabels(s, m) {
   const hint = el("capacityHint");
   if (hint && m) {
     const L = m.layout || {};
-    hint.textContent = "Y\u0131ll\u0131k bitki " + fmt(m.plantsYear) + " = hasattaki " + fmt(m.plantsInFlower) + " \u00d7 takvim hasad\u0131. Verim " + fmt(m.yieldUse, 0) + " g/bitki \u00b7 " + fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 (yo\u011funluk doyumu). Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
+    hint.textContent = "Y\u0131ll\u0131k bitki " + fmt(m.plantsYear) + " = hasattaki " + fmt(m.plantsInFlower) + " \u00d7 takvim hasad\u0131. Verim " + fmt(m.yieldUse, 0) + " g/bitki \u00b7 " + fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 (yo\u011funluk doyumu). Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest + " \u00b7 trim/paket " + (L.trimM2 || 0) + "/" + (L.packM2 || 0) + " m\u00B2 (ihtiya\u00e7 " + ((m.postDry && m.postDry.trimNeed) || 0) + "/" + ((m.postDry && m.postDry.packNeed) || 0) + ")";
   }
   const mixEl = el("geneticsMix");
   if (mixEl && m && m.stats) {
@@ -1958,6 +2296,8 @@ function exportJson() {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
+  applyView(readStoredView(), false);
+  bindViewSwitch();
   bindSideTabs();
   bindRoomCards();
   bindPlanClicks();

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="view-desktop">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,29 +7,53 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=24" />
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem("tkts-view");
+        if (v !== "phone" && v !== "desktop") {
+          v = window.matchMedia("(max-width: 720px)").matches ? "phone" : "desktop";
+        }
+        document.documentElement.setAttribute("data-view", v);
+        document.documentElement.classList.remove("view-phone", "view-desktop");
+        document.documentElement.classList.add(v === "phone" ? "view-phone" : "view-desktop");
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <header class="app-header">
-    <div class="brand">
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
-          <path d="M16 4 L27 16 L16 28 L5 16 Z" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="currentColor" stroke-width="1.2"/>
-        </svg>
-      </div>
-      <div>
-        <h1>Tıbbi kenevir tesis simülatörü</h1>
-        <p>Tam indoor GACP üretim ve GMP işleme</p>
+    <div class="view-bar">
+      <span class="view-bar-label">G&ouml;r&uuml;n&uuml;m</span>
+      <div class="view-switch" role="tablist" aria-label="Gorunum">
+        <button type="button" data-view="desktop" class="on">Masa&uuml;st&uuml;</button>
+        <button type="button" data-view="phone">Telefon</button>
       </div>
     </div>
-    <div class="header-meta">
-      <span class="chip">Indoor</span>
-      <span class="chip">GACP</span>
-      <span class="chip">GMP</span>
+    <div class="header-row">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
+            <path d="M16 4 L27 16 L16 28 L5 16 Z" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Tıbbi kenevir tesis simülatörü</h1>
+          <p>Tam indoor GACP üretim ve GMP işleme</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <span class="chip">Indoor</span>
+        <span class="chip">GACP</span>
+        <span class="chip">GMP</span>
+      </div>
     </div>
   </header>
 
+  <div class="phone-shell">
+  <div class="phone-frame">
   <div class="layout">
     <aside class="sidebar">
       <div class="side-tabs" role="tablist">
@@ -66,7 +90,11 @@
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
         <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
           <input id="dryTiers" type="range" min="1" max="3" step="1" value="3" /></div>
-        <p class="hint">Yıllık bitki = her odanın hasattaki bitkisi × o odanın yıldaki hasat sayısı. Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir.</p>
+        <div class="control"><header><span>Trim alanı</span><span id="v-trimM2">24 m²</span></header>
+          <input id="trimM2" type="range" min="18" max="240" step="6" value="24" /></div>
+        <div class="control"><header><span>Paket alanı</span><span id="v-packM2">30 m²</span></header>
+          <input id="packM2" type="range" min="12" max="200" step="5" value="30" /></div>
+        <p class="hint">Yıllık bitki = her odanın hasattaki bitkisi × o odanın yıldaki hasat sayısı. Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir. Trim ve paket, kurutmadan çıkan partiyi FIFO kuyruk ve oda kasasıyla işler; küçük oda tepe hasadı alamaz.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
@@ -125,6 +153,9 @@
           <span><i class="swatch" style="background:#6f9e62"></i>Anaç / veg</span>
           <span><i class="swatch" style="background:#5b8aa8"></i>GMP kurutma</span>
           <span><i class="swatch" style="background:#8aaeb8"></i>Kurutma temizlik</span>
+          <span><i class="swatch" style="background:#5d8a9c"></i>Trim</span>
+          <span><i class="swatch" style="background:#3d7a6a"></i>Paket</span>
+          <span><i class="swatch" style="background:#a56a4a"></i>Kuru bekleme</span>
           <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>
           <span><i class="swatch" style="background:#c9b56a"></i>Ofis</span>
         </div>
@@ -156,7 +187,9 @@
       </div>
     </main>
   </div>
+  </div>
+  </div>
 
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
