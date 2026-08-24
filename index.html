@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
   <header class="app-header">
@@ -91,7 +91,7 @@
 
       <section class="panel">
         <h2>Genetikler</h2>
-        <p class="hint">Her seçilen genetik için kaç çiçek odasında yetişeceğini yazın. Toplam, çiçek odası sayısına eşit olmalı. Takvim, verim ve hasılat oda ağırlıklı hesaplanır.</p>
+        <p class="hint">Her seçilen genetik için kaç çiçek odasında yetişeceğini yazın. Toplam, çiçek odası sayısına eşit olmalı. Her genetik kendi bitki/m² değeriyle odasını doldurur; takvim, verim ve hasılat oda ağırlıklı hesaplanır.</p>
         <p class="hint" id="geneticsMix"></p>
         <div id="geneticsBox" class="genetics"></div>
       </section>
@@ -107,8 +107,8 @@
           <button type="button" class="secondary" id="conceptBtn">Konsept dizaynı indir</button>
           <span class="week-label" id="weekLabel">Hafta 1</span>
         </div>
-        <h2>Konsept dizayn</h2>
-        <p class="hint">Senaryodaki oda sayısı, m² ve genetik dağılımına göre ölçekli kat planı. PNG olarak indirilebilir.</p>
+        <h2>Tesis yerleşimi</h2>
+        <p class="hint">Ekrandaki şema genetik bitki/m² ile oda modelini gösterir. Ölçekli konsept kat planını PNG olarak indirin.</p>
         <div class="plan-wrap" id="plan"></div>
         <div class="legend">
           <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
@@ -138,6 +138,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

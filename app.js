@@ -211,6 +211,71 @@ function mixStats(list) {
   };
 }
 
+let densityOverride = false;
+
+function densOf(g, fallback) {
+  if (densityOverride) return fallback;
+  const d = g && g.dens;
+  return (d && d > 0) ? d : fallback;
+}
+
+function yieldOfCultivar(g, fallback) {
+  if (cycleOverride) return fallback;
+  const y = g && g.yieldG;
+  return (y && y > 0) ? y : fallback;
+}
+
+function buildRoomModels(s) {
+  const n = Math.max(1, s.flowerRooms || 1);
+  const usable = Math.max(1, (s.roomM2 || 70) * (s.usable || 0.85));
+  const map = (s.roomMap && s.roomMap.length) ? s.roomMap : [];
+  const harvests = s.harvestsPerRoom || 5;
+  const fbDens = s.plantsPerM2 || 5;
+  const fbYield = s.yieldG || 160;
+  const rooms = [];
+  for (let i = 0; i < n; i++) {
+    const g = map[i] || null;
+    const dens = densOf(g, fbDens);
+    const plants = Math.max(1, Math.round(usable * dens));
+    const yld = yieldOfCultivar(g, fbYield);
+    const kgHarvest = plants * yld / 1000;
+    rooms.push({
+      i: i + 1,
+      g: g,
+      name: g ? g.name : ("Oda " + (i + 1)),
+      dens: dens,
+      plants: plants,
+      yieldG: yld,
+      kgHarvest: kgHarvest,
+      kgYear: kgHarvest * harvests,
+      m2: s.roomM2,
+      usable: usable
+    });
+  }
+  return rooms;
+}
+
+function syncPlantsFromGenetics() {
+  if (densityOverride) return;
+  if (!el("plantsYear") || !el("plantsPerM2") || !el("roomM2")) return;
+  const rooms = flowerRoomCount();
+  const alloc = buildRoomMap(rooms);
+  const roomM2 = Math.max(50, +el("roomM2").value || 70);
+  const usable = roomM2 * 0.85;
+  const harvests = +el("harvestsPerRoom").value || 5;
+  const fb = +el("plantsPerM2").value || 5;
+  let plants = 0;
+  for (let i = 0; i < rooms; i++) {
+    const g = alloc.map[i];
+    const d = (g && g.dens) ? g.dens : fb;
+    plants += Math.max(1, Math.round(usable * d));
+  }
+  const year = Math.round(plants * harvests);
+  el("plantsYear").value = String(Math.min(100000, Math.max(400, year)));
+  const avg = plants / Math.max(1, rooms * usable);
+  el("plantsPerM2").value = String(round1(Math.min(12, Math.max(2, avg))));
+}
+
 function applyMixToSliders() {
   const alloc = buildRoomMap(flowerRoomCount());
   const list = alloc.map.length ? alloc.map : selectedCultivars();
@@ -223,6 +288,8 @@ function applyMixToSliders() {
   if (el("rootDays")) el("rootDays").value = String(st.rootDays);
   if (el("yieldG")) el("yieldG").value = String(st.yieldG);
   if (el("genetics")) el("genetics").value = String(uniqueCultivars(list).length);
+  if (!densityOverride && el("plantsPerM2") && st.dens) el("plantsPerM2").value = String(st.dens);
+  if (!densityOverride) syncPlantsFromGenetics();
 }
 
 function cultivarForRoom(list, i) {
@@ -412,6 +479,7 @@ function renderGeneticsUI() {
       syncGeneRooms(id);
       customMode = true;
       cycleOverride = false;
+      densityOverride = false;
       pinDryRooms = false;
       highlightPreset("custom");
       applyMixToSliders();
@@ -426,6 +494,7 @@ function renderGeneticsUI() {
       onGeneRoomsInput(id);
       customMode = true;
       cycleOverride = false;
+      densityOverride = false;
       pinDryRooms = false;
       highlightPreset("custom");
       applyMixToSliders();
@@ -551,11 +620,19 @@ function readState() {
   clampHarvests();
   if (ae === "flowerArea" || ae === "roomM2" || ae === "flowerRooms") {
     syncLayout(ae);
-    syncDensity("keepDensity");
+    if (densityOverride) syncDensity("keepDensity");
+    else syncPlantsFromGenetics();
   } else if (ae === "plantsYear") {
+    densityOverride = true;
     syncDensity("plantsYear");
-  } else if (ae === "plantsPerM2" || ae === "harvestsPerRoom") {
+  } else if (ae === "plantsPerM2") {
+    densityOverride = true;
     syncDensity("keepDensity");
+  } else if (ae === "harvestsPerRoom") {
+    if (densityOverride) syncDensity("keepDensity");
+    else syncPlantsFromGenetics();
+  } else if (!densityOverride) {
+    syncPlantsFromGenetics();
   }
   const flowerRooms = Math.max(1, +el("flowerRooms").value);
   const alloc = buildRoomMap(flowerRooms);
@@ -617,10 +694,11 @@ function applyPreset(key) {
     } else if (el(k)) el(k).value = v;
   });
   cycleOverride = false;
+  densityOverride = false;
   applyMixToSliders();
   highlightPreset(key);
   syncLayout("roomM2");
-  syncDensity("plantsYear");
+  syncPlantsFromGenetics();
   week = 0;
   render();
 }
@@ -774,10 +852,11 @@ function simulate(s) {
     : s.flowerDays;
   const roomM2 = s.roomM2;
   const usableFlower = s.flowerArea * s.usable;
-  const plantsYear = s.plantsYear;
-  const plantsInFlower = plantsYear / s.harvestsPerRoom;
-  const plantsPerRoom = Math.round(plantsInFlower / s.flowerRooms);
-  const density = s.plantsPerM2;
+  const roomModels = buildRoomModels(s);
+  const plantsInFlower = roomModels.reduce(function (n, r) { return n + r.plants; }, 0);
+  const plantsYear = Math.round(plantsInFlower * s.harvestsPerRoom);
+  const plantsPerRoom = Math.round(plantsInFlower / Math.max(1, s.flowerRooms));
+  const density = plantsInFlower / Math.max(1, usableFlower);
   const turnaround = 7;
   const cycleFlower = 365 / s.harvestsPerRoom;
   const cyclesPerRoom = s.harvestsPerRoom;
@@ -789,15 +868,10 @@ function simulate(s) {
   const yieldOf = function (g) { return cycleOverride ? s.yieldG : g.yieldG; };
   let kgGross = 0;
   const kgById = {};
-  if (roomMap.length) {
-    roomMap.forEach(function (g) {
-      const kg = (plantsYear / s.flowerRooms) * yieldOf(g) / 1000;
-      kgGross += kg;
-      kgById[g.id] = (kgById[g.id] || 0) + kg;
-    });
-  } else {
-    kgGross = plantsYear * yieldUse / 1000;
-  }
+  roomModels.forEach(function (r) {
+    kgGross += r.kgYear;
+    if (r.g) kgById[r.g.id] = (kgById[r.g.id] || 0) + r.kgYear;
+  });
   const kgYear = kgGross * s.saleablePct;
   const unsaleableKg = kgGross * (1 - s.saleablePct);
   const extractFeed = kgGross * (s.extractPct || 0);
@@ -866,8 +940,23 @@ function simulate(s) {
   if (density > 10) {
     alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 indoor i\u00e7in y\u00fcksek." });
   }
-  if (stats && Math.abs(stats.dens - density) > 1) {
-    alerts.push({ t: "warn", m: "Se\u00e7ilen genetik ortalama " + fmt(stats.dens, 1) + " bitki/m\u00B2 \u00f6nerir; kayd\u0131r\u0131c\u0131 " + fmt(density, 1) + "." });
+  if (densityOverride && stats && Math.abs(stats.dens - density) > 1) {
+    alerts.push({ t: "warn", m: "Se\u00e7ilen genetik ortalama " + fmt(stats.dens, 1) + " bitki/m\u00B2 \u00f6nerir; kayd\u0131r\u0131c\u0131 " + fmt(density, 1) + " (manuel yo\u011funluk)." });
+  }
+  if (!densityOverride && roomModels.length) {
+    const seenR = {};
+    const bits = [];
+    roomModels.forEach(function (r) {
+      const id = r.g ? r.g.id : "?";
+      if (seenR[id]) { seenR[id].n += 1; return; }
+      seenR[id] = { n: 1, r: r };
+    });
+    Object.keys(seenR).forEach(function (id) {
+      const x = seenR[id];
+      const nm = x.r.g ? x.r.g.name.split(" ")[0] : "Oda";
+      bits.push(nm + " " + x.n + " oda \u00b7 " + fmt(x.r.dens, 1) + "/m\u00B2 \u00b7 " + x.r.plants + " bitki");
+    });
+    alerts.push({ t: "ok", m: "Oda modeli genetik bitki/m\u00B2 ile: " + bits.join(" \u00b7 ") + ". Y\u0131ll\u0131k bitki " + fmt(plantsYear) + " (oda \u00d7 hasat)." });
   }
   if (cal.gmpIdleWeeks > 8) {
     alerts.push({ t: "warn", m: "GMP kurutma " + cal.gmpIdleWeeks + " hafta bo\u015f kal\u0131yor." });
@@ -913,13 +1002,13 @@ function simulate(s) {
     cycleFlower: cycleFlower, cal: cal, alerts: alerts,
     layout: layout, extract: ex, kgFlowerSold: kgFlowerSold, extractFeed: extractFeed, yieldUse: yieldUse,
     flowerRevenue: flowerRevenue, extractRevenue: extractRevenue, kgById: kgById,
-    stats: stats, flowerDaysLong: flowerDaysLong
+    stats: stats, flowerDaysLong: flowerDaysLong, roomModels: roomModels
   };
 }
 
 function renderKpis(m, s) {
   const items = [
-    ["Y\u0131ll\u0131k bitki", fmt(s.plantsYear), fmt(m.plantsInFlower, 0) + " \u00e7i\u00e7ekte \u00b7 " + fmt(s.plantsPerM2, 1) + " /m\u00B2", ""],
+    ["Y\u0131ll\u0131k bitki", fmt(m.plantsYear), fmt(m.plantsInFlower, 0) + " \u00e7i\u00e7ekte \u00b7 " + fmt(m.density, 1) + " /m\u00B2", ""],
     ["Oda alan\u0131", m2(s.roomM2), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
     ["Kurutma", String(s.dryRooms), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
     ["Kuru \u00e7i\u00e7ek", fmt(m.kgYear, 0) + " kg", "sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 ham ya\u011f " + fmt(m.extract ? m.extract.crudeKg : 0, 0) + " kg", ""],
@@ -1035,6 +1124,10 @@ function buildConceptSvg(m, s, currentWeek) {
     const st = calRooms[i] ? calRooms[i][currentWeek] : "empty";
     const fill = st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#6a4634";
     const short = g && g.name ? g.name.split(" ")[0] : "";
+    const spec = (m.roomModels && m.roomModels[i]) || null;
+    const tag = spec
+      ? (Math.round(spec.m2) + " m\u00B2 \u00b7 " + fmt(spec.dens, 1) + "/m\u00B2 \u00b7 " + spec.plants + " bitki" + (short ? (" \u00b7 " + short) : ""))
+      : (Math.round(s.roomM2) + " m\u00B2" + (short ? (" \u00b7 " + short) : ""));
     add(
       "\u00c7i\u00e7ek " + (i + 1),
       col * (flower.w + gap),
@@ -1042,9 +1135,14 @@ function buildConceptSvg(m, s, currentWeek) {
       flower.w,
       flower.h,
       fill,
-      Math.round(s.roomM2) + " m\u00B2" + (short ? (" \u00b7 " + short) : ""),
+      tag,
       "cicek"
     );
+    if (spec) {
+      const last = rooms[rooms.length - 1];
+      last.dens = spec.dens;
+      last.plants = spec.plants;
+    }
   }
   const flowerW = fCols * flower.w + (fCols - 1) * gap;
   const flowerH = fRows * flower.h + (fRows - 1) * gap;
@@ -1124,6 +1222,20 @@ function buildConceptSvg(m, s, currentWeek) {
     const rx = X(b.x), ry = Y(b.y), rw = S(b.w), rh = S(b.h);
     svg += "<g>";
     svg += "<rect x=\"" + rx + "\" y=\"" + ry + "\" width=\"" + rw + "\" height=\"" + rh + "\" fill=\"" + b.fill + "\" stroke=\"#0c1210\" stroke-width=\"1.4\" opacity=\"0.94\"/>";
+    if (b.dens && rh > 44 && rw > 48) {
+      const pitch = Math.max(4.5, Math.min(11, PPM / Math.sqrt(b.dens)));
+      const x0 = rx + 6, y0 = ry + 36, iw = rw - 12, ih = rh - 42;
+      const colsN = Math.max(1, Math.floor(iw / pitch));
+      const rowsN = Math.max(1, Math.floor(ih / pitch));
+      const rad = Math.max(1.1, Math.min(2.3, pitch * 0.22));
+      const ox = x0 + (iw - colsN * pitch) / 2 + pitch / 2;
+      const oy = y0 + (ih - rowsN * pitch) / 2 + pitch / 2;
+      for (let jj = 0; jj < rowsN; jj++) {
+        for (let ii = 0; ii < colsN; ii++) {
+          svg += "<circle cx=\"" + (ox + ii * pitch).toFixed(1) + "\" cy=\"" + (oy + jj * pitch).toFixed(1) + "\" r=\"" + rad.toFixed(1) + "\" fill=\"#0c1210\" opacity=\"0.28\"/>";
+        }
+      }
+    }
     const fs = rw < 70 ? 9 : 11;
     svg += "<text x=\"" + (rx + 7) + "\" y=\"" + (ry + 16) + "\" fill=\"#0c1210\" font-size=\"" + fs + "\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(b.name) + "</text>";
     if (rh > 28) {
@@ -1147,10 +1259,10 @@ function buildConceptSvg(m, s, currentWeek) {
   const barX = 36, barY = H - 48;
   svg += "<rect x=\"" + barX + "\" y=\"" + barY + "\" width=\"" + (barM * PPM) + "\" height=\"5\" fill=\"#d4c49a\"/>";
   svg += "<text x=\"" + barX + "\" y=\"" + (barY - 6) + "\" fill=\"#d4c49a\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">\u00d6L\u00c7EK  \u00b7  10 m = " + (barM * PPM) + " px  \u00b7  1 m = " + PPM + " px</text>";
-  svg += "<text x=\"" + barX + "\" y=\"" + (barY + 22) + "\" fill=\"#8b9a90\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">Konsept kat plan\u0131 \u00b7 in\u015faat projesi de\u011fildir \u00b7 mahal alanlar\u0131 senaryo algoritmas\u0131ndan</text>";
+  svg += "<text x=\"" + barX + "\" y=\"" + (barY + 22) + "\" fill=\"#8b9a90\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">Konsept dizayn \u00b7 in\u015faat projesi de\u011fildir \u00b7 odalar genetik bitki/m\u00B2 ile modellendi</text>";
 
   const lx = W - 250, ly = padT;
-  svg += "<text x=\"" + lx + "\" y=\"" + ly + "\" fill=\"#d4c49a\" font-size=\"11\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1\">MAHAL CETVEL\u0130</text>";
+  svg += "<text x=\"" + lx + "\" y=\"" + ly + "\" fill=\"#d4c49a\" font-size=\"11\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1\">KONSEPT D\u0130ZAYN</text>";
   const lines = [
     "\u00c7i\u00e7ek odas\u0131: " + s.flowerRooms + " \u00d7 " + Math.round(s.roomM2) + " m\u00B2",
     "Kurutma: " + s.dryRooms + " \u00d7 " + Math.round(L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat",
@@ -1160,10 +1272,23 @@ function buildConceptSvg(m, s, currentWeek) {
     hasEx ? ("Ekstraksiyon: " + Math.round(ex.m2) + " m\u00B2") : "Ekstraksiyon: yok",
     "GACP / GMP: " + Math.round(m.gacpM2) + " / " + Math.round(m.gmpM2) + " m\u00B2",
     "Toplam kapal\u0131: " + Math.round(m.totalBuilt) + " m\u00B2",
-    "Y\u0131ll\u0131k bitki: " + fmt(s.plantsYear),
+    "Y\u0131ll\u0131k bitki: " + fmt(m.plantsYear),
     "CAPEX: " + eur(m.capex)
   ];
-  if (s.alloc && s.alloc.rows && s.alloc.rows.length) {
+  if (m.roomModels && m.roomModels.length) {
+    lines.push("Oda modeli:");
+    const seenG = {};
+    m.roomModels.forEach(function (r) {
+      const id = r.g ? r.g.id : "?";
+      if (seenG[id]) { seenG[id].n += 1; return; }
+      seenG[id] = { n: 1, r: r };
+    });
+    Object.keys(seenG).forEach(function (id) {
+      const x = seenG[id];
+      const nm = x.r.g ? x.r.g.name.split(" ")[0] : "Oda";
+      lines.push("  " + nm + " \u00d7" + x.n + " \u00b7 " + fmt(x.r.dens, 1) + "/m\u00B2 \u00b7 " + x.r.plants + "b");
+    });
+  } else if (s.alloc && s.alloc.rows && s.alloc.rows.length) {
     lines.push("Genetik:");
     s.alloc.rows.forEach(function (r) {
       lines.push("  " + r.c.name.split(" ")[0] + " \u00b7 " + r.rooms + " oda");
@@ -1178,14 +1303,14 @@ function buildConceptSvg(m, s, currentWeek) {
 }
 
 function downloadConceptPng() {
-  const svg = el("plan") && el("plan").querySelector("svg");
-  if (!svg) return;
-  const W = Math.max(800, parseInt(svg.getAttribute("width") || "1600", 10));
-  const H = Math.max(500, parseInt(svg.getAttribute("height") || "900", 10));
-  const clone = svg.cloneNode(true);
-  clone.setAttribute("width", String(W));
-  clone.setAttribute("height", String(H));
-  const xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + new XMLSerializer().serializeToString(clone);
+  const s = lastS || readState();
+  const m = lastM || simulate(s);
+  const markup = buildConceptSvg(m, s, week);
+  const wMatch = markup.match(/\bwidth="(\d+)"/);
+  const hMatch = markup.match(/\bheight="(\d+)"/);
+  const W = Math.max(800, wMatch ? +wMatch[1] : 1600);
+  const H = Math.max(500, hMatch ? +hMatch[1] : 900);
+  const xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + markup;
   const img = new Image();
   img.onload = function () {
     const scale = 2;
@@ -1216,7 +1341,85 @@ function downloadConceptPng() {
 }
 
 function renderPlan(m, s, currentWeek) {
-  el("plan").innerHTML = buildConceptSvg(m, s, currentWeek);
+  const W = 1180;
+  const gap = 8;
+  const fCount = Math.max(1, s.flowerRooms);
+  const fCols = Math.min(10, fCount);
+  const fRows = Math.ceil(fCount / fCols);
+  const flowerW = Math.min(108, 1100 / fCols - gap);
+  const flowerH = 96;
+  const flowerY0 = 280;
+  const H = flowerY0 + fRows * (flowerH + gap) + 28;
+  const rooms = [];
+  for (let i = 0; i < fCount; i++) {
+    const st = m.cal.rooms[i] ? m.cal.rooms[i][currentWeek] : "empty";
+    const col = i % fCols;
+    const row = Math.floor(i / fCols);
+    const g = m.cal.roomCultivars && m.cal.roomCultivars[i];
+    const spec = (m.roomModels && m.roomModels[i]) || null;
+    const short = g ? g.name.split(" ")[0] : "";
+    const dens = spec ? spec.dens : s.plantsPerM2;
+    const plants = spec ? spec.plants : Math.round(s.roomM2 * 0.85 * dens);
+    rooms.push({
+      id: "\u00c7i\u00e7ek " + (i + 1),
+      x: 40 + col * (flowerW + gap),
+      y: flowerY0 + row * (flowerH + gap),
+      w: flowerW, h: flowerH,
+      line2: m2(s.roomM2) + (short ? (" \u00b7 " + short) : ""),
+      line3: fmt(dens, 1) + "/m\u00B2 \u00b7 " + plants + " bitki",
+      fill: st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#3a2c24"
+    });
+  }
+  const gmpDry = [];
+  const dCols = 6;
+  for (let i = 0; i < s.dryRooms; i++) {
+    const batch = m.cal.dryOcc[i] ? m.cal.dryOcc[i][currentWeek] : null;
+    const kind = m.cal.dryRows[i] ? m.cal.dryRows[i][currentWeek] : "idle";
+    const col = i % dCols;
+    const row = Math.floor(i / dCols);
+    const flowerNo = batch ? String(batch).replace("C", "") : "";
+    gmpDry.push({
+      id: "Kurutma " + (i + 1),
+      x: 640 + col * 88,
+      y: 48 + row * 50,
+      w: 82, h: 44,
+      fill: kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#243038",
+      line2: (kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f")) + " \u00b7 " + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2"
+    });
+  }
+  const blocks = [
+    { id: "Ofis / QMS", x: 40, y: 48, w: 130, h: 90, fill: "#c9b56a", line2: "\u0130dare" },
+    { id: "GACP giri\u015f", x: 180, y: 48, w: 70, h: 90, fill: "#a34a3a", line2: "Ak\u0131\u015f" },
+    { id: "GMP giri\u015f", x: 258, y: 48, w: 70, h: 90, fill: "#a34a3a", line2: "Ak\u0131\u015f" },
+    { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", line2: m2(m.layout.trimM2) },
+    { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", line2: m2(m.layout.packM2) }
+  ].concat(gmpDry).concat([
+    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", line2: m2(m.motherProd) },
+    { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 48, fill: "#587c4e", line2: "GACP" },
+    { id: "Karantina", x: 168, y: 220, w: 48, h: 48, fill: "#8b6bb0", line2: "R&D" },
+    { id: "Doku k\u00fclt.", x: 220, y: 220, w: 48, h: 48, fill: "#8b6bb0", line2: "R&D" },
+    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", line2: m2(m.layout.cuttingsM2) },
+    { id: "Pre-veg", x: 394, y: 168, w: 120, h: 100, fill: "#88b57a", line2: m2(m.preVeg) },
+    { id: "Veg", x: 522, y: 168, w: 150, h: 100, fill: "#88b57a", line2: m2(m.veg) },
+    {
+      id: (m.extract && m.extract.m2) ? "Ekstraksiyon" : "Trim at\u0131k",
+      x: 980, y: 168, w: 150, h: 100,
+      fill: (m.extract && m.extract.m2) ? "#8b6bb0" : "#2a332e",
+      line2: (m.extract && m.extract.m2) ? (m.extract.m2 + " m\u00B2 \u00b7 " + fmt(m.extract.kgDay, 1) + " kg/g") : "\u2014"
+    }
+  ]).concat(rooms);
+  const svg = blocks.map(function (b) {
+    return "<g class=\"room\"><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
+      "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 22) + "\" fill=\"#0c1210\" font-size=\"12\" font-weight=\"600\">" + xmlEsc(b.id) + "</text>" +
+      "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 40) + "\" fill=\"#0c1210\" font-size=\"11\" opacity=\"0.75\">" + xmlEsc(b.line2 || "") + "</text>" +
+      (b.line3 ? ("<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 56) + "\" fill=\"#0c1210\" font-size=\"10\" opacity=\"0.7\">" + xmlEsc(b.line3) + "</text>") : "") +
+      "</g>";
+  }).join("");
+  el("plan").innerHTML =
+    "<svg class=\"plan\" viewBox=\"0 0 " + W + " " + H + "\" xmlns=\"http://www.w3.org/2000/svg\">" +
+    "<rect x=\"16\" y=\"16\" width=\"" + (W - 32) + "\" height=\"" + (H - 32) + "\" rx=\"18\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>" +
+    "<text x=\"40\" y=\"40\" fill=\"#d4c49a\" font-size=\"12\" letter-spacing=\"2\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>" +
+    svg + "</svg>";
 }
 
 function renderCalendar(m) {
@@ -1264,7 +1467,7 @@ function renderTables(m, s) {
   el("ops").innerHTML =
     "<table><tr><th>Operasyon</th><th></th></tr>" +
     "<tr><td>Oda alan\u0131</td><td class=\"num\">" + m2(m.roomM2) + "</td></tr>" +
-    "<tr><td>Bitki / m\u00B2</td><td class=\"num\">" + fmt(s.plantsPerM2, 1) + "</td></tr>" +
+    "<tr><td>Bitki / m\u00B2 (oda modeli)</td><td class=\"num\">" + fmt(m.density, 1) + "</td></tr>" +
     "<tr><td>Bitki / oda</td><td class=\"num\">" + fmt(m.plantsPerRoom) + "</td></tr>" +
     "<tr><td>Hasat / oda / y\u0131l</td><td class=\"num\">" + fmt(s.harvestsPerRoom, 1) + "</td></tr>" +
     "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear, 1) + "</td></tr>" +
@@ -1324,7 +1527,7 @@ function renderLabels(s, m) {
   const hint = el("capacityHint");
   if (hint && m) {
     const L = m.layout || {};
-    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
+    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 genetik oda modeli " + fmt(m.density, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
   }
   refreshRoomInputMax();
   const mixEl = el("geneticsMix");
@@ -1332,11 +1535,18 @@ function renderLabels(s, m) {
     const dist = (s.alloc && s.alloc.rows && s.alloc.rows.length)
       ? s.alloc.rows.map(function (r) { return r.c.name.split(" ")[0] + " " + r.rooms; }).join(" \u00b7 ") + " \u2014 " + s.alloc.assigned + "/" + s.flowerRooms + " oda \u00b7 "
       : "";
-    mixEl.textContent = dist + "oda a\u011f\u0131rl\u0131kl\u0131: \u00e7i\u00e7ek " + m.stats.flowerDays + " g\u00fcn \u00b7 veg " + m.stats.vegDays + " g\u00fcn \u00b7 k\u00f6k " + m.stats.rootDays + " g\u00fcn \u00b7 " + m.stats.yieldG + " g \u00b7 " + fmt(m.stats.dens, 1) + " /m\u00B2";
+    const densBits = (m.roomModels || []).reduce(function (acc, r) {
+      if (!r.g) return acc;
+      if (acc.seen[r.g.id]) return acc;
+      acc.seen[r.g.id] = true;
+      acc.parts.push(r.g.name.split(" ")[0] + " " + fmt(r.dens, 1) + "/m\u00B2 " + r.plants + "b");
+      return acc;
+    }, { seen: {}, parts: [] }).parts.join(" \u00b7 ");
+    mixEl.textContent = dist + (densBits ? densBits + " \u2014 " : "") + "oda a\u011f\u0131rl\u0131kl\u0131: \u00e7i\u00e7ek " + m.stats.flowerDays + " g\u00fcn \u00b7 veg " + m.stats.vegDays + " g\u00fcn \u00b7 k\u00f6k " + m.stats.rootDays + " g\u00fcn \u00b7 " + m.stats.yieldG + " g \u00b7 " + fmt(m.stats.dens, 1) + " /m\u00B2";
   } else if (mixEl) mixEl.textContent = "";
 }
 
-let week = 0, playing = false, timer = null, lastM = null;
+let week = 0, playing = false, timer = null, lastM = null, lastS = null;
 let pinDryRooms = false;
 
 function ensureDryRooms(need) {
@@ -1356,6 +1566,7 @@ function render() {
     m = simulate(s);
   }
   lastM = m;
+  lastS = s;
   renderLabels(s, m);
   renderKpis(m, s);
   renderPlan(m, s, week);
@@ -1372,7 +1583,7 @@ function play() {
     timer = setInterval(function () {
       week = (week + 1) % 52;
       if (lastM) {
-        renderPlan(lastM, readState(), week);
+        renderPlan(lastM, lastS || readState(), week);
         renderCalendar(lastM);
         el("weekLabel").textContent = "Hafta " + (week + 1);
       }
@@ -1399,7 +1610,8 @@ window.addEventListener("DOMContentLoaded", function () {
       highlightPreset("custom");
       if (i.id === "dryRooms") pinDryRooms = true;
       if (i.id === "flowerDays" || i.id === "vegDays" || i.id === "preVegDays" || i.id === "rootDays" || i.id === "yieldG") cycleOverride = true;
-      if (i.id && (i.id.indexOf("g-") === 0 || i.id.indexOf("gr-") === 0)) { cycleOverride = false; pinDryRooms = false; applyMixToSliders(); }
+      if (i.id === "plantsYear" || i.id === "plantsPerM2") densityOverride = true;
+      if (i.id && (i.id.indexOf("g-") === 0 || i.id.indexOf("gr-") === 0)) { cycleOverride = false; densityOverride = false; pinDryRooms = false; applyMixToSliders(); }
       else if (i.id === "flowerRooms") { pinDryRooms = false; scaleRoomAllocation(); }
       else if (i.id === "harvestsPerRoom" || i.id === "flowerDays" || i.id === "dryDays" || i.id === "dryCleanDays" || i.id === "dryTiers") pinDryRooms = false;
       week = 0;
