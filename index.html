@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=27" />
   <script>
     (function () {
       try {
@@ -130,7 +130,7 @@
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
         <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
           <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
-        <p class="hint">Yoğunluk artınca bitki başı verim düşer, m² verimi doyarak artar (katlı değil). Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı Endemic scCO2 hatta gider (Caladrius 450 X + Isolute X, KDV hariç indikatif). Satılamayan kütle önce ekstraksiyona yazılır.</p>
+        <p class="hint">Yoğunluk artınca bitki başı verim düşer, m² verimi doyarak artar (katlı değil). Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı scCO2 hatta gider (Caladrius 450 X + Isolute X, KDV hariç indikatif). Satılamayan kütle önce ekstraksiyona yazılır.</p>
       </section>
 
     </aside>
@@ -141,21 +141,22 @@
       <section class="panel" style="margin-bottom:14px">
         <div class="toolbar">
           <button type="button" id="playBtn">Yılı oynat</button>
-          <button type="button" class="secondary" id="exportBtn">Senaryoyu indir</button>
+          <button type="button" id="pdfBtn">Senaryo özeti (PDF)</button>
+          <button type="button" class="secondary" id="exportBtn">JSON</button>
           <button type="button" class="secondary" id="conceptBtn">Konsept dizaynı indir</button>
           <span class="week-label" id="weekLabel">Hafta 1</span>
         </div>
         <h2>Tesis yerleşimi</h2>
-        <p class="hint">Sol GACP üretim, orta GMP işleme, sağ idare ve diğer alanlar. Odaya tıklayın; genetik ve bitki/m² karttan değişir. Konsept kat planı PNG olarak iner.</p>
+        <p class="hint">Sol GACP üretim, orta GMP işleme, sağ idare ve diğer alanlar. Odaya tıklayın; genetik ve bitki/m² karttan değişir. Konsept kat planı PNG olarak iner. Senaryo özeti PDF, ekrandaki tüm kapasite, oda, ekonomi, uyarı ve takvim detayını indirir. Yılı oynat: kurutmadan çıkan parti trimde camgöbeği, pakette yeşil yanar; kasa dolunca turuncu bekler.</p>
         <div class="plan-wrap" id="plan"></div>
         <div class="legend">
           <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
           <span><i class="swatch" style="background:#6f9e62"></i>Anaç / veg</span>
           <span><i class="swatch" style="background:#5b8aa8"></i>GMP kurutma</span>
           <span><i class="swatch" style="background:#8aaeb8"></i>Kurutma temizlik</span>
-          <span><i class="swatch" style="background:#5d8a9c"></i>Trim</span>
-          <span><i class="swatch" style="background:#3d7a6a"></i>Paket</span>
-          <span><i class="swatch" style="background:#a56a4a"></i>Kuru bekleme</span>
+          <span><i class="swatch" style="background:#3ea8c4"></i>Trim (kurutmadan)</span>
+          <span><i class="swatch" style="background:#3d9a72"></i>Paket (trimden)</span>
+          <span><i class="swatch" style="background:#c17a48"></i>Kuru bekleme</span>
           <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>
           <span><i class="swatch" style="background:#c9b56a"></i>Ofis</span>
         </div>
@@ -190,6 +191,7 @@
   </div>
   </div>
 
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=27"></script>
+  <script src="pdf-export.js?v=27"></script>
 </body>
 </html>

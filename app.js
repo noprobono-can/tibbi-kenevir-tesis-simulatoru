@@ -1026,6 +1026,31 @@ function finishPackSpec(m2) {
   };
 }
 
+function flowerTagLabel(tag) {
+  if (!tag) return "";
+  return "\u00c7i\u00e7ek " + String(tag).replace(/^C/i, "");
+}
+
+function finishTrimFill(kind) {
+  if (kind === "hold") return "#c17a48";
+  if (kind === "trim") return "#3ea8c4";
+  return "#243038";
+}
+
+function finishPackFill(kind) {
+  if (kind === "pack") return "#3d9a72";
+  return "#243038";
+}
+
+function dryBusyThisWeek(cal, w) {
+  const rows = (cal && cal.dryRows) || [];
+  for (let i = 0; i < rows.length; i++) {
+    const k = rows[i] ? rows[i][w] : "idle";
+    if (k === "gmp" || k === "clean") return true;
+  }
+  return false;
+}
+
 function simulatePostDry(jobs, trimSp, packSp) {
   const days = 364;
   const arrivals = (jobs || []).map(function (j) {
@@ -1054,6 +1079,10 @@ function simulatePostDry(jobs, trimSp, packSp) {
   const trimKg = Array(days).fill(0);
   const packKgD = Array(days).fill(0);
   const holdN = Array(days).fill(0);
+  const trimHead = Array(days).fill(null);
+  const packHead = Array(days).fill(null);
+  const trimLeftD = Array(days).fill(0);
+  const packLeftD = Array(days).fill(0);
   let peakTrimQ = 0, peakPackQ = 0, maxHold = 0, holdLots = 0;
   let maxTrimWait = 0, maxPackWait = 0;
   const endWip = [0, 0, 0];
@@ -1080,7 +1109,10 @@ function simulatePostDry(jobs, trimSp, packSp) {
     const measure = year === 2;
     if (measure && d === 0) {
       peakTrimQ = 0; peakPackQ = 0; maxHold = 0; holdLots = 0; maxTrimWait = 0; maxPackWait = 0;
-      for (let i = 0; i < days; i++) { trimKg[i] = 0; packKgD[i] = 0; holdN[i] = 0; }
+      for (let i = 0; i < days; i++) {
+        trimKg[i] = 0; packKgD[i] = 0; holdN[i] = 0;
+        trimHead[i] = null; packHead[i] = null; trimLeftD[i] = 0; packLeftD[i] = 0;
+      }
     }
     const work = (t % 7) < GMP_FINISH.workDays;
     byDay[d].forEach(function (a) {
@@ -1116,7 +1148,10 @@ function simulatePostDry(jobs, trimSp, packSp) {
         const take = Math.min(cap, l.trimLeft);
         l.trimLeft -= take;
         cap -= take;
-        if (measure) trimKg[d] += take;
+        if (measure) {
+          trimKg[d] += take;
+          trimHead[d] = "C" + l.room;
+        }
         if (l.trimLeft <= 1e-6) {
           l.trimLeft = 0;
           l.trimEnd = t;
@@ -1141,7 +1176,10 @@ function simulatePostDry(jobs, trimSp, packSp) {
         const take = Math.min(cap, l.packLeft);
         l.packLeft -= take;
         cap -= take;
-        if (measure) packKgD[d] += take;
+        if (measure) {
+          packKgD[d] += take;
+          packHead[d] = "C" + l.room;
+        }
         if (l.packLeft <= 1e-6) {
           l.packLeft = 0;
           l.packEnd = t;
@@ -1155,23 +1193,60 @@ function simulatePostDry(jobs, trimSp, packSp) {
     if (measure) {
       if (vaultTrim() > peakTrimQ) peakTrimQ = vaultTrim();
       if (vaultPack() > peakPackQ) peakPackQ = vaultPack();
+      if (trimQ.length) {
+        trimHead[d] = "C" + trimQ[0].room;
+        trimLeftD[d] = vaultTrim();
+      } else if (packGate.length) {
+        trimHead[d] = "C" + packGate[0].room;
+        trimLeftD[d] = vaultTrim();
+      }
+      if (packQ.length) {
+        packHead[d] = "C" + packQ[0].room;
+        packLeftD[d] = vaultPack();
+      }
     }
     if (d === days - 1) endWip[year] = wipAll();
   }
 
   const diverging = endWip[2] > endWip[1] + Math.max(8, annualKg * 0.05);
+  function modeTag(list) {
+    const counts = {};
+    let best = null, n = 0;
+    list.forEach(function (t) {
+      if (!t) return;
+      counts[t] = (counts[t] || 0) + 1;
+      if (counts[t] > n) { n = counts[t]; best = t; }
+    });
+    return best;
+  }
   const trimWeeks = [];
   const packWeeks = [];
+  const trimOcc = [];
+  const packOcc = [];
+  const trimKgW = [];
+  const packKgW = [];
   for (let w = 0; w < 52; w++) {
-    let kt = 0, kp = 0, hd = 0;
+    let kt = 0, kp = 0, hd = 0, leftT = 0, leftP = 0;
+    const headsT = [];
+    const headsP = [];
     for (let d = 0; d < 7; d++) {
       const idx = w * 7 + d;
       kt += trimKg[idx];
       kp += packKgD[idx];
       hd += holdN[idx];
+      headsT.push(trimHead[idx]);
+      headsP.push(packHead[idx]);
+      if (trimLeftD[idx] > leftT) leftT = trimLeftD[idx];
+      if (packLeftD[idx] > leftP) leftP = packLeftD[idx];
     }
-    trimWeeks.push(kt > 0.2 ? "trim" : (hd > 0 ? "hold" : "idle"));
-    packWeeks.push(kp > 0.2 ? "pack" : "idle");
+    const occT = modeTag(headsT);
+    const occP = modeTag(headsP);
+    trimWeeks.push(kt > 0.2 ? "trim" : (hd > 0 ? "hold" : (occT ? "trim" : "idle")));
+    packWeeks.push(kp > 0.2 || occP ? "pack" : "idle");
+    trimOcc.push(occT);
+    packOcc.push(occP);
+    trimKgW.push(kt > 0.2 ? kt : leftT);
+    packKgW.push(kp > 0.2 ? kp : leftP);
   }
   return {
     annualKg: annualKg,
@@ -1188,6 +1263,10 @@ function simulatePostDry(jobs, trimSp, packSp) {
     maxPackWait: maxPackWait,
     trimWeeks: trimWeeks,
     packWeeks: packWeeks,
+    trimOcc: trimOcc,
+    packOcc: packOcc,
+    trimKgW: trimKgW,
+    packKgW: packKgW,
     endWip: endWip[2]
   };
 }
@@ -1316,6 +1395,10 @@ function simulate(s) {
   post.packNeed = need.packNeed;
   cal.trimWeeks = post.trimWeeks;
   cal.packWeeks = post.packWeeks;
+  cal.trimOcc = post.trimOcc;
+  cal.packOcc = post.packOcc;
+  cal.trimKgW = post.trimKgW;
+  cal.packKgW = post.packKgW;
   const flowerRevenue = kgFlowerSold * s.priceKg;
   const extractSoldKg = ex.productKg != null ? ex.productKg : (ex.crudeKg || 0);
   const extractRevenue = extractSoldKg * (s.extractPriceKg || 0);
@@ -1439,7 +1522,7 @@ function simulate(s) {
     alerts.push({ t: "ok", m: "Genetik (oda a\u011f\u0131rl\u0131kl\u0131): " + kgBits + " \u00b7 ort. \u00e7i\u00e7ek " + flowerDaysUse + " g\u00fcn / yo\u011funluk ayarl\u0131 " + fmt(yieldUse, 0) + " g/bitki / ham ya\u011f %" + Math.round(((stats && stats.extractY) || 0.12) * 100) + "." });
   }
   if (extractFeed > 0) {
-    alerts.push({ t: ex.overCap ? "warn" : "ok", m: "Ekstraksiyon scCO\u2082 (Endemic, TR indikatif, KDV hari\u00e7): " + fmt(extractFeed, 0) + " kg kuru \u00e7i\u00e7ek/y\u0131l (~" + fmt(ex.kgDay, 1) + " / " + fmt(ex.ratedKgDay, 0) + " kg/g\u00fcn). 1. ad\u0131m Caladrius 450 X 2\u00d730 L + 2\u00d710 L seperat\u00f6r + 5 L terpen tutucu (max 450 bar / 80 \u00b0C; seperat\u00f6r 150 bar / 40 \u00b0C). 2\u20133. ad\u0131m Isolute X dist+kristal " + fmt(ex.isoluteKgDay, 0) + " kg ya\u011f/g\u00fcn. Ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u2192 sat\u0131lan distilat " + fmt(ex.productKg, 0) + " kg. Ekipman " + eur(ex.capexEq) + " \u00b7 CO\u2082 geri kazan\u0131m %95\u201398 \u00b7 C1D2 yok \u00b7 8 sa / 1 vardiya." });
+    alerts.push({ t: ex.overCap ? "warn" : "ok", m: "Ekstraksiyon scCO\u2082 (TR indikatif, KDV hari\u00e7): " + fmt(extractFeed, 0) + " kg kuru \u00e7i\u00e7ek/y\u0131l (~" + fmt(ex.kgDay, 1) + " / " + fmt(ex.ratedKgDay, 0) + " kg/g\u00fcn). 1. ad\u0131m Caladrius 450 X 2\u00d730 L + 2\u00d710 L seperat\u00f6r + 5 L terpen tutucu (max 450 bar / 80 \u00b0C; seperat\u00f6r 150 bar / 40 \u00b0C). 2\u20133. ad\u0131m Isolute X dist+kristal " + fmt(ex.isoluteKgDay, 0) + " kg ya\u011f/g\u00fcn. Ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u2192 sat\u0131lan distilat " + fmt(ex.productKg, 0) + " kg. Ekipman " + eur(ex.capexEq) + " \u00b7 CO\u2082 geri kazan\u0131m %95\u201398 \u00b7 C1D2 yok \u00b7 8 sa / 1 vardiya." });
     if (ex.overCap) alerts.push({ t: "bad", m: "Besleme Caladrius/Isolute anma kapasitesini a\u015f\u0131yor \u2014 ek hat veya ikinci vardiya gerekir." });
   }
   alerts.push({ t: "ok", m: "Has\u0131lat = sat\u0131lan \u00e7i\u00e7ek " + fmt(kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + "/kg (" + eur(flowerRevenue) + ")" + (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg (" + eur(extractRevenue) + ")") : "") + "." });
@@ -1632,8 +1715,26 @@ function buildConceptSvg(m, s, currentWeek) {
   const dryW = dCols * dry.w + (dCols - 1) * gap;
   const dryH = dRows * dry.h + (dRows - 1) * gap;
   let py = gmpY + dryH + gap;
-  add("Trim", gmpX, py, trim.w, trim.h, "#4d738a", Math.round(L.trimM2 || trim.a) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g", "gmp");
-  add("Paket", gmpX + trim.w + gap, py, pack.w, pack.h, "#4d738a", Math.round(L.packM2 || pack.a) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g", "gmp");
+  const twC = (m.cal && m.cal.trimWeeks && m.cal.trimWeeks[currentWeek]) || "idle";
+  const pwC = (m.cal && m.cal.packWeeks && m.cal.packWeeks[currentWeek]) || "idle";
+  const tWho = flowerTagLabel(m.cal && m.cal.trimOcc && m.cal.trimOcc[currentWeek]);
+  const pWho = flowerTagLabel(m.cal && m.cal.packOcc && m.cal.packOcc[currentWeek]);
+  const tKg = (m.cal && m.cal.trimKgW && m.cal.trimKgW[currentWeek]) || 0;
+  const pKg = (m.cal && m.cal.packKgW && m.cal.packKgW[currentWeek]) || 0;
+  add(
+    "Trim",
+    gmpX, py, trim.w, trim.h,
+    finishTrimFill(twC),
+    (tWho ? (tWho + " \u00b7 " + fmt(tKg, 0) + " kg") : (Math.round(L.trimM2 || trim.a) + " m\u00B2")) + (twC === "hold" ? " \u00b7 bekler" : (twC === "trim" ? " \u00b7 i\u015fleniyor" : "")),
+    "gmp"
+  );
+  add(
+    "Paket",
+    gmpX + trim.w + gap, py, pack.w, pack.h,
+    finishPackFill(pwC),
+    (pWho ? (pWho + " \u00b7 " + fmt(pKg, 0) + " kg") : (Math.round(L.packM2 || pack.a) + " m\u00B2")) + (pwC === "pack" ? " \u00b7 i\u015fleniyor" : ""),
+    "gmp"
+  );
   py += Math.max(trim.h, pack.h) + gap;
   if (hasEx) {
     add("Ekstraksiyon", gmpX, py, Math.max(ext.w, dryW), ext.h, "#8b6bb0", Math.round(ex.m2) + " m\u00B2 \u00b7 " + fmt(ex.kgDay, 1) + " kg/g", "ext");
@@ -1861,7 +1962,7 @@ function wrapPlanText(str, widthPx, fontSize) {
 }
 
 function inkForFill(fill) {
-  const dark = { "#4a5550": 1, "#2e3c42": 1, "#243038": 1, "#2a332e": 1, "#3a2c24": 1, "#6a4634": 1, "#2a4a58": 1, "#a34a3a": 1, "#8a3a42": 1, "#a56a4a": 1, "#5d8a9c": 1, "#3d7a6a": 1 };
+  const dark = { "#4a5550": 1, "#2e3c42": 1, "#243038": 1, "#2a332e": 1, "#3a2c24": 1, "#6a4634": 1, "#2a4a58": 1, "#a34a3a": 1, "#8a3a42": 1, "#a56a4a": 1, "#5d8a9c": 1, "#3d7a6a": 1, "#c17a48": 1, "#3ea8c4": 1, "#3d9a72": 1 };
   return dark[fill] ? "#eef3ec" : "#0c1210";
 }
 
@@ -1938,7 +2039,7 @@ function renderPlan(m, s, currentWeek) {
     specs.forEach(function (q, i) {
       blocks.push({
         id: q.id, line2: q.line2 || "", line3: q.line3 || "", fill: q.fill,
-        x: x0, y: y, w: ws[i], h: height, i: q.i, on: q.on
+        x: x0, y: y, w: ws[i], h: height, i: q.i, on: q.on, flow: q.flow
       });
       x0 += ws[i] + boxGap;
     });
@@ -1996,7 +2097,8 @@ function renderPlan(m, s, currentWeek) {
       w: dryW, h: dryH,
       fill: kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#243038",
       line2: status,
-      line3: (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat"
+      line3: (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat",
+      flow: kind === "gmp" || kind === "clean"
     });
   }
   const gmpLowY = afterDry + boxGap;
@@ -2004,19 +2106,30 @@ function renderPlan(m, s, currentWeek) {
   const pw = (m.cal.packWeeks && m.cal.packWeeks[currentWeek]) || "idle";
   const tSp = m.trimSpec || finishTrimSpec(L.trimM2);
   const pSp = m.packSpec || finishPackSpec(L.packM2);
+  const tOcc = (m.cal.trimOcc && m.cal.trimOcc[currentWeek]) || null;
+  const pOcc = (m.cal.packOcc && m.cal.packOcc[currentWeek]) || null;
+  const tKg = (m.cal.trimKgW && m.cal.trimKgW[currentWeek]) || 0;
+  const pKg = (m.cal.packKgW && m.cal.packKgW[currentWeek]) || 0;
+  const tWho = flowerTagLabel(tOcc);
+  const pWho = flowerTagLabel(pOcc);
+  const tpW = splitRow(gmpInnerW, [1, 0.9], boxGap);
+  const trimX = gmpInnerX;
+  const packX = gmpInnerX + tpW[0] + boxGap;
   rowBoxes(gmpInnerX, gmpLowY, gmpInnerW, row2H, [
     {
       id: "Trim",
-      line2: m2(L.trimM2) + " \u00b7 " + tSp.kgDay + " kg/g",
-      line3: tw === "trim" ? "i\u015fleniyor" : (tw === "hold" ? "kasa dolu" : "bo\u015f"),
-      fill: tw === "hold" ? "#a56a4a" : (tw === "trim" ? "#5d8a9c" : "#2a4a58"),
+      line2: tWho ? (tWho + " \u00b7 " + fmt(tKg, 0) + " kg") : (m2(L.trimM2) + " \u00b7 " + tSp.kgDay + " kg/g"),
+      line3: tw === "trim" ? "kurutmadan i\u015fleniyor" : (tw === "hold" ? "kuru oda bekler" : "bo\u015f"),
+      fill: finishTrimFill(tw),
+      flow: tw !== "idle",
       flex: 1
     },
     {
       id: "Paket",
-      line2: m2(L.packM2) + " \u00b7 " + pSp.kgDay + " kg/g",
-      line3: pw === "pack" ? "i\u015fleniyor" : "bo\u015f",
-      fill: pw === "pack" ? "#3d7a6a" : "#2a4a58",
+      line2: pWho ? (pWho + " \u00b7 " + fmt(pKg, 0) + " kg") : (m2(L.packM2) + " \u00b7 " + pSp.kgDay + " kg/g"),
+      line3: pw === "pack" ? "trimden i\u015fleniyor" : "bo\u015f",
+      fill: finishPackFill(pw),
+      flow: pw !== "idle",
       flex: 0.9
     }
   ]);
@@ -2053,9 +2166,23 @@ function renderPlan(m, s, currentWeek) {
   zoneFrame(gacpX, gacpTop, gacpW, phone ? gacpH : deskH, "rgba(111,158,98,0.08)", "rgba(111,158,98,0.4)", "GACP \u00dcRET\u0130M", "#8fbf84");
   zoneFrame(gmpX, gmpTop, gmpW, phone ? gmpH : deskH, "rgba(91,138,168,0.08)", "rgba(91,138,168,0.45)", "GMP \u0130\u015eLEME", "#8eb4c8");
   zoneFrame(officeX, officeTop, officeW, phone ? officeH : deskH, "rgba(201,181,106,0.08)", "rgba(201,181,106,0.4)", "\u0130DARE / D\u0130\u011eER", "#d4c49a");
-  const defs = "<defs>" + blocks.map(function (b, i) {
+  const defs = "<defs>" +
+    "<marker id=\"arrF\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#d4c49a\"/></marker>" +
+    blocks.map(function (b, i) {
     return "<clipPath id=\"pb" + i + "\"><rect x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\"/></clipPath>";
   }).join("") + "</defs>";
+  const dryOn = dryBusyThisWeek(m.cal, currentWeek);
+  const trimOn = tw !== "idle";
+  const packOn = pw !== "idle";
+  let flowSvg = "<g class=\"flow-links\" pointer-events=\"none\">";
+  function flowLink(x1, y1, x2, y2, color, on) {
+    flowSvg += "<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" stroke=\"" + color + "\" stroke-width=\"" + (on ? 2.8 : 1.2) + "\" opacity=\"" + (on ? 0.95 : 0.28) + "\" marker-end=\"url(#arrF)\"/>";
+  }
+  const dryCx = gmpInnerX + gmpInnerW / 2;
+  const trimCx = trimX + tpW[0] / 2;
+  flowLink(dryCx, afterDry + 1, trimCx, gmpLowY - 1, trimOn ? "#3ea8c4" : "#5b8aa8", dryOn || trimOn);
+  flowLink(trimX + tpW[0] + 1, gmpLowY + row2H / 2, packX - 1, gmpLowY + row2H / 2, packOn ? "#3d9a72" : "#3ea8c4", trimOn || packOn);
+  flowSvg += "</g>";
   const body = blocks.map(function (b, i) {
     const clip = "pb" + i;
     const padB = Math.max(5, Math.min(9, Math.round(Math.min(b.w, b.h) * 0.08)));
@@ -2068,7 +2195,8 @@ function renderPlan(m, s, currentWeek) {
     const titleLines = wrapPlanText(b.id, innerWB, titleFs).slice(0, b.h < 40 ? 1 : 2);
     const di = (typeof b.i === "number") ? (" data-i=\"" + b.i + "\"") : "";
     const on = b.on ? " on" : "";
-    let out = "<g class=\"room" + on + "\"" + di + " clip-path=\"url(#" + clip + ")\">";
+    const flow = b.flow ? " flow-on" : "";
+    let out = "<g class=\"room" + on + flow + "\"" + di + " clip-path=\"url(#" + clip + ")\">";
     out += "<rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>";
     titleLines.forEach(function (ln) {
       if (y > limit) return;
@@ -2088,7 +2216,7 @@ function renderPlan(m, s, currentWeek) {
   }).join("");
   el("plan").innerHTML =
     "<svg class=\"plan\" viewBox=\"0 0 " + W + " " + H + "\" xmlns=\"http://www.w3.org/2000/svg\">" +
-    defs + svg + body + "</svg>";
+    defs + svg + body + flowSvg + "</svg>";
 }
 
 function renderCalendar(m) {
@@ -2110,10 +2238,16 @@ function renderCalendar(m) {
     }).join("") + "</div>";
   }).join("");
   const trimRow = (m.cal.trimWeeks || Array(52).fill("idle")).map(function (c, w) {
-    return cell(w, c, "H" + (w + 1) + (c === "trim" ? " trim" : c === "hold" ? " kuru bekler" : " bo\u015f"));
+    const who = flowerTagLabel(m.cal.trimOcc && m.cal.trimOcc[w]);
+    const kg = (m.cal.trimKgW && m.cal.trimKgW[w]) || 0;
+    const extra = who ? (" " + who + (kg ? (" " + fmt(kg, 0) + " kg") : "")) : "";
+    return cell(w, c, "H" + (w + 1) + extra + (c === "trim" ? " trim" : c === "hold" ? " kuru bekler" : " bo\u015f"));
   }).join("");
   const packRow = (m.cal.packWeeks || Array(52).fill("idle")).map(function (c, w) {
-    return cell(w, c, "H" + (w + 1) + (c === "pack" ? " paket" : " bo\u015f"));
+    const who = flowerTagLabel(m.cal.packOcc && m.cal.packOcc[w]);
+    const kg = (m.cal.packKgW && m.cal.packKgW[w]) || 0;
+    const extra = who ? (" " + who + (kg ? (" " + fmt(kg, 0) + " kg") : "")) : "";
+    return cell(w, c, "H" + (w + 1) + extra + (c === "pack" ? " paket" : " bo\u015f"));
   }).join("");
   el("calendar").innerHTML = "<div class=\"cal-grid\">" + head + rows + dry +
     "<div class=\"week-row\"><b>Trim</b>" + trimRow + "</div>" +
@@ -2168,19 +2302,40 @@ function renderTables(m, s) {
     "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
 
   el("alerts").innerHTML = m.alerts.map(function (a) { return "<div class=\"alert " + a.t + "\">" + a.m + "</div>"; }).join("");
+  renderProcessFlow(m, s, week);
+}
+
+function renderProcessFlow(m, s, currentWeek) {
+  const host = el("flow");
+  if (!host || !m) return;
+  s = s || lastS || readState();
+  currentWeek = currentWeek == null ? week : currentWeek;
+  const tw = (m.cal && m.cal.trimWeeks && m.cal.trimWeeks[currentWeek]) || "idle";
+  const pw = (m.cal && m.cal.packWeeks && m.cal.packWeeks[currentWeek]) || "idle";
+  const dryOn = dryBusyThisWeek(m.cal, currentWeek);
+  const tWho = flowerTagLabel(m.cal && m.cal.trimOcc && m.cal.trimOcc[currentWeek]);
+  const pWho = flowerTagLabel(m.cal && m.cal.packOcc && m.cal.packOcc[currentWeek]);
+  const tKg = (m.cal && m.cal.trimKgW && m.cal.trimKgW[currentWeek]) || 0;
+  const pKg = (m.cal && m.cal.packKgW && m.cal.packKgW[currentWeek]) || 0;
+  const trimSub = tWho
+    ? (tWho + " \u00b7 " + fmt(tKg, 0) + " kg")
+    : ((m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g");
+  const packSub = pWho
+    ? (pWho + " \u00b7 " + fmt(pKg, 0) + " kg")
+    : ((m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g");
   const nodes = [
-    ["Ana\u00e7", (m.motherProd + m.motherBank) + " m\u00B2"],
-    ["\u00c7elik", s.rootDays + " g\u00fcn"],
-    ["Pre-veg", s.preVegDays + " g\u00fcn"],
-    ["Veg", s.vegDays + " g\u00fcn"],
-    ["\u00c7i\u00e7ek", s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda"],
-    ["Hasat", fmt(m.cyclesPerRoom, 0) + " / oda / y\u0131l"],
-    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat"],
-    ["Trim", (m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g"],
-    ["Paket", (m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g"]
+    { name: "Ana\u00e7", sub: (m.motherProd + m.motherBank) + " m\u00B2", cls: "" },
+    { name: "\u00c7elik", sub: s.rootDays + " g\u00fcn", cls: "" },
+    { name: "Pre-veg", sub: s.preVegDays + " g\u00fcn", cls: "" },
+    { name: "Veg", sub: s.vegDays + " g\u00fcn", cls: "" },
+    { name: "\u00c7i\u00e7ek", sub: s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda", cls: "" },
+    { name: "Hasat", sub: fmt(m.cyclesPerRoom, 0) + " / oda / y\u0131l", cls: "" },
+    { name: "Kurutma", sub: s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat", cls: dryOn ? " live-dry" : "" },
+    { name: "Trim", sub: trimSub + (tw === "hold" ? " \u00b7 bekler" : ""), cls: tw === "hold" ? " live-hold" : (tw === "trim" ? " live-trim" : "") },
+    { name: "Paket", sub: packSub, cls: pw === "pack" ? " live-pack" : "" }
   ];
-  el("flow").innerHTML = nodes.map(function (pair, i) {
-    return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node\"><strong>" + pair[0] + "</strong><span>" + pair[1] + "</span></div>";
+  host.innerHTML = nodes.map(function (n, i) {
+    return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node" + n.cls + "\"><strong>" + n.name + "</strong><span>" + n.sub + "</span></div>";
   }).join("");
 }
 
@@ -2281,6 +2436,7 @@ function play() {
       if (lastM) {
         renderPlan(lastM, lastS || readState(), week);
         renderCalendar(lastM);
+        renderProcessFlow(lastM, lastS, week);
         el("weekLabel").textContent = "Hafta " + (week + 1);
       }
     }, 220);
