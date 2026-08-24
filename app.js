@@ -54,13 +54,37 @@ function cloneBufferFor(saleable) {
 
 
 const CULTIVARS = [
-  { id: "wc", name: "Wedding Cake", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 165, dens: 5.5, extractY: 0.12, stretch: 1.5, thc: "22-26%", note: "8-9 hf \u00e7i\u00e7ek, orta stretch" },
-  { id: "km", name: "Kush Mints", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 175, dens: 6.0, extractY: 0.11, stretch: 1.4, thc: "22-25%", note: "y\u00fcksek yo\u011funluk / verim" },
-  { id: "gg4", name: "GG4", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.12, stretch: 1.7, thc: "20-25%", note: "stretchli, re\u00e7ine iyi" },
-  { id: "gel", name: "Gelato 33 / ICC", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.13, stretch: 1.3, thc: "22-26%", note: "kompakt, \u00f6zk\u00fct" },
-  { id: "jfg", name: "Jet Fuel Gelato", flowerDays: 67, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.5, extractY: 0.11, stretch: 1.6, thc: "24-28%", note: "uzun \u00e7i\u00e7ek, terpen yo\u011fun" },
-  { id: "pm", name: "Permanent Marker", flowerDays: 67, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 145, dens: 5.0, extractY: 0.13, stretch: 1.5, thc: "24-28%", note: "orta-uzun \u00e7i\u00e7ek" },
-  { id: "mac1", name: "MAC1", flowerDays: 70, vegDays: 25, preVegDays: 16, rootDays: 16, yieldG: 125, dens: 3.5, extractY: 0.15, stretch: 1.2, thc: "24-29%", note: "yava\u015f veg, d\u00fc\u015f\u00fck yo\u011funluk, y\u00fcksek re\u00e7ine" }
+  { id: "wc", name: "Wedding Cake", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 165, dens: 5.5, extractY: 0.12, stretch: 1.5, thc: "22-26%", origin: "US/AB", note: "8-9 hf, orta stretch" },
+  { id: "km", name: "Kush Mints", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 175, dens: 6.0, extractY: 0.11, stretch: 1.4, thc: "22-25%", origin: "US/AB", note: "y\u00fcksek yo\u011funluk / verim" },
+  { id: "gg4", name: "GG4", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.12, stretch: 1.7, thc: "20-25%", origin: "US/AB", note: "stretchli, re\u00e7ine iyi" },
+  { id: "gel", name: "Gelato 33 / ICC", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.13, stretch: 1.3, thc: "22-26%", origin: "US/AB", note: "kompakt, \u00f6zk\u00fct" },
+  { id: "jfg", name: "Jet Fuel Gelato", flowerDays: 67, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.5, extractY: 0.11, stretch: 1.6, thc: "24-28%", origin: "US/AB", note: "uzun \u00e7i\u00e7ek, terpen yo\u011fun" },
+  { id: "pm", name: "Permanent Marker", flowerDays: 67, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 145, dens: 5.0, extractY: 0.13, stretch: 1.5, thc: "24-28%", origin: "US/AB", note: "orta-uzun \u00e7i\u00e7ek" },
+  { id: "mac1", name: "MAC1", flowerDays: 70, vegDays: 25, preVegDays: 16, rootDays: 16, yieldG: 125, dens: 3.5, extractY: 0.15, stretch: 1.2, thc: "24-29%", origin: "US/AB", note: "yava\u015f veg, y\u00fcksek re\u00e7ine" },
+  { id: "jh", name: "Jack Herer (Afina)", flowerDays: 70, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 140, dens: 4.5, extractY: 0.11, stretch: 2.0, thc: "18-25%", origin: "AB", note: "Bedrocan hatt\u0131, AB t\u0131bbi klasik, sativa stretch" },
+  { id: "ww", name: "White Widow", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 170, dens: 5.5, extractY: 0.12, stretch: 1.4, thc: "18-24%", origin: "AB", note: "NL 90\u2019lar klasi\u011fi, 8-9 hf, re\u00e7ine \u00f6rt\u00fcs\u00fc" },
+  { id: "amh", name: "Amnesia Haze", flowerDays: 77, vegDays: 21, preVegDays: 14, rootDays: 16, yieldG: 145, dens: 4.0, extractY: 0.10, stretch: 2.2, thc: "20-25%", origin: "AB", note: "11-12 hf, y\u00fcksek stretch, coffeeshop klasi\u011fi" },
+  { id: "slh", name: "Super Lemon Haze", flowerDays: 70, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 4.5, extractY: 0.11, stretch: 2.0, thc: "18-24%", origin: "AB", note: "Cup kazanan\u0131, limon terpen, 10 hf" },
+  { id: "nl", name: "Northern Lights", flowerDays: 53, vegDays: 16, preVegDays: 14, rootDays: 14, yieldG: 180, dens: 6.0, extractY: 0.11, stretch: 1.2, thc: "16-21%", origin: "AB", note: "k\u0131sa \u00e7i\u00e7ek, kompakt, ticari verim" },
+  { id: "crp", name: "Critical+", flowerDays: 49, vegDays: 16, preVegDays: 12, rootDays: 14, yieldG: 200, dens: 6.0, extractY: 0.10, stretch: 1.3, thc: "16-22%", origin: "AB", note: "\u0130spanya ticari omurga, 7 hf, y\u00fcksek biyok\u00fctle" },
+  { id: "chs", name: "UK Cheese", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 165, dens: 5.5, extractY: 0.11, stretch: 1.4, thc: "17-22%", origin: "AB", note: "Exodus/UK hatt\u0131, 8-9 hf" },
+  { id: "hk", name: "Hindu Kush", flowerDays: 52, vegDays: 16, preVegDays: 14, rootDays: 14, yieldG: 160, dens: 5.5, extractY: 0.12, stretch: 1.2, thc: "16-22%", origin: "AB", note: "indica landrace, k\u0131sa d\u00f6ng\u00fc, re\u00e7ete klasi\u011fi" },
+  { id: "pk", name: "Pink Kush", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.0, extractY: 0.13, stretch: 1.3, thc: "20-26%", origin: "AB", note: "DE/CA t\u0131bbi eczane favorisi" },
+  { id: "gth", name: "Ghost Train Haze", flowerDays: 77, vegDays: 21, preVegDays: 14, rootDays: 16, yieldG: 140, dens: 4.0, extractY: 0.12, stretch: 2.1, thc: "24-28%", origin: "AB", note: "Alman eczane pop\u00fcler, uzun sativa" },
+  { id: "pp", name: "Power Plant", flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 185, dens: 5.5, extractY: 0.10, stretch: 1.7, thc: "16-22%", origin: "AB", note: "NL ticari sativa, h\u0131zl\u0131 ve verimli" },
+  { id: "runtz", name: "Runtz", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 145, dens: 5.0, extractY: 0.13, stretch: 1.4, thc: "20-25%", origin: "K\u00fcresel", note: "Zkittlez x Gelato, 8-9 hf" },
+  { id: "zkit", name: "Zkittlez", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 135, dens: 5.0, extractY: 0.12, stretch: 1.3, thc: "18-24%", origin: "K\u00fcresel", note: "terpen odakl\u0131, orta verim" },
+  { id: "gsc", name: "GSC", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 140, dens: 5.0, extractY: 0.13, stretch: 1.4, thc: "20-26%", origin: "K\u00fcresel", note: "Cookies ailesi, ABD ikonu" },
+  { id: "ogk", name: "OG Kush", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.12, stretch: 1.6, thc: "20-26%", origin: "K\u00fcresel", note: "LA hatt\u0131, orta stretch" },
+  { id: "sd", name: "Sour Diesel", flowerDays: 70, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 145, dens: 4.5, extractY: 0.11, stretch: 2.0, thc: "18-24%", origin: "K\u00fcresel", note: "10 hf sativa, yak\u0131t terpen" },
+  { id: "gmo", name: "GMO (Garlic Cookies)", flowerDays: 70, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.0, extractY: 0.16, stretch: 1.5, thc: "24-30%", origin: "K\u00fcresel", note: "y\u00fcksek re\u00e7ine, extract hatt\u0131" },
+  { id: "dsd", name: "Do-Si-Dos", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.13, stretch: 1.4, thc: "20-26%", origin: "K\u00fcresel", note: "OG x Cookies, 9 hf" },
+  { id: "jeal", name: "Jealousy", flowerDays: 67, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.13, stretch: 1.5, thc: "24-30%", origin: "K\u00fcresel", note: "Gelato x Sherb, AB eczanede de" },
+  { id: "lcg", name: "Lemon Cherry Gelato", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.13, stretch: 1.4, thc: "22-28%", origin: "K\u00fcresel", note: "2020\u2019ler ABD/AB pop\u00fcler" },
+  { id: "apf", name: "Apple Fritter", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 160, dens: 5.5, extractY: 0.12, stretch: 1.4, thc: "22-28%", origin: "K\u00fcresel", note: "Sour Apple x Animal Cookies" },
+  { id: "bd", name: "Blue Dream", flowerDays: 67, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 175, dens: 5.0, extractY: 0.11, stretch: 1.8, thc: "18-24%", origin: "K\u00fcresel", note: "ABD ticari omurga, y\u00fcksek verim" },
+  { id: "cj", name: "Cap Junky", flowerDays: 67, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 140, dens: 4.5, extractY: 0.15, stretch: 1.5, thc: "28-34%", origin: "K\u00fcresel", note: "\u00e7ok y\u00fcksek THC, AB t\u0131bbi pazarda da" },
+  { id: "sbf", name: "Super Boof", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.12, stretch: 1.4, thc: "22-27%", origin: "K\u00fcresel", note: "Black Cherry Punch x Tropicana Cookies" }
 ];
 
 function selectedCultivars() {
@@ -177,13 +201,34 @@ function sizeExtract(feedKg, crudeFrac) {
 function renderGeneticsUI() {
   const box = el("geneticsBox");
   if (!box || box.dataset.ready) return;
-  box.innerHTML = CULTIVARS.map(function (c, i) {
-    const on = i < 4 ? " checked" : "";
-    return "<label class=\"check\"><input type=\"checkbox\" id=\"g-" + c.id + "\"" + on + " /> " + c.name +
-      "<small>" + c.flowerDays + "g \u00e7i\u00e7ek / " + c.vegDays + "g veg / " + c.rootDays + "g k\u00f6k / " +
+  const groups = [
+    { t: "Tesis kar\u0131\u015f\u0131m\u0131", ids: ["wc", "km", "gg4", "gel", "jfg", "pm", "mac1"] },
+    { t: "Avrupa / t\u0131bbi klasik", ids: ["jh", "ww", "amh", "slh", "nl", "crp", "chs", "hk", "pk", "gth", "pp"] },
+    { t: "K\u00fcresel ticari", ids: ["runtz", "zkit", "gsc", "ogk", "sd", "gmo", "dsd", "jeal", "lcg", "apf", "bd", "cj", "sbf"] }
+  ];
+  const byId = {};
+  CULTIVARS.forEach(function (c) { byId[c.id] = c; });
+  function card(c, on) {
+    return "<label class=\"check\"><input type=\"checkbox\" id=\"g-" + c.id + "\"" + (on ? " checked" : "") + " /> " + c.name +
+      "<small>" + c.origin + " \u00b7 " + c.flowerDays + "g \u00e7i\u00e7ek / " + c.vegDays + "g veg / " + c.rootDays + "g k\u00f6k / " +
       c.yieldG + " g \u00b7 " + c.dens + "/m\u00B2 \u00b7 THC " + c.thc +
       "<br>" + c.note + " \u00b7 ham ya\u011f ~%" + Math.round(c.extractY * 100) + "</small></label>";
-  }).join("");
+  }
+  const seen = {};
+  let html = "";
+  groups.forEach(function (g) {
+    html += "<h3>" + g.t + "</h3>";
+    g.ids.forEach(function (id, i) {
+      const c = byId[id];
+      if (!c) return;
+      seen[id] = true;
+      html += card(c, g === groups[0] && i < 4);
+    });
+  });
+  CULTIVARS.forEach(function (c) {
+    if (!seen[c.id]) html += card(c, false);
+  });
+  box.innerHTML = html;
   box.dataset.ready = "1";
   box.querySelectorAll("input").forEach(function (i) {
     i.addEventListener("input", function () {

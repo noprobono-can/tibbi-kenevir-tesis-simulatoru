@@ -240,7 +240,15 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .grid-3 { grid-template-columns: 1fr; }
 }
 
-.genetics { display: grid; gap: 8px; }
+.genetics { display: grid; gap: 8px; max-height: min(58vh, 640px); overflow: auto; padding-right: 4px; }
+.genetics h3 {
+  margin: 10px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
 .genetics .check { align-items: flex-start; margin: 0; }
 .genetics .check small {
   display: block;
