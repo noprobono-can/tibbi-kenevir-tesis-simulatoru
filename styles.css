@@ -257,3 +257,39 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-size: 11px;
   line-height: 1.35;
 }
+
+.gene-row {
+  display: grid;
+  grid-template-columns: 1fr 64px;
+  gap: 8px;
+  align-items: start;
+  background: var(--panel-2, #1a221e);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.gene-body { display: block; }
+.gene-rooms {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.gene-rooms input[type=number] {
+  width: 56px;
+  background: #121816;
+  border: 1px solid var(--line);
+  color: inherit;
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 13px;
+  text-align: right;
+}
+.gene-rooms input[type=number]:disabled { opacity: 0.4; }
+.gene-rooms em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

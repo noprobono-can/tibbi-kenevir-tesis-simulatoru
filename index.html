@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 <body>
   <header class="app-header">
@@ -77,18 +77,21 @@
         <div class="control"><header><span>Verim / bitki</span><span id="v-yieldG">180 g</span></header>
           <input id="yieldG" type="range" min="80" max="280" step="5" value="180" /></div>
         <input id="genetics" type="hidden" value="4" />
-        <div class="control"><header><span>Toptan fiyat</span><span id="v-priceKg">€3.500</span></header>
+        <div class="control"><header><span>Çiçek satış fiyatı</span><span id="v-priceKg">€3.500</span></header>
           <input id="priceKg" type="range" min="500" max="8000" step="50" value="3500" /></div>
+        <div class="control"><header><span>Ekstrakt satış fiyatı</span><span id="v-extractPriceKg">€4.200</span></header>
+          <input id="extractPriceKg" type="range" min="500" max="20000" step="50" value="4200" /></div>
+
         <div class="control"><header><span>Satılabilir oran</span><span id="v-saleablePct">%85</span></header>
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
         <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
           <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
-        <p class="hint">0 = hat yok. Değer, yıllık kuru çiçek kütlesinin ekstraksiyona giden payıdır; hat kapasiteye göre ölçeklenir (kriyo-etanol, C1D2).</p>
+        <p class="hint">Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı kriyo-etanol hatta gider (C1D2). Satılamayan kütle önce ekstraksiyona yazılır.</p>
       </section>
 
       <section class="panel">
         <h2>Genetikler</h2>
-        <p class="hint">Avrupa tıbbi klasikler (Jack Herer/Afina, White Widow, Amnesia Haze, Critical+) ve küresel ticari genetik (Runtz, GMO, Jealousy, Cap Junky). Seçilenler odalara sırayla dağılır.</p>
+        <p class="hint">Her seçilen genetik için kaç çiçek odasında yetişeceğini yazın. Toplam, çiçek odası sayısına eşit olmalı. Takvim, verim ve hasılat oda ağırlıklı hesaplanır.</p>
         <p class="hint" id="geneticsMix"></p>
         <div id="geneticsBox" class="genetics"></div>
       </section>
@@ -133,6 +136,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
