@@ -437,33 +437,46 @@ function layoutFromFlower(s, stats) {
 }
 
 function sizeExtract(feedKg, crudeFrac) {
-  if (feedKg < 1) {
-    return {
-      capexEq: 0, capexRoom: 0, capex: 0, m2: 0, opex: 0,
-      opexSolvent: 0, opexLabor: 0, opexFixed: 0,
-      kgDay: 0, crudeKg: 0, operators: 0, tier: "off", crudeFrac: 0
-    };
-  }
-  const kgDay = feedKg / 250;
-  let capexEq, m2, tier;
-  if (kgDay <= 8) { capexEq = 70000 + kgDay * 3500; m2 = 48; tier = "CUP / ~15 lb-g\u00fcn"; }
-  else if (kgDay <= 45) { capexEq = 165000 + (kgDay - 8) * 5200; m2 = 90 + (kgDay - 8) * 2.2; tier = "kriyo-etanol orta"; }
-  else if (kgDay <= 90) { capexEq = 360000 + (kgDay - 45) * 3100; m2 = 175 + (kgDay - 45) * 1.8; tier = "100+ lb/g\u00fcn hatt\u0131"; }
-  else if (kgDay <= 180) { capexEq = 500000 + (kgDay - 90) * 3900; m2 = 256 + (kgDay - 90) * 1.4; tier = "CryoEXS-400 s\u0131n\u0131f\u0131"; }
-  else { capexEq = 850000 + (kgDay - 180) * 2000; m2 = 380 + (kgDay - 180) * 1.1; tier = "end\u00fcstriyel"; }
-  capexEq = Math.min(2200000, capexEq) + 22000;
-  m2 = Math.min(700, Math.max(40, Math.round(m2)));
-  const capexRoom = m2 * 5600;
-  const operators = 1 + Math.floor(kgDay / 70);
-  const opexSolvent = feedKg * 9.5;
-  const opexLabor = operators * 1800 * 7;
-  const opexFixed = 16000;
+  const off = {
+    capexEq: 0, capexRoom: 0, capex: 0, m2: 0, opex: 0,
+    opexSolvent: 0, opexLabor: 0, opexFixed: 0, opexEnergy: 0,
+    kgDay: 0, crudeKg: 0, productKg: 0, operators: 0,
+    tier: "off", crudeFrac: 0, nCal: 0, nIso: 0,
+    ratedKgDay: 0, isoluteKgDay: 0, overCap: false
+  };
+  if (feedKg < 1) return off;
   const frac = crudeFrac || 0.12;
+  const OP_DAYS = 225;
+  const RATED_FLOWER = 40;
+  const RATED_ISO = 8;
+  const CAL_EUR = 340000;
+  const ISO_EUR = 110000;
+  const DIST_Y = 0.78;
+  const kgDay = feedKg / OP_DAYS;
+  const crudeKg = feedKg * frac;
+  const crudeDay = crudeKg / OP_DAYS;
+  const productKg = crudeKg * DIST_Y;
+  const nCal = Math.max(1, Math.ceil(kgDay / RATED_FLOWER - 1e-9));
+  const nIso = Math.max(1, Math.ceil(crudeDay / RATED_ISO - 1e-9));
+  const capexEq = nCal * CAL_EUR + nIso * ISO_EUR;
+  const m2 = Math.round(96 + Math.max(0, nCal - 1) * 40 + Math.max(0, nIso - 1) * 22);
+  const capexRoom = m2 * 3200;
+  const opexEnergy = feedKg * 1.4 * 0.09 + crudeKg * 2.2 * 0.09;
+  const opexSolvent = feedKg * 0.04 * 0.55;
+  const opexLabor = 39000 * nCal;
+  const opexFixed = capexEq * 0.035 + 3500;
+  const operators = 1 + Math.max(0, nCal - 1);
+  const overCap = kgDay > nCal * RATED_FLOWER + 0.05 || crudeDay > nIso * RATED_ISO + 0.05;
+  const tier = (nCal === 1 && nIso === 1)
+    ? "Caladrius 450 X (2\u00d730 L, 8 sa / 1 vardiya) + Isolute X (8 kg/g\u00fcn dist+kristal)"
+    : (nCal + "\u00d7 Caladrius 450 X + " + nIso + "\u00d7 Isolute X");
   return {
     capexEq: capexEq, capexRoom: capexRoom, capex: capexEq + capexRoom, m2: m2,
-    opex: opexSolvent + opexLabor + opexFixed,
-    opexSolvent: opexSolvent, opexLabor: opexLabor, opexFixed: opexFixed,
-    kgDay: kgDay, crudeKg: feedKg * frac, operators: operators, tier: tier, crudeFrac: frac
+    opex: opexEnergy + opexSolvent + opexLabor + opexFixed,
+    opexSolvent: opexSolvent, opexLabor: opexLabor, opexFixed: opexFixed, opexEnergy: opexEnergy,
+    kgDay: kgDay, crudeKg: crudeKg, productKg: productKg, operators: operators,
+    tier: tier, crudeFrac: frac, nCal: nCal, nIso: nIso,
+    ratedKgDay: nCal * RATED_FLOWER, isoluteKgDay: nIso * RATED_ISO, overCap: overCap
   };
 }
 
@@ -1017,7 +1030,8 @@ function simulate(s) {
   const ex = sizeExtract(extractFeed, crudeFrac);
   const layout = layoutFromFlower(s, stats);
   const flowerRevenue = kgFlowerSold * s.priceKg;
-  const extractRevenue = ex.crudeKg * (s.extractPriceKg || 0);
+  const extractSoldKg = ex.productKg != null ? ex.productKg : (ex.crudeKg || 0);
+  const extractRevenue = extractSoldKg * (s.extractPriceKg || 0);
   const revenue = flowerRevenue + extractRevenue;
 
 
@@ -1126,10 +1140,11 @@ function simulate(s) {
     alerts.push({ t: "ok", m: "Genetik (oda a\u011f\u0131rl\u0131kl\u0131): " + kgBits + " \u00b7 ort. \u00e7i\u00e7ek " + flowerDaysUse + " g\u00fcn / yo\u011funluk ayarl\u0131 " + fmt(yieldUse, 0) + " g/bitki / ham ya\u011f %" + Math.round(((stats && stats.extractY) || 0.12) * 100) + "." });
   }
   if (extractFeed > 0) {
-    alerts.push({ t: "ok", m: "Ekstraksiyon " + fmt(extractFeed, 0) + " kg/y\u0131l (~" + fmt(ex.kgDay, 1) + " kg/g\u00fcn, " + ex.tier + "), ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg. Hat kapasiteye g\u00f6re \u00f6l\u00e7ekli kriyo-etanol (C1D2)." });
+    alerts.push({ t: ex.overCap ? "warn" : "ok", m: "Ekstraksiyon scCO\u2082 (Endemic, TR indikatif, KDV hari\u00e7): " + fmt(extractFeed, 0) + " kg kuru \u00e7i\u00e7ek/y\u0131l (~" + fmt(ex.kgDay, 1) + " / " + fmt(ex.ratedKgDay, 0) + " kg/g\u00fcn). 1. ad\u0131m Caladrius 450 X 2\u00d730 L + 2\u00d710 L seperat\u00f6r + 5 L terpen tutucu (max 450 bar / 80 \u00b0C; seperat\u00f6r 150 bar / 40 \u00b0C). 2\u20133. ad\u0131m Isolute X dist+kristal " + fmt(ex.isoluteKgDay, 0) + " kg ya\u011f/g\u00fcn. Ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u2192 sat\u0131lan distilat " + fmt(ex.productKg, 0) + " kg. Ekipman " + eur(ex.capexEq) + " \u00b7 CO\u2082 geri kazan\u0131m %95\u201398 \u00b7 C1D2 yok \u00b7 8 sa / 1 vardiya." });
+    if (ex.overCap) alerts.push({ t: "bad", m: "Besleme Caladrius/Isolute anma kapasitesini a\u015f\u0131yor \u2014 ek hat veya ikinci vardiya gerekir." });
   }
-  alerts.push({ t: "ok", m: "Has\u0131lat = sat\u0131lan \u00e7i\u00e7ek " + fmt(kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + "/kg (" + eur(flowerRevenue) + ")" + (extractFeed > 0 ? (" + ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg (" + eur(extractRevenue) + ")") : "") + "." });
-  alerts.push({ t: "ok", m: "OPEX Cannactive v2 + ekstraksiyon i\u015fletme (solvent/enerji + operat\u00f6r). Sera HVAC enerjisi, G&A ve d\u0131\u015f COA bu modelde yok." });
+  alerts.push({ t: "ok", m: "Has\u0131lat = sat\u0131lan \u00e7i\u00e7ek " + fmt(kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + "/kg (" + eur(flowerRevenue) + ")" + (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg (" + eur(extractRevenue) + ")") : "") + "." });
+  alerts.push({ t: "ok", m: "OPEX Cannactive v2 + scCO\u2082 i\u015fletme (elektrik ~1,4 kWh/kg biyok\u00fctle, CO\u2082 makyaj, 1 proses hatt\u0131 kadrosu, bak\u0131m %3,5). Sera HVAC enerjisi, G&A ve d\u0131\u015f COA bu modelde yok." });
 
   return {
     roomM2: roomM2, usableFlower: usableFlower, plantsPerRoom: plantsPerRoom, density: density,
@@ -1146,18 +1161,25 @@ function simulate(s) {
   };
 }
 
+function kpiMain(num, unit, euro) {
+  return (euro ? "<span class=\"kpi-cur\">\u20AC</span>" : "") +
+    "<span class=\"kpi-num\">" + num + "</span>" +
+    (unit ? "<span class=\"kpi-unit\">" + unit + "</span>" : "");
+}
+
 function renderKpis(m, s) {
+  const soldEx = m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0;
   const items = [
-    ["Y\u0131ll\u0131k bitki", fmt(m.plantsYear), fmt(m.plantsInFlower, 0) + " hasatta \u00b7 " + fmt(m.harvestsYear, 0) + " hasat/y\u0131l", ""],
-    ["Oda alan\u0131", m2(s.roomM2), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
-    ["Kurutma", String(s.dryRooms), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
-    ["Kuru \u00e7i\u00e7ek", fmt(m.kgYear, 0) + " kg", fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 ham ya\u011f " + fmt(m.extract ? m.extract.crudeKg : 0, 0) + " kg", ""],
-    ["Has\u0131lat", eur(m.revenue), "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0), ""],
-    ["CAPEX", eur(m.capex), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
+    ["Y\u0131ll\u0131k bitki", kpiMain(fmt(m.plantsYear), ""), fmt(m.plantsInFlower, 0) + " hasatta \u00b7 " + fmt(m.harvestsYear, 0) + " hasat/y\u0131l", ""],
+    ["Oda alan\u0131", kpiMain(fmt(s.roomM2, 0), "m\u00B2"), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
+    ["Kurutma", kpiMain(String(s.dryRooms), ""), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 tepe " + m.cal.peakDry, m.cal.unassigned ? "warn" : ""],
+    ["Kuru \u00e7i\u00e7ek", kpiMain(fmt(m.kgYear, 0), "kg"), fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg", ""],
+    ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0), ""],
+    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
   ];
-  el("kpis").innerHTML = items.map(([label, value, sub, cls]) =>
-    "<article class=\"kpi " + cls + "\"><div class=\"label\">" + label + "</div><div class=\"value\">" + value + "</div><div class=\"sub\">" + sub + "</div></article>"
-  ).join("");
+  el("kpis").innerHTML = items.map(function (row) {
+    return "<article class=\"kpi " + row[3] + "\"><div class=\"label\">" + row[0] + "</div><div class=\"value\">" + row[1] + "</div><div class=\"sub\">" + row[2] + "</div></article>";
+  }).join("");
 }
 
 
@@ -1201,9 +1223,11 @@ function buildConceptSvg(m, s, currentWeek) {
     });
   }
 
-  const office = mSize(36, 1.8);
-  const air = mSize(10, 0.65);
-  const mech = mSize(Math.max(18, Math.round((m.totalBuilt || 400) * 0.025)), 1.4);
+  const office = mSize(36, 1.35);
+  const air = mSize(10, 2.4);
+  const mech = mSize(Math.max(18, Math.round((m.totalBuilt || 400) * 0.025)), 1.15);
+  const staff = mSize(14, 1.4);
+  const store = mSize(16, 1.3);
   const mother = mSize(m.motherProd || L.motherM2 || 18, 1.25);
   const bank = mSize(m.motherBank || 10, 1.6);
   const cut = mSize(L.cuttingsM2 || 16, 1.2);
@@ -1215,31 +1239,22 @@ function buildConceptSvg(m, s, currentWeek) {
   const pack = mSize(L.packM2 || 18, 1.35);
   const ext = hasEx ? mSize(ex.m2, 1.6) : null;
 
-  const gap = 0.55;
-  const hall = 2.4;
+  const gap = 0.5;
+  const hall = 2.2;
   let x = 0;
   let y = 0;
-  const staffH = Math.max(7.2, office.h, air.h, mech.h);
-
-  add("Ofis / QMS", x, y, office.w, staffH, "#c9b56a", "36 m\u00B2 \u00b7 idare", "idare");
-  x += office.w + gap;
-  add("GACP giri\u015f", x, y, Math.max(4.2, air.w), staffH, "#a34a3a", "hava kilit", "akisi");
-  x += Math.max(4.2, air.w) + gap;
-  add("GMP giri\u015f", x, y, Math.max(4.2, air.w), staffH, "#8a3a42", "hava kilit", "akisi");
-  x += Math.max(4.2, air.w) + gap;
-  add("Mekanik / HVAC", x, y, mech.w, staffH, "#4a5550", Math.round(mech.a) + " m\u00B2", "mek");
-  const staffW = x + mech.w;
-
-  y = staffH + hall;
-  x = 0;
-  const propH = Math.max(mother.h, bank.h + 3.6, cut.h, prev.h, veg.h);
+  add("GACP giri\u015f", x, y, Math.max(5.2, air.w), 3.2, "#a34a3a", "hava kilit", "gacp");
+  y = 3.2 + gap;
+  const propY = y;
+  const propH = Math.max(mother.h, cut.h, prev.h, veg.h, bank.h + 3.6);
   add("Ana\u00e7 \u00fcretim", x, y, mother.w, propH, "#6f9e62", Math.round(m.motherProd || mother.a) + " m\u00B2", "gacp");
   x += mother.w + gap;
-  const bankH = Math.min(bank.h, propH * 0.52);
-  add("Ana\u00e7 bankas\u0131", x, y, Math.max(bank.w, 6.5), bankH, "#587c4e", "GACP", "gacp");
-  add("Karantina", x, y + bankH + 0.4, 4.2, propH - bankH - 0.4, "#8b6bb0", "R&D", "rd");
-  add("Doku k\u00fclt.", x + 4.4, y + bankH + 0.4, Math.max(4.2, Math.max(bank.w, 6.5) - 4.4), propH - bankH - 0.4, "#8b6bb0", "R&D", "rd");
-  x += Math.max(bank.w, 6.5) + gap;
+  const bankW = Math.max(bank.w, 6.6);
+  const bankH = Math.min(bank.h, propH * 0.48);
+  add("Ana\u00e7 bankas\u0131", x, y, bankW, bankH, "#587c4e", "GACP", "gacp");
+  add("Karantina", x, y + bankH + 0.35, bankW * 0.48, propH - bankH - 0.35, "#8b6bb0", "R&D", "rd");
+  add("Doku k\u00fclt.", x + bankW * 0.52, y + bankH + 0.35, bankW * 0.48, propH - bankH - 0.35, "#8b6bb0", "R&D", "rd");
+  x += bankW + gap;
   add("\u00c7elik", x, y, cut.w, propH, "#7aa56e", Math.round(L.cuttingsM2 || cut.a) + " m\u00B2", "gacp");
   x += cut.w + gap;
   add("Pre-veg", x, y, prev.w, propH, "#88b57a", Math.round(m.preVeg || prev.a) + " m\u00B2", "gacp");
@@ -1247,7 +1262,6 @@ function buildConceptSvg(m, s, currentWeek) {
   add("Veg", x, y, veg.w, propH, "#88b57a", Math.round(m.veg || veg.a) + " m\u00B2", "gacp");
   x += veg.w;
   const propW = x;
-  const propY = y;
   const propBottom = y + propH;
 
   const fCount = Math.max(1, s.flowerRooms);
@@ -1290,8 +1304,10 @@ function buildConceptSvg(m, s, currentWeek) {
   const dCount = Math.max(1, s.dryRooms);
   const dCols = Math.min(dCount, dCount <= 3 ? dCount : 3);
   const dRows = Math.ceil(dCount / dCols);
-  const gmpX = Math.max(staffW, propW, flowerW) + hall;
-  const gmpY = staffH + hall;
+  const gacpW = Math.max(propW, flowerW);
+  const gmpX = gacpW + hall;
+  const gmpY = 3.2 + gap;
+  add("GMP giri\u015f", gmpX, 0, Math.max(5.2, air.w), 3.2, "#8a3a42", "hava kilit", "gmp");
   const dryOcc = (m.cal && (m.cal.dryOcc || m.cal.dryOcc)) || [];
   const dryRows = (m.cal && (m.cal.dryRows || m.cal.dryRows)) || [];
   for (let i = 0; i < dCount; i++) {
@@ -1323,10 +1339,24 @@ function buildConceptSvg(m, s, currentWeek) {
     py += ext.h;
   }
 
-  const innerW = Math.max(staffW, propW, flowerW, gmpX + Math.max(dryW, trim.w + gap + pack.w));
-  const innerH = Math.max(flowerY + flowerH, py);
+  const gmpW = Math.max(dryW, trim.w + gap + pack.w, hasEx ? Math.max(ext.w, dryW) : 0, Math.max(5.2, air.w));
+  const gmpH = py;
+  const officeX = gmpX + gmpW + hall;
+  const colW = Math.max(office.w, mech.w, staff.w, store.w, 8);
+  add("Ofis / QMS", officeX, 0, colW, office.h, "#c9b56a", "36 m\u00B2 \u00b7 idare", "idare");
+  let oy = office.h + gap;
+  add("Mekanik / HVAC", officeX, oy, colW, mech.h, "#4a5550", Math.round(mech.a) + " m\u00B2", "mek");
+  oy += mech.h + gap;
+  add("Personel", officeX, oy, colW, staff.h, "#b8a56a", Math.round(staff.a) + " m\u00B2", "idare");
+  oy += staff.h + gap;
+  add("Depo / at\u0131k", officeX, oy, colW, store.h, "#7a846c", Math.round(store.a) + " m\u00B2", "idare");
+  oy += store.h;
+  const officeW = colW;
+  const officeH = oy;
+  const innerW = officeX + officeW;
+  const innerH = Math.max(flowerY + flowerH, gmpH, officeH);
 
-  const padL = 40, padT = 86, padR = 268, padB = 96;
+  const padL = 40, padT = 86, padR = 220, padB = 72;
   const W = Math.round(padL + innerW * PPM + padR);
   const H = Math.round(padT + innerH * PPM + padB);
 
@@ -1334,13 +1364,17 @@ function buildConceptSvg(m, s, currentWeek) {
   function Y(mtr) { return Math.round(padT + mtr * PPM); }
   function S(mtr) { return Math.max(8, Math.round(mtr * PPM)); }
 
-  const gacpX0 = X(0), gacpY0 = Y(staffH + hall * 0.35);
-  const gacpW = S(Math.max(propW, flowerW));
-  const gacpH = S(innerH - staffH - hall * 0.35);
-  const gmpX0 = X(gmpX - hall * 0.35);
-  const gmpY0 = Y(staffH + hall * 0.2);
-  const gmpW = S(innerW - gmpX + hall * 0.35);
-  const gmpH = S(innerH - staffH - hall * 0.2);
+  const gacpX0 = X(0), gacpY0 = Y(0);
+  const gacpZoneW = S(gacpW);
+  const gacpZoneH = S(innerH);
+  const gmpX0 = X(gmpX - hall * 0.15);
+  const gmpY0 = Y(0);
+  const gmpZoneW = S(gmpW + hall * 0.3);
+  const gmpZoneH = S(innerH);
+  const officeX0 = X(officeX - hall * 0.15);
+  const officeY0 = Y(0);
+  const officeZoneW = S(officeW + hall * 0.15);
+  const officeZoneH = S(innerH);
 
   let svg = "";
   svg += "<rect x=\"0\" y=\"0\" width=\"" + W + "\" height=\"" + H + "\" fill=\"#0c1210\"/>";
@@ -1353,14 +1387,22 @@ function buildConceptSvg(m, s, currentWeek) {
   svg += "<polygon points=\"" + (W - 48) + ",28 " + (W - 53) + ",46 " + (W - 43) + ",46\" fill=\"#d4c49a\"/>";
   svg += "<text x=\"" + (W - 48) + "\" y=\"62\" text-anchor=\"middle\" fill=\"#d4c49a\" font-size=\"9\" font-family=\"Segoe UI, Arial, sans-serif\">K</text>";
 
-  svg += "<rect x=\"" + gacpX0 + "\" y=\"" + gacpY0 + "\" width=\"" + gacpW + "\" height=\"" + gacpH + "\" fill=\"rgba(111,158,98,0.08)\" stroke=\"rgba(111,158,98,0.35)\" stroke-dasharray=\"4 3\"/>";
+  svg += "<rect x=\"" + gacpX0 + "\" y=\"" + gacpY0 + "\" width=\"" + gacpZoneW + "\" height=\"" + gacpZoneH + "\" fill=\"rgba(111,158,98,0.08)\" stroke=\"rgba(111,158,98,0.35)\" stroke-dasharray=\"4 3\"/>";
   svg += "<text x=\"" + (gacpX0 + 8) + "\" y=\"" + (gacpY0 + 16) + "\" fill=\"#8fbf84\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.2\">GACP \u00dcRET\u0130M</text>";
-  svg += "<rect x=\"" + gmpX0 + "\" y=\"" + gmpY0 + "\" width=\"" + gmpW + "\" height=\"" + gmpH + "\" fill=\"rgba(91,138,168,0.08)\" stroke=\"rgba(91,138,168,0.4)\" stroke-dasharray=\"4 3\"/>";
+  svg += "<rect x=\"" + gmpX0 + "\" y=\"" + gmpY0 + "\" width=\"" + gmpZoneW + "\" height=\"" + gmpZoneH + "\" fill=\"rgba(91,138,168,0.08)\" stroke=\"rgba(91,138,168,0.4)\" stroke-dasharray=\"4 3\"/>";
   svg += "<text x=\"" + (gmpX0 + 8) + "\" y=\"" + (gmpY0 + 16) + "\" fill=\"#8eb4c8\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.2\">GMP \u0130\u015eLEME</text>";
+  svg += "<rect x=\"" + officeX0 + "\" y=\"" + officeY0 + "\" width=\"" + officeZoneW + "\" height=\"" + officeZoneH + "\" fill=\"rgba(201,181,106,0.08)\" stroke=\"rgba(201,181,106,0.4)\" stroke-dasharray=\"4 3\"/>";
+  svg += "<text x=\"" + (officeX0 + 8) + "\" y=\"" + (officeY0 + 16) + "\" fill=\"#d4c49a\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1.2\">\u0130DARE / D\u0130\u011eER</text>";
 
-  rooms.forEach(function (b) {
+  rooms.forEach(function (b, ri) {
     const rx = X(b.x), ry = Y(b.y), rw = S(b.w), rh = S(b.h);
-    svg += "<g>";
+    const ink = inkForFill(b.fill);
+    const padB = 6;
+    const innerW = Math.max(10, rw - padB * 2);
+    const fs = rw < 70 ? 9 : 11;
+    const subFs = Math.max(7, fs - 2);
+    svg += "<clipPath id=\"cr" + ri + "\"><rect x=\"" + rx + "\" y=\"" + ry + "\" width=\"" + rw + "\" height=\"" + rh + "\"/></clipPath>";
+    svg += "<g clip-path=\"url(#cr" + ri + ")\">";
     svg += "<rect x=\"" + rx + "\" y=\"" + ry + "\" width=\"" + rw + "\" height=\"" + rh + "\" fill=\"" + b.fill + "\" stroke=\"#0c1210\" stroke-width=\"1.4\" opacity=\"0.94\"/>";
     if (b.dens && rh > 44 && rw > 48) {
       const pitch = Math.max(4.5, Math.min(11, PPM / Math.sqrt(b.dens)));
@@ -1376,10 +1418,19 @@ function buildConceptSvg(m, s, currentWeek) {
         }
       }
     }
-    const fs = rw < 70 ? 9 : 11;
-    svg += "<text x=\"" + (rx + 7) + "\" y=\"" + (ry + 16) + "\" fill=\"#0c1210\" font-size=\"" + fs + "\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(b.name) + "</text>";
-    if (rh > 28) {
-      svg += "<text x=\"" + (rx + 7) + "\" y=\"" + (ry + 30) + "\" fill=\"#0c1210\" font-size=\"10\" opacity=\"0.78\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(b.tag) + "</text>";
+    let ty = ry + padB + fs;
+    const limit = ry + rh - 4;
+    wrapPlanText(b.name, innerW, fs).slice(0, rh < 36 ? 1 : 2).forEach(function (ln) {
+      if (ty > limit) return;
+      svg += "<text x=\"" + (rx + padB) + "\" y=\"" + ty + "\" fill=\"" + ink + "\" font-size=\"" + fs + "\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(ln) + "</text>";
+      ty += fs + 2;
+    });
+    if (rh > 28 && b.tag) {
+      wrapPlanText(b.tag, innerW, subFs).forEach(function (ln) {
+        if (ty + subFs - 1 > limit) return;
+        svg += "<text x=\"" + (rx + padB) + "\" y=\"" + ty + "\" fill=\"" + ink + "\" font-size=\"" + subFs + "\" opacity=\"0.78\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(ln) + "</text>";
+        ty += subFs + 2;
+      });
     }
     svg += "</g>";
   });
@@ -1401,7 +1452,7 @@ function buildConceptSvg(m, s, currentWeek) {
   svg += "<text x=\"" + barX + "\" y=\"" + (barY - 6) + "\" fill=\"#d4c49a\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">\u00d6L\u00c7EK  \u00b7  10 m = " + (barM * PPM) + " px  \u00b7  1 m = " + PPM + " px</text>";
   svg += "<text x=\"" + barX + "\" y=\"" + (barY + 22) + "\" fill=\"#8b9a90\" font-size=\"10\" font-family=\"Segoe UI, Arial, sans-serif\">Konsept dizayn \u00b7 in\u015faat projesi de\u011fildir \u00b7 odalar genetik bitki/m\u00B2 ile modellendi</text>";
 
-  const lx = W - 250, ly = padT;
+  const lx = W - 210, ly = padT;
   svg += "<text x=\"" + lx + "\" y=\"" + ly + "\" fill=\"#d4c49a\" font-size=\"11\" font-weight=\"700\" font-family=\"Segoe UI, Arial, sans-serif\" letter-spacing=\"1\">KONSEPT D\u0130ZAYN</text>";
   const lines = [
     "\u00c7i\u00e7ek odas\u0131: " + s.flowerRooms + " \u00d7 " + Math.round(s.roomM2) + " m\u00B2",
@@ -1480,17 +1531,124 @@ function downloadConceptPng() {
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
 }
 
+function ellipsize(str, n) {
+  const t = String(str == null ? "" : str);
+  if (n < 2) return "";
+  if (t.length <= n) return t;
+  return t.slice(0, n - 1) + "\u2026";
+}
+
+function charsFit(widthPx, fontSize) {
+  return Math.max(3, Math.floor(Math.max(8, widthPx) / (fontSize * 0.58)));
+}
+
+function wrapPlanText(str, widthPx, fontSize) {
+  const maxC = charsFit(widthPx, fontSize);
+  const words = String(str || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = "";
+  words.forEach(function (w) {
+    const next = cur ? (cur + " " + w) : w;
+    if (next.length <= maxC) cur = next;
+    else {
+      if (cur) lines.push(cur);
+      cur = w.length <= maxC ? w : ellipsize(w, maxC);
+    }
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function inkForFill(fill) {
+  const dark = { "#4a5550": 1, "#2e3c42": 1, "#243038": 1, "#2a332e": 1, "#3a2c24": 1, "#6a4634": 1, "#2a4a58": 1, "#a34a3a": 1, "#8a3a42": 1 };
+  return dark[fill] ? "#eef3ec" : "#0c1210";
+}
+
+function splitRow(total, weights, gap) {
+  const n = weights.length;
+  const sum = weights.reduce(function (a, b) { return a + b; }, 0) || n;
+  const avail = Math.max(n * 28, total - gap * Math.max(0, n - 1));
+  const out = [];
+  let used = 0;
+  for (let i = 0; i < n; i++) {
+    const w = (i === n - 1) ? Math.max(28, avail - used) : Math.max(28, Math.round(avail * weights[i] / sum));
+    out.push(w);
+    used += w;
+  }
+  return out;
+}
+
 function renderPlan(m, s, currentWeek) {
-  const W = 1180;
-  const gap = 16;
+  const W = 1240;
+  const pad = 18;
+  const zoneGap = 12;
+  const boxGap = 8;
+  const innerW = W - pad * 2;
+  const gacpW = Math.round(innerW * 0.46);
+  const gmpW = Math.round(innerW * 0.32);
+  const officeW = innerW - gacpW - gmpW - zoneGap * 2;
+  const gacpX = pad;
+  const gmpX = gacpX + gacpW + zoneGap;
+  const officeX = gmpX + gmpW + zoneGap;
+  const titleY = 28;
+  const zoneY = 40;
+  const labelH = 16;
+  const zonePad = 10;
+  const row1H = 56;
+  const row2H = 72;
+  const L = m.layout || {};
   const fCount = Math.max(1, s.flowerRooms);
-  const fCols = Math.min(10, fCount);
+  const gacpInnerX = gacpX + zonePad;
+  const gacpInnerW = gacpW - zonePad * 2;
+  const gmpInnerX = gmpX + zonePad;
+  const gmpInnerW = gmpW - zonePad * 2;
+  const officeInnerX = officeX + zonePad;
+  const officeInnerW = officeW - zonePad * 2;
+  const y0 = zoneY + labelH;
+  const fCols = Math.min(fCount, Math.max(1, Math.floor((gacpInnerW + boxGap) / (88 + boxGap))));
+  const flowerW = Math.floor((gacpInnerW - (fCols - 1) * boxGap) / fCols);
+  const flowerH = Math.max(70, Math.min(92, Math.round(flowerW * 0.9)));
   const fRows = Math.ceil(fCount / fCols);
-  const flowerW = Math.min(108, 1100 / fCols - gap);
-  const flowerH = 102;
-  const flowerY0 = 280;
-  const H = flowerY0 + fRows * (flowerH + gap) + 28;
-  const rooms = [];
+  const flowerY = y0 + row1H + boxGap + row2H + boxGap;
+  const gacpH = flowerY + fRows * (flowerH + boxGap) - boxGap + zonePad - zoneY;
+  const dCount = Math.max(0, s.dryRooms);
+  const dCols = Math.max(1, Math.min(Math.max(1, dCount), Math.max(1, Math.floor((gmpInnerW + boxGap) / (72 + boxGap)))));
+  const dryW = dCount ? Math.floor((gmpInnerW - (dCols - 1) * boxGap) / dCols) : gmpInnerW;
+  const dryH = 58;
+  const dRows = dCount ? Math.ceil(dCount / dCols) : 0;
+  const dryY = y0 + 44 + boxGap;
+  const afterDry = dCount ? (dryY + dRows * (dryH + boxGap) - boxGap) : (y0 + 44);
+  const gmpH = afterDry + boxGap + row2H + boxGap + row2H + zonePad - zoneY;
+  const officeBoxH = 70;
+  const officeH = 4 * officeBoxH + 3 * boxGap + zonePad + labelH;
+  const contentH = Math.max(gacpH, gmpH, officeH);
+  const H = zoneY + contentH + pad;
+
+  const blocks = [];
+  function rowBoxes(x, y, width, height, specs) {
+    const ws = splitRow(width, specs.map(function (q) { return q.flex || 1; }), boxGap);
+    let x0 = x;
+    specs.forEach(function (q, i) {
+      blocks.push({
+        id: q.id, line2: q.line2 || "", line3: q.line3 || "", fill: q.fill,
+        x: x0, y: y, w: ws[i], h: height, i: q.i, on: q.on
+      });
+      x0 += ws[i] + boxGap;
+    });
+  }
+
+  rowBoxes(gacpInnerX, y0, gacpInnerW, row1H, [
+    { id: "GACP giri\u015f", line2: "Hava kilit", fill: "#a34a3a", flex: 0.9 },
+    { id: "Ana\u00e7 \u00fcretim", line2: m2(m.motherProd), fill: "#6f9e62", flex: 1.2 },
+    { id: "Ana\u00e7 bankas\u0131", line2: m2(m.motherBank), fill: "#587c4e", flex: 1 }
+  ]);
+  rowBoxes(gacpInnerX, y0 + row1H + boxGap, gacpInnerW, row2H, [
+    { id: "Karantina", line2: "R&D", fill: "#8b6bb0", flex: 0.85 },
+    { id: "Doku k\u00fclt.", line2: "R&D", fill: "#8b6bb0", flex: 0.85 },
+    { id: "\u00c7elik", line2: m2(L.cuttingsM2), fill: "#7aa56e", flex: 1 },
+    { id: "Pre-veg", line2: m2(m.preVeg), fill: "#88b57a", flex: 1.05 },
+    { id: "Veg", line2: m2(m.veg), fill: "#88b57a", flex: 1.15 }
+  ]);
   for (let i = 0; i < fCount; i++) {
     const st = m.cal.rooms[i] ? m.cal.rooms[i][currentWeek] : "empty";
     const col = i % fCols;
@@ -1500,69 +1658,114 @@ function renderPlan(m, s, currentWeek) {
     const short = g ? g.name.split(" ")[0] : "";
     const dens = spec ? spec.dens : s.plantsPerM2;
     const plants = spec ? spec.plants : Math.round(s.roomM2 * 0.85 * dens);
-    rooms.push({
+    const hv = spec && spec.harvests != null ? spec.harvests : plannedHarvests(s.harvestsPerRoom);
+    blocks.push({
       i: i,
+      on: i === selectedRoom,
       id: "\u00c7i\u00e7ek " + (i + 1),
-      x: 40 + col * (flowerW + gap),
-      y: flowerY0 + row * (flowerH + gap),
+      x: gacpInnerX + col * (flowerW + boxGap),
+      y: flowerY + row * (flowerH + boxGap),
       w: flowerW, h: flowerH,
       line2: m2(s.roomM2) + (short ? (" \u00b7 " + short) : ""),
-      line3: fmt(dens, 1) + "/m\u00B2 \u00b7 " + plants + " hasatta \u00b7 " + (spec && spec.harvests != null ? spec.harvests : plannedHarvests(s.harvestsPerRoom)) + " hasat",
+      line3: fmt(dens, 1) + "/m\u00B2 \u00b7 " + plants + " b \u00b7 " + hv + " h",
       fill: st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#3a2c24"
     });
   }
-  const gmpDry = [];
-  const dCols = 6;
-  for (let i = 0; i < s.dryRooms; i++) {
+
+  rowBoxes(gmpInnerX, y0, gmpInnerW, 44, [
+    { id: "GMP giri\u015f", line2: "Hava kilit", fill: "#8a3a42", flex: 1 }
+  ]);
+  for (let i = 0; i < dCount; i++) {
     const batch = m.cal.dryOcc[i] ? m.cal.dryOcc[i][currentWeek] : null;
     const kind = m.cal.dryRows[i] ? m.cal.dryRows[i][currentWeek] : "idle";
     const col = i % dCols;
     const row = Math.floor(i / dCols);
     const flowerNo = batch ? String(batch).replace("C", "") : "";
-    gmpDry.push({
+    const status = kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f");
+    blocks.push({
       id: "Kurutma " + (i + 1),
-      x: 640 + col * 88,
-      y: 48 + row * 50,
-      w: 82, h: 44,
+      x: gmpInnerX + col * (dryW + boxGap),
+      y: dryY + row * (dryH + boxGap),
+      w: dryW, h: dryH,
       fill: kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#243038",
-      line2: (kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f")) + " \u00b7 " + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2"
+      line2: status,
+      line3: (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat"
     });
   }
-  const blocks = [
-    { id: "Ofis / QMS", x: 40, y: 48, w: 130, h: 90, fill: "#c9b56a", line2: "\u0130dare" },
-    { id: "GACP giri\u015f", x: 180, y: 48, w: 70, h: 90, fill: "#a34a3a", line2: "Ak\u0131\u015f" },
-    { id: "GMP giri\u015f", x: 258, y: 48, w: 70, h: 90, fill: "#a34a3a", line2: "Ak\u0131\u015f" },
-    { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", line2: m2(m.layout.trimM2) },
-    { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", line2: m2(m.layout.packM2) }
-  ].concat(gmpDry).concat([
-    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", line2: m2(m.motherProd) },
-    { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 48, fill: "#587c4e", line2: "GACP" },
-    { id: "Karantina", x: 168, y: 220, w: 48, h: 48, fill: "#8b6bb0", line2: "R&D" },
-    { id: "Doku k\u00fclt.", x: 220, y: 220, w: 48, h: 48, fill: "#8b6bb0", line2: "R&D" },
-    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", line2: m2(m.layout.cuttingsM2) },
-    { id: "Pre-veg", x: 394, y: 168, w: 120, h: 100, fill: "#88b57a", line2: m2(m.preVeg) },
-    { id: "Veg", x: 522, y: 168, w: 150, h: 100, fill: "#88b57a", line2: m2(m.veg) },
-    {
-      id: (m.extract && m.extract.m2) ? "Ekstraksiyon" : "Trim at\u0131k",
-      x: 980, y: 168, w: 150, h: 100,
-      fill: (m.extract && m.extract.m2) ? "#8b6bb0" : "#2a332e",
-      line2: (m.extract && m.extract.m2) ? (m.extract.m2 + " m\u00B2 \u00b7 " + fmt(m.extract.kgDay, 1) + " kg/g") : "\u2014"
-    }
-  ]).concat(rooms);
-  const svg = blocks.map(function (b) {
+  const gmpLowY = afterDry + boxGap;
+  rowBoxes(gmpInnerX, gmpLowY, gmpInnerW, row2H, [
+    { id: "Trim", line2: m2(L.trimM2), fill: "#4d738a", flex: 1 },
+    { id: "Paket", line2: m2(L.packM2), fill: "#4d738a", flex: 0.9 }
+  ]);
+  const hasEx = !!(m.extract && m.extract.m2);
+  rowBoxes(gmpInnerX, gmpLowY + row2H + boxGap, gmpInnerW, row2H, [
+    hasEx
+      ? { id: "Ekstraksiyon", line2: m.extract.m2 + " m\u00B2", line3: fmt(m.extract.kgDay, 1) + " kg/g \u00b7 scCO2", fill: "#8b6bb0", flex: 1 }
+      : { id: "Bekleme / CIP", line2: "GMP ara", fill: "#2a4a58", flex: 1 }
+  ]);
+
+  const officeSpecs = [
+    { id: "Ofis / QMS", line2: "36 m\u00B2 \u00b7 idare", fill: "#c9b56a" },
+    { id: "Mekanik / HVAC", line2: m2(Math.max(18, Math.round((m.totalBuilt || 400) * 0.025))), fill: "#4a5550" },
+    { id: "Personel", line2: "Soyunma / mola", fill: "#b8a56a" },
+    { id: "Depo / at\u0131k", line2: "Lojistik", fill: "#7a846c" }
+  ];
+  officeSpecs.forEach(function (q, i) {
+    blocks.push({
+      id: q.id, line2: q.line2, fill: q.fill,
+      x: officeInnerX,
+      y: y0 + i * (officeBoxH + boxGap),
+      w: officeInnerW, h: officeBoxH
+    });
+  });
+
+  const zoneH = contentH;
+  let svg = "";
+  svg += "<rect x=\"12\" y=\"12\" width=\"" + (W - 24) + "\" height=\"" + (H - 24) + "\" rx=\"16\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>";
+  svg += "<text x=\"" + pad + "\" y=\"" + titleY + "\" fill=\"#d4c49a\" font-size=\"12\" letter-spacing=\"1.4\" font-family=\"Segoe UI, Arial, sans-serif\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>";
+  function zoneFrame(x, y, w, h, fill, stroke, label, lx) {
+    svg += "<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + w + "\" height=\"" + h + "\" rx=\"12\" fill=\"" + fill + "\" stroke=\"" + stroke + "\" stroke-dasharray=\"4 3\"/>";
+    svg += "<text x=\"" + (x + 10) + "\" y=\"" + (y + 14) + "\" fill=\"" + lx + "\" font-size=\"10\" letter-spacing=\"1.1\" font-family=\"Segoe UI, Arial, sans-serif\">" + label + "</text>";
+  }
+  zoneFrame(gacpX, zoneY, gacpW, zoneH, "rgba(111,158,98,0.08)", "rgba(111,158,98,0.4)", "GACP \u00dcRET\u0130M", "#8fbf84");
+  zoneFrame(gmpX, zoneY, gmpW, zoneH, "rgba(91,138,168,0.08)", "rgba(91,138,168,0.45)", "GMP \u0130\u015eLEME", "#8eb4c8");
+  zoneFrame(officeX, zoneY, officeW, zoneH, "rgba(201,181,106,0.08)", "rgba(201,181,106,0.4)", "\u0130DARE / D\u0130\u011eER", "#d4c49a");
+  const defs = "<defs>" + blocks.map(function (b, i) {
+    return "<clipPath id=\"pb" + i + "\"><rect x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\"/></clipPath>";
+  }).join("") + "</defs>";
+  const body = blocks.map(function (b, i) {
+    const clip = "pb" + i;
+    const padB = Math.max(5, Math.min(9, Math.round(Math.min(b.w, b.h) * 0.08)));
+    const innerWB = Math.max(10, b.w - padB * 2);
+    const ink = inkForFill(b.fill);
+    const titleFs = b.h < 34 ? 8 : (b.w < 58 ? 9 : (b.h < 48 ? 10 : 11));
+    const subFs = Math.max(7, titleFs - 2);
+    const limit = b.y + b.h - padB;
+    let y = b.y + padB + titleFs;
+    const titleLines = wrapPlanText(b.id, innerWB, titleFs).slice(0, b.h < 40 ? 1 : 2);
     const di = (typeof b.i === "number") ? (" data-i=\"" + b.i + "\"") : "";
-    const on = (typeof b.i === "number" && b.i === selectedRoom) ? " on" : "";
-    return "<g class=\"room" + on + "\"" + di + "><rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>" +
-      "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 22) + "\" fill=\"#0c1210\" font-size=\"12\" font-weight=\"600\">" + xmlEsc(b.id) + "</text>" +
-      "<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 40) + "\" fill=\"#0c1210\" font-size=\"11\" opacity=\"0.75\">" + xmlEsc(b.line2 || "") + "</text>" +
-      (b.line3 ? ("<text x=\"" + (b.x + 10) + "\" y=\"" + (b.y + 56) + "\" fill=\"#0c1210\" font-size=\"10\" opacity=\"0.7\">" + xmlEsc(b.line3) + "</text>") : "") +
-      "</g>";
+    const on = b.on ? " on" : "";
+    let out = "<g class=\"room" + on + "\"" + di + " clip-path=\"url(#" + clip + ")\">";
+    out += "<rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>";
+    titleLines.forEach(function (ln) {
+      if (y > limit) return;
+      out += "<text x=\"" + (b.x + padB) + "\" y=\"" + y + "\" fill=\"" + ink + "\" font-size=\"" + titleFs + "\" font-weight=\"600\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(ln) + "</text>";
+      y += titleFs + 2;
+    });
+    const subs = [];
+    if (b.line2) wrapPlanText(b.line2, innerWB, subFs).forEach(function (ln) { subs.push(ln); });
+    if (b.line3) wrapPlanText(b.line3, innerWB, subFs).forEach(function (ln) { subs.push(ln); });
+    subs.forEach(function (ln) {
+      if (y + subFs - 1 > limit) return;
+      out += "<text x=\"" + (b.x + padB) + "\" y=\"" + y + "\" fill=\"" + ink + "\" font-size=\"" + subFs + "\" opacity=\"0.78\" font-family=\"Segoe UI, Arial, sans-serif\">" + xmlEsc(ln) + "</text>";
+      y += subFs + 2;
+    });
+    out += "</g>";
+    return out;
   }).join("");
   el("plan").innerHTML =
     "<svg class=\"plan\" viewBox=\"0 0 " + W + " " + H + "\" xmlns=\"http://www.w3.org/2000/svg\">" +
-    "<rect x=\"16\" y=\"16\" width=\"" + (W - 32) + "\" height=\"" + (H - 32) + "\" rx=\"18\" fill=\"#101714\" stroke=\"rgba(212,196,154,0.2)\"/>" +
-    "<text x=\"40\" y=\"40\" fill=\"#d4c49a\" font-size=\"12\" letter-spacing=\"2\">INDOOR YERLE\u015e\u0130M \u00b7 HAFTA " + (currentWeek + 1) + "</text>" +
-    svg + "</svg>";
+    defs + svg + body + "</svg>";
 }
 
 function renderCalendar(m) {
@@ -1591,8 +1794,8 @@ function renderTables(m, s) {
     "<table><tr><th>Kalem</th><th></th></tr>" +
     "<tr><td>Indoor GACP</td><td class=\"num\">" + eur(m.gacpCapex) + "</td></tr>" +
     "<tr><td>GMP</td><td class=\"num\">" + eur(m.gmpCapex) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon ekipman (kriyo-etanol + k\u0131\u015flama)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon C1D2 oda</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon ekipman (Caladrius 450 X + Isolute X, KDV hari\u00e7)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon GMP oda (scCO2)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
     "<tr><td>Stabilite</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
     "<tr><td><strong>Toplam CAPEX</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
     "<tr><td>Substrate (pot+coco+perlit)</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
@@ -1603,7 +1806,7 @@ function renderTables(m, s) {
     "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
     "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
     "<tr><td>\u00c7i\u00e7ek sat\u0131\u015f\u0131 (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + ")</td><td class=\"num\">" + eur(m.flowerRevenue || 0) + "</td></tr>" +
-    "<tr><td>Ekstrakt sat\u0131\u015f\u0131 (" + fmt(m.extract ? m.extract.crudeKg : 0, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + ")</td><td class=\"num\">" + eur(m.extractRevenue || 0) + "</td></tr>" +
+    "<tr><td>Ekstrakt sat\u0131\u015f\u0131 (" + fmt(m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + ")</td><td class=\"num\">" + eur(m.extractRevenue || 0) + "</td></tr>" +
     "<tr><td><strong>Toplam has\u0131lat</strong></td><td class=\"num\"><strong>" + eur(m.revenue) + "</strong></td></tr>" +
     "<tr><td>Marj (has\u0131lat \u2212 OPEX)</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr></table>";
 
@@ -1627,6 +1830,7 @@ function renderTables(m, s) {
     "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
     "<tr><td>Clone / hafta (bufferli)</td><td class=\"num\">" + fmt(m.opex.clonesWeek, 0) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon hatt\u0131</td><td class=\"num\">" + (m.extract && m.extract.m2 ? (m.extract.nCal + "\u00d7 Caladrius \u00b7 " + fmt(m.extract.kgDay, 1) + " / " + fmt(m.extract.ratedKgDay, 0) + " kg/g") : "yok") + "</td></tr>" +
     "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
 
   el("alerts").innerHTML = m.alerts.map(function (a) { return "<div class=\"alert " + a.t + "\">" + a.m + "</div>"; }).join("");
