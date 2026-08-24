@@ -6,13 +6,18 @@
   <title>Tıbbi Kenevir Tesis Simülatörü</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=21" />
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <div class="mark">T</div>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
+          <path d="M16 4 L27 16 L16 28 L5 16 Z" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
       <div>
         <h1>Tıbbi kenevir tesis simülatörü</h1>
         <p>Tam indoor GACP üretim ve GMP işleme</p>
@@ -46,7 +51,7 @@
       <section class="panel" data-panel="tesis">
         <h2>Kapasite</h2>
         <div class="control"><header><span>Yıllık bitki (türev)</span><span id="v-plantsYear">5.360</span></header>
-          <input id="plantsYear" type="range" min="400" max="100000" step="40" value="5360" /></div>
+          <input id="plantsYear" type="range" min="400" max="100000" step="1" value="5360" /></div>
         <div class="control"><header><span>Ortalama bitki / m²</span><span id="v-plantsPerM2">4,5</span></header>
           <input id="plantsPerM2" type="range" min="2" max="12" step="0.1" value="4.5" /></div>
         <div class="control"><header><span>Hasat / oda / yıl</span><span id="v-harvestsPerRoom">5,0</span></header>
@@ -61,7 +66,7 @@
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
         <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
           <input id="dryTiers" type="range" min="1" max="3" step="1" value="3" /></div>
-        <p class="hint">Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir.</p>
+        <p class="hint">Yıllık bitki = her odanın hasattaki bitkisi × o odanın yıldaki hasat sayısı. Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
@@ -79,8 +84,14 @@
           <input id="dryDays" type="range" min="7" max="21" step="7" value="14" /></div>
         <div class="control"><header><span>Kurutma temizlik</span><span id="v-dryCleanDays">7 gün</span></header>
           <input id="dryCleanDays" type="range" min="1" max="7" step="1" value="7" /></div>
-        <div class="control"><header><span>Verim / bitki</span><span id="v-yieldG">180 g</span></header>
-          <input id="yieldG" type="range" min="80" max="280" step="5" value="180" /></div>
+        <div class="control"><header><span>Üretim seviyesi</span><span id="v-yieldSkill">Orta · 105 g</span></header>
+          <div class="yield-skill" role="group">
+            <button type="button" data-skill="starter">Başlangıç<small>65 g/bitki</small></button>
+            <button type="button" data-skill="mid" class="active">Orta<small>105 g/bitki</small></button>
+            <button type="button" data-skill="pro">Profesyonel<small>145 g/bitki</small></button>
+          </div></div>
+        <div class="control"><header><span>Özel g/bitki</span><span id="v-yieldG">105 g</span></header>
+          <input id="yieldG" type="range" min="50" max="180" step="5" value="105" /></div>
         <input id="genetics" type="hidden" value="4" />
         <div class="control"><header><span>Çiçek satış fiyatı (kg başına)</span><span id="v-priceKg">€3.500/kg</span></header>
           <input id="priceKg" type="range" min="500" max="8000" step="50" value="3500" /></div>
@@ -91,7 +102,7 @@
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
         <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
           <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
-        <p class="hint">Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı kriyo-etanol hatta gider (C1D2). Satılamayan kütle önce ekstraksiyona yazılır.</p>
+        <p class="hint">Yoğunluk artınca bitki başı verim düşer, m² verimi doyarak artar (katlı değil). Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı kriyo-etanol hatta gider (C1D2). Satılamayan kütle önce ekstraksiyona yazılır.</p>
       </section>
 
     </aside>
@@ -146,6 +157,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
