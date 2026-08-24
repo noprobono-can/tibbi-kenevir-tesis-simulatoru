@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <header class="app-header">
@@ -54,9 +54,9 @@
           <input id="flowerArea" type="range" min="50" max="9000" step="10" value="280" /></div>
         <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
-        <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">2 kat</span></header>
-          <input id="dryTiers" type="range" min="1" max="2" step="1" value="2" /></div>
-        <p class="hint">2 katlı kurutmada her oda tabanı en az çiçek odasının yarısıdır; ası kapasitesi bir oda hasadına yeter. Veg, pre-veg ve çelik alanları çiçek m&#178; ile genetik süre oranından hesaplanır.</p>
+        <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
+          <input id="dryTiers" type="range" min="1" max="3" step="1" value="3" /></div>
+        <p class="hint">Kurutma katı ası katmanıdır: her oda tabanı en az çiçek odası / kat sayısıdır (3 katta üçte biri). Ası kapasitesi bir oda hasadına yeter. Veg, pre-veg ve çelik alanları çiçek m&#178; ile genetik süre oranından hesaplanır.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
@@ -133,6 +133,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

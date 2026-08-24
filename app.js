@@ -2,22 +2,22 @@ const PRESETS = {
   pilot: {
     plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, saleablePct: 80, extraction: false, dryTiers: 2
+    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, saleablePct: 80, extraction: false, dryTiers: 3
   },
   dengeli: {
     plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, saleablePct: 85, extraction: true, dryTiers: 2
+    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, saleablePct: 85, extraction: true, dryTiers: 3
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 2
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 3
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 5, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 2
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 3
   }
 };
 
@@ -116,7 +116,7 @@ function layoutFromFlower(s, stats) {
   const preVegDays = (stats && stats.preVegDays) || s.preVegDays;
   const rootDays = (stats && stats.rootDays) || s.rootDays;
   const nG = (s.cultivars && s.cultivars.length) || s.genetics || 4;
-  const tiers = Math.max(1, Math.min(2, s.dryTiers || 2));
+  const tiers = Math.max(1, Math.min(3, s.dryTiers || 3));
   const room = s.roomM2;
   const flower = s.flowerArea;
   const dryRoomM2 = Math.max(24, Math.round(room / tiers));
@@ -331,7 +331,7 @@ function readState() {
     flowerArea: flowerArea,
     roomM2: flowerArea / flowerRooms,
     dryRooms: Math.max(1, +el("dryRooms").value),
-    dryTiers: Math.max(1, Math.min(2, +el("dryTiers").value)),
+    dryTiers: Math.max(1, Math.min(3, +el("dryTiers").value)),
     flowerRooms: flowerRooms,
     flowerDays: +el("flowerDays").value,
     vegDays: +el("vegDays").value,
@@ -620,7 +620,7 @@ function simulate(s) {
   if (!layout.hangOk) {
     alerts.push({ t: "bad", m: "Kurutma taban\u0131 yetersiz: " + layout.dryRoomM2 + " m\u00B2 \u00d7 " + layout.tiers + " kat = " + layout.hangEq + " m\u00B2 as\u0131; bir \u00e7i\u00e7ek hasad\u0131 " + layout.hangNeed + " m\u00B2 ister." });
   } else {
-    alerts.push({ t: "ok", m: "Kurutma boyutu: \u00e7i\u00e7ek odas\u0131 " + Math.round(s.roomM2) + " m\u00B2 \u2192 " + layout.tiers + " katta taban " + layout.dryRoomM2 + " m\u00B2 (\u2265 yar\u0131 oda kural\u0131). As\u0131 e\u015fde\u011feri " + layout.hangEq + " m\u00B2." });
+    alerts.push({ t: "ok", m: "Kurutma boyutu: \u00e7i\u00e7ek odas\u0131 " + Math.round(s.roomM2) + " m\u00B2 \u2192 " + layout.tiers + " katta taban " + layout.dryRoomM2 + " m\u00B2 (\u2265 oda/" + layout.tiers + "). As\u0131 e\u015fde\u011feri " + layout.hangEq + " m\u00B2." });
   }
   alerts.push({ t: "ok", m: "Yerle\u015fim: veg / pre-veg / \u00e7elik alan\u0131 = \u00e7i\u00e7ek m\u00B2 \u00d7 (a\u015fama s\u00fcresi / \u00e7i\u00e7ek s\u00fcresi) / yo\u011funluk katsay\u0131s\u0131. Ana\u00e7 genetik say\u0131s\u0131yla b\u00fcy\u00fcr." });
   if (mix.length) {
@@ -785,7 +785,7 @@ function renderTables(m, s) {
     "<tr><td>Pre-veg (algoritma)</td><td class=\"num\">" + m2(m.layout ? m.layout.preVegM2 : m.preVeg) + "</td></tr>" +
     "<tr><td>\u00c7elik / k\u00f6klendirme</td><td class=\"num\">" + m2(m.layout ? m.layout.cuttingsM2 : 0) + "</td></tr>" +
     "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
-    "<tr><td>Kurutma taban / kat</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 2) + "</td></tr>" +
+    "<tr><td>Kurutma taban / kat</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + "</td></tr>" +
     "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
     "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
@@ -800,7 +800,7 @@ function renderTables(m, s) {
     ["Veg", s.vegDays + " g\u00fcn"],
     ["\u00c7i\u00e7ek", s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda"],
     ["Hasat", fmt(s.harvestsPerRoom, 1) + " / oda / y\u0131l"],
-    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 2) + " kat"]
+    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat"]
   ];
   el("flow").innerHTML = nodes.map(function (pair, i) {
     return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node\"><strong>" + pair[0] + "</strong><span>" + pair[1] + "</span></div>";
@@ -827,7 +827,7 @@ function renderLabels(s, m) {
     priceKg: eur(s.priceKg),
     saleablePct: "%" + fmt(s.saleablePct * 100, 0),
     extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
-    dryTiers: String(s.dryTiers || 2) + " kat"
+    dryTiers: String(s.dryTiers || 3) + " kat"
   };
   Object.keys(map).forEach(function (k) {
     const n = el("v-" + k);
@@ -836,7 +836,7 @@ function renderLabels(s, m) {
   const hint = el("capacityHint");
   if (hint && m) {
     const L = m.layout || {};
-    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 2) + " kat \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
+    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + " kat \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
   }
   const mixEl = el("geneticsMix");
   if (mixEl && m && m.stats) {
