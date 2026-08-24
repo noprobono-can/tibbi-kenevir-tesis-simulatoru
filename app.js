@@ -2,22 +2,22 @@ const PRESETS = {
   pilot: {
     plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, saleablePct: 80, extraction: false
+    dryDays: 14, dryCleanDays: 7, yieldG: 160, genetics: 3, priceKg: 3500, saleablePct: 80, extraction: false, dryTiers: 2
   },
   dengeli: {
     plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, saleablePct: 85, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 180, genetics: 4, priceKg: 3500, saleablePct: 85, extraction: true, dryTiers: 2
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 4, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 2
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 5, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true
+    dryDays: 14, dryCleanDays: 7, yieldG: 170, genetics: 5, priceKg: 3500, saleablePct: 88, extraction: true, dryTiers: 2
   }
 };
 
@@ -50,6 +50,152 @@ function cloneBufferFor(saleable) {
   if (saleable <= 0.82) return 0.15;
   if (saleable <= 0.86) return 0.12;
   return 0.1;
+}
+
+
+const CULTIVARS = [
+  { id: "wc", name: "Wedding Cake", flowerDays: 60, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 165, dens: 5.5, extractY: 0.12, stretch: 1.5, thc: "22-26%", note: "8-9 hf \u00e7i\u00e7ek, orta stretch" },
+  { id: "km", name: "Kush Mints", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 175, dens: 6.0, extractY: 0.11, stretch: 1.4, thc: "22-25%", note: "y\u00fcksek yo\u011funluk / verim" },
+  { id: "gg4", name: "GG4", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.0, extractY: 0.12, stretch: 1.7, thc: "20-25%", note: "stretchli, re\u00e7ine iyi" },
+  { id: "gel", name: "Gelato 33 / ICC", flowerDays: 63, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 155, dens: 5.5, extractY: 0.13, stretch: 1.3, thc: "22-26%", note: "kompakt, \u00f6zk\u00fct" },
+  { id: "jfg", name: "Jet Fuel Gelato", flowerDays: 67, vegDays: 18, preVegDays: 14, rootDays: 14, yieldG: 150, dens: 5.5, extractY: 0.11, stretch: 1.6, thc: "24-28%", note: "uzun \u00e7i\u00e7ek, terpen yo\u011fun" },
+  { id: "pm", name: "Permanent Marker", flowerDays: 67, vegDays: 21, preVegDays: 14, rootDays: 14, yieldG: 145, dens: 5.0, extractY: 0.13, stretch: 1.5, thc: "24-28%", note: "orta-uzun \u00e7i\u00e7ek" },
+  { id: "mac1", name: "MAC1", flowerDays: 70, vegDays: 25, preVegDays: 16, rootDays: 16, yieldG: 125, dens: 3.5, extractY: 0.15, stretch: 1.2, thc: "24-29%", note: "yava\u015f veg, d\u00fc\u015f\u00fck yo\u011funluk, y\u00fcksek re\u00e7ine" }
+];
+
+function selectedCultivars() {
+  const list = CULTIVARS.filter(function (c) {
+    const n = el("g-" + c.id);
+    return n && n.checked;
+  });
+  return list.length ? list : CULTIVARS.slice(0, 4);
+}
+
+function applyGeneticsCount(n) {
+  CULTIVARS.forEach(function (c, i) {
+    const node = el("g-" + c.id);
+    if (node) node.checked = i < n;
+  });
+  if (el("genetics")) el("genetics").value = String(n);
+}
+
+function mixStats(list) {
+  const n = list.length;
+  const avg = function (k) { return list.reduce(function (s, c) { return s + c[k]; }, 0) / n; };
+  return {
+    flowerDays: Math.round(avg("flowerDays")),
+    vegDays: Math.round(avg("vegDays")),
+    preVegDays: Math.round(avg("preVegDays")),
+    rootDays: Math.round(avg("rootDays")),
+    yieldG: Math.round(avg("yieldG")),
+    dens: Math.round(avg("dens") * 10) / 10,
+    extractY: Math.round(avg("extractY") * 1000) / 1000,
+    stretch: Math.round(avg("stretch") * 10) / 10
+  };
+}
+
+function applyMixToSliders() {
+  const list = selectedCultivars();
+  if (!list.length) return;
+  const st = mixStats(list);
+  if (el("flowerDays")) el("flowerDays").value = String(st.flowerDays);
+  if (el("vegDays")) el("vegDays").value = String(st.vegDays);
+  if (el("preVegDays")) el("preVegDays").value = String(st.preVegDays);
+  if (el("rootDays")) el("rootDays").value = String(st.rootDays);
+  if (el("yieldG")) el("yieldG").value = String(st.yieldG);
+  if (el("genetics")) el("genetics").value = String(list.length);
+}
+
+function cultivarForRoom(list, i) {
+  return list[i % list.length];
+}
+
+function layoutFromFlower(s, stats) {
+  const flowerDays = Math.max(1, (stats && stats.flowerDays) || s.flowerDays);
+  const vegDays = (stats && stats.vegDays) || s.vegDays;
+  const preVegDays = (stats && stats.preVegDays) || s.preVegDays;
+  const rootDays = (stats && stats.rootDays) || s.rootDays;
+  const nG = (s.cultivars && s.cultivars.length) || s.genetics || 4;
+  const tiers = Math.max(1, Math.min(2, s.dryTiers || 2));
+  const room = s.roomM2;
+  const flower = s.flowerArea;
+  const dryRoomM2 = Math.max(24, Math.round(room / tiers));
+  const dryArea = s.dryRooms * dryRoomM2;
+  const hangEq = dryRoomM2 * tiers;
+  const hangNeed = Math.round(room);
+  return {
+    tiers: tiers,
+    dryRoomM2: dryRoomM2,
+    dryArea: dryArea,
+    hangEq: hangEq,
+    hangNeed: hangNeed,
+    hangOk: hangEq + 0.01 >= hangNeed,
+    motherM2: Math.max(12, Math.round(flower * 0.03 + nG * 6)),
+    cuttingsM2: Math.max(16, Math.round(flower * (rootDays / flowerDays) / 2.6)),
+    preVegM2: Math.max(20, Math.round(flower * (preVegDays / flowerDays) / 1.8)),
+    vegM2: Math.max(28, Math.round(flower * (vegDays / flowerDays) / 1.45)),
+    trimM2: Math.max(24, Math.round(room * 0.35)),
+    packM2: Math.max(18, Math.round(s.flowerRooms * 6 + flower * 0.02)),
+    flowerDays: flowerDays,
+    vegDays: vegDays,
+    preVegDays: preVegDays,
+    rootDays: rootDays
+  };
+}
+
+function sizeExtract(feedKg, crudeFrac) {
+  if (feedKg < 1) {
+    return {
+      capexEq: 0, capexRoom: 0, capex: 0, m2: 0, opex: 0,
+      opexSolvent: 0, opexLabor: 0, opexFixed: 0,
+      kgDay: 0, crudeKg: 0, operators: 0, tier: "off", crudeFrac: 0
+    };
+  }
+  const kgDay = feedKg / 250;
+  let capexEq, m2, tier;
+  if (kgDay <= 8) { capexEq = 70000 + kgDay * 3500; m2 = 48; tier = "CUP / ~15 lb-g\u00fcn"; }
+  else if (kgDay <= 45) { capexEq = 165000 + (kgDay - 8) * 5200; m2 = 90 + (kgDay - 8) * 2.2; tier = "kriyo-etanol orta"; }
+  else if (kgDay <= 90) { capexEq = 360000 + (kgDay - 45) * 3100; m2 = 175 + (kgDay - 45) * 1.8; tier = "100+ lb/g\u00fcn hatt\u0131"; }
+  else if (kgDay <= 180) { capexEq = 500000 + (kgDay - 90) * 3900; m2 = 256 + (kgDay - 90) * 1.4; tier = "CryoEXS-400 s\u0131n\u0131f\u0131"; }
+  else { capexEq = 850000 + (kgDay - 180) * 2000; m2 = 380 + (kgDay - 180) * 1.1; tier = "end\u00fcstriyel"; }
+  capexEq = Math.min(2200000, capexEq) + 22000;
+  m2 = Math.min(700, Math.max(40, Math.round(m2)));
+  const capexRoom = m2 * 5600;
+  const operators = 1 + Math.floor(kgDay / 70);
+  const opexSolvent = feedKg * 9.5;
+  const opexLabor = operators * 1800 * 7;
+  const opexFixed = 16000;
+  const frac = crudeFrac || 0.12;
+  return {
+    capexEq: capexEq, capexRoom: capexRoom, capex: capexEq + capexRoom, m2: m2,
+    opex: opexSolvent + opexLabor + opexFixed,
+    opexSolvent: opexSolvent, opexLabor: opexLabor, opexFixed: opexFixed,
+    kgDay: kgDay, crudeKg: feedKg * frac, operators: operators, tier: tier, crudeFrac: frac
+  };
+}
+
+function renderGeneticsUI() {
+  const box = el("geneticsBox");
+  if (!box || box.dataset.ready) return;
+  box.innerHTML = CULTIVARS.map(function (c, i) {
+    const on = i < 4 ? " checked" : "";
+    return "<label class=\"check\"><input type=\"checkbox\" id=\"g-" + c.id + "\"" + on + " /> " + c.name +
+      "<small>" + c.flowerDays + "g \u00e7i\u00e7ek / " + c.vegDays + "g veg / " + c.rootDays + "g k\u00f6k / " +
+      c.yieldG + " g \u00b7 " + c.dens + "/m\u00B2 \u00b7 THC " + c.thc +
+      "<br>" + c.note + " \u00b7 ham ya\u011f ~%" + Math.round(c.extractY * 100) + "</small></label>";
+  }).join("");
+  box.dataset.ready = "1";
+  box.querySelectorAll("input").forEach(function (i) {
+    i.addEventListener("input", function () {
+      customMode = true;
+      cycleOverride = false;
+      pinDryRooms = false;
+      highlightPreset("custom");
+      applyMixToSliders();
+      week = 0;
+      render();
+    });
+  });
 }
 
 function computeOpex(s, plantsYear, harvestsYear) {
@@ -111,9 +257,13 @@ function maxFlowerDays(harvests) {
 function clampHarvests() {
   const harvests = round1(Math.min(7, Math.max(4, +el("harvestsPerRoom").value)));
   el("harvestsPerRoom").value = String(harvests);
+  el("flowerDays").min = "35";
+  if (!cycleOverride) {
+    el("flowerDays").max = "84";
+    return harvests;
+  }
   const cap = maxFlowerDays(harvests);
   el("flowerDays").max = String(Math.max(35, cap));
-  el("flowerDays").min = "35";
   if (+el("flowerDays").value > cap) el("flowerDays").value = String(cap);
   return harvests;
 }
@@ -181,6 +331,7 @@ function readState() {
     flowerArea: flowerArea,
     roomM2: flowerArea / flowerRooms,
     dryRooms: Math.max(1, +el("dryRooms").value),
+    dryTiers: Math.max(1, Math.min(2, +el("dryTiers").value)),
     flowerRooms: flowerRooms,
     flowerDays: +el("flowerDays").value,
     vegDays: +el("vegDays").value,
@@ -189,10 +340,12 @@ function readState() {
     dryDays: +el("dryDays").value,
     dryCleanDays: Math.max(1, Math.min(7, +el("dryCleanDays").value)),
     yieldG: +el("yieldG").value,
-    genetics: +el("genetics").value,
+    genetics: selectedCultivars().length,
+    cultivars: selectedCultivars(),
     priceKg: +el("priceKg").value,
     saleablePct: Math.max(0.8, Math.min(0.88, +el("saleablePct").value / 100)),
-    extraction: el("extraction").checked,
+    extractPct: Math.max(0, Math.min(1, +el("extractPct").value / 100)),
+    extraction: +el("extractPct").value > 0,
     usable: 0.85
   };
 }
@@ -202,6 +355,7 @@ function highlightPreset(key) {
 }
 
 let customMode = false;
+let cycleOverride = false;
 
 function applyPreset(key) {
   if (key === "custom") {
@@ -215,9 +369,14 @@ function applyPreset(key) {
   pinDryRooms = false;
   const p = PRESETS[key];
   Object.entries(p).forEach(([k, v]) => {
-    if (k === "extraction") el("extraction").checked = v;
-    else if (el(k)) el(k).value = v;
+    if (k === "extraction") {
+      if (el("extractPct")) el("extractPct").value = v ? "20" : "0";
+    } else if (k === "genetics") {
+      applyGeneticsCount(v);
+    } else if (el(k)) el(k).value = v;
   });
+  cycleOverride = false;
+  applyMixToSliders();
   highlightPreset(key);
   syncLayout("roomM2");
   syncDensity("plantsYear");
@@ -312,12 +471,17 @@ function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
 
 function buildCalendar(s) {
   const weeks = 52;
-  const flowerW = Math.max(1, Math.round(s.flowerDays / 7));
+  const mix = s.cultivars && s.cultivars.length ? s.cultivars : [];
   const periodW = 52 / s.harvestsPerRoom;
   const staggerW = periodW / s.flowerRooms;
   const rooms = [];
   const events = [];
+  const roomCultivars = [];
   for (let r = 0; r < s.flowerRooms; r++) {
+    const g = mix.length ? cultivarForRoom(mix, r) : null;
+    roomCultivars.push(g);
+    const flowerDays = (!cycleOverride && g) ? g.flowerDays : s.flowerDays;
+    const flowerW = Math.max(1, Math.round(flowerDays / 7));
     const row = Array(weeks).fill("empty");
     const offset = r * staggerW;
     const harvestAt = [];
@@ -329,7 +493,7 @@ function buildCalendar(s) {
       }
       const h = (s0 + flowerW - 1) % weeks;
       harvestAt.push(h);
-      events.push({ w: h, room: r + 1 });
+      events.push({ w: h, room: r + 1, cultivar: g ? g.name : "" });
     }
     harvestAt.forEach(function (h) { row[h] = "harvest"; });
     rooms.push(row);
@@ -349,6 +513,7 @@ function buildCalendar(s) {
   });
   return {
     rooms: rooms,
+    roomCultivars: roomCultivars,
     dryRows: assigned.dryRows,
     dryOcc: assigned.dryOcc,
     drySuggest: assigned.drySuggest,
@@ -359,6 +524,12 @@ function buildCalendar(s) {
 }
 
 function simulate(s) {
+  const mixEarly = s.cultivars && s.cultivars.length ? s.cultivars : [];
+  const statsEarly = mixEarly.length ? mixStats(mixEarly) : null;
+  const flowerDaysUse = statsEarly ? statsEarly.flowerDays : s.flowerDays;
+  const flowerDaysLong = (mixEarly.length && !cycleOverride)
+    ? Math.max.apply(null, mixEarly.map(function (c) { return c.flowerDays; }))
+    : s.flowerDays;
   const roomM2 = s.roomM2;
   const usableFlower = s.flowerArea * s.usable;
   const plantsYear = s.plantsYear;
@@ -368,42 +539,61 @@ function simulate(s) {
   const turnaround = 7;
   const cycleFlower = 365 / s.harvestsPerRoom;
   const cyclesPerRoom = s.harvestsPerRoom;
-  const staggerOk = s.flowerDays + turnaround <= cycleFlower + 0.5;
+  const staggerOk = flowerDaysLong + turnaround <= cycleFlower + 0.5;
   const harvestsYear = s.flowerRooms * s.harvestsPerRoom;
-  const kgGross = plantsYear * s.yieldG / 1000;
+  const mix = mixEarly;
+  const stats = statsEarly;
+  const yieldUse = cycleOverride ? s.yieldG : (stats ? stats.yieldG : s.yieldG);
+  const kgGross = plantsYear * yieldUse / 1000;
   const kgYear = kgGross * s.saleablePct;
-  const revenue = kgYear * s.priceKg;
+  const unsaleableKg = kgGross * (1 - s.saleablePct);
+  const extractFeed = kgGross * (s.extractPct || 0);
+  const kgFlowerSold = Math.max(0, kgYear - Math.max(0, extractFeed - unsaleableKg));
+  const crudeFrac = stats && stats.extractY ? stats.extractY : 0.12;
+  const ex = sizeExtract(extractFeed, crudeFrac);
+  const layout = layoutFromFlower(s, stats);
+  let revenue = kgFlowerSold * s.priceKg + ex.crudeKg * 4200;
 
-  const motherProd = 18, motherBank = 12, quarantine = 4, tissue = 8, cuttings = 16;
-  const preVeg = Math.max(20, Math.round(plantsPerRoom * 0.05));
-  const veg = Math.max(28, Math.round(plantsPerRoom * 0.12));
+
+  const motherProd = layout.motherM2;
+  const motherBank = Math.max(8, Math.round(layout.motherM2 * 0.5));
+  const quarantine = 4, tissue = 8, cuttings = layout.cuttingsM2;
+  const preVeg = layout.preVegM2;
+  const veg = layout.vegM2;
   const gacpM2 = motherProd + motherBank + quarantine + tissue + cuttings + preVeg + veg + s.flowerArea + 40;
-  const dryM2 = s.dryRooms * 28;
-  const extractM2 = s.extraction ? 24 : 0;
-  const gmpM2 = dryM2 + 24 + 20 + 30;
+  const dryM2 = layout.dryArea;
+  const extractM2 = ex.m2;
+  const gmpM2 = dryM2 + layout.trimM2 + layout.packM2 + 30;
   const officeM2 = 36;
   const totalBuilt = gacpM2 + gmpM2 + officeM2 + extractM2;
 
   const lightCapex = preVeg * 220 + veg * 380 + s.flowerArea * 480;
   const gacpCapex = gacpM2 * 2800 + lightCapex;
   const gmpCapex = gmpM2 * 5600;
-  const extractCapex = s.extraction ? 120000 : 0;
-  const stability = s.genetics * 8000;
+  const extractCapex = ex.capex;
+  const stability = (mix.length || s.genetics) * 8000;
   const capex = gacpCapex + gmpCapex + officeM2 * 1400 + extractCapex + stability;
   const ox = computeOpex(s, plantsYear, harvestsYear);
+  ox.extract = ex.opex;
+  ox.total += ex.opex;
   const opexYear = ox.total;
-  const staffBase = Math.max(2, Math.ceil(ox.laborH / 1800));
+  const staffBase = Math.max(2, Math.ceil(ox.laborH / 1800) + (ex.operators || 0));
   const harvestCrew = staffBase + Math.ceil(plantsPerRoom / 80);
   const ebitda = revenue - opexYear;
   const payback = ebitda > 0 ? capex / ebitda : Infinity;
   const opexPerG = kgYear > 0 ? opexYear / (kgYear * 1000) : 0;
   const cal = buildCalendar(s);
-  const cycleDays = s.rootDays + s.preVegDays + s.vegDays + s.flowerDays;
+  const cycleDays = (stats && !cycleOverride)
+    ? stats.rootDays + stats.preVegDays + stats.vegDays + stats.flowerDays
+    : s.rootDays + s.preVegDays + s.vegDays + s.flowerDays;
   const drySuggest = cal.drySuggest;
 
   const alerts = [];
   if (!staggerOk) {
-    alerts.push({ t: "bad", m: fmt(s.harvestsPerRoom, 1) + " hasat/oda/y\u0131l i\u00e7in \u00e7i\u00e7eklenme en fazla " + maxFlowerDays(s.harvestsPerRoom) + " g\u00fcn olabilir." });
+    const tight = (mixEarly.length && !cycleOverride)
+      ? mixEarly.filter(function (c) { return c.flowerDays + turnaround > cycleFlower + 0.5; }).map(function (c) { return c.name; }).join(", ")
+      : "";
+    alerts.push({ t: "bad", m: fmt(s.harvestsPerRoom, 1) + " hasat/oda/y\u0131l i\u00e7in \u00e7i\u00e7eklenme en fazla " + maxFlowerDays(s.harvestsPerRoom) + " g\u00fcn olabilir" + (tight ? (" \u2014 s\u0131k\u0131\u015fan: " + tight) : "") + "." });
   } else {
     alerts.push({ t: "ok", m: "Her oda y\u0131lda " + fmt(s.harvestsPerRoom, 1) + " hasat (\u00e7evrim " + fmt(cycleFlower, 1) + " g\u00fcn)." });
   }
@@ -421,10 +611,25 @@ function simulate(s) {
   if (density > 10) {
     alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 indoor i\u00e7in y\u00fcksek." });
   }
+  if (stats && Math.abs(stats.dens - density) > 1) {
+    alerts.push({ t: "warn", m: "Se\u00e7ilen genetik ortalama " + fmt(stats.dens, 1) + " bitki/m\u00B2 \u00f6nerir; kayd\u0131r\u0131c\u0131 " + fmt(density, 1) + "." });
+  }
   if (cal.gmpIdleWeeks > 8) {
     alerts.push({ t: "warn", m: "GMP kurutma " + cal.gmpIdleWeeks + " hafta bo\u015f kal\u0131yor." });
   }
-  alerts.push({ t: "ok", m: "OPEX Cannactive v2: substrate, su/g\u00fcbre, i\u015f\u00e7ilik, malzeme. Enerji/HVAC, G&A ve d\u0131\u015f COA bu modelde yok." });
+  if (!layout.hangOk) {
+    alerts.push({ t: "bad", m: "Kurutma taban\u0131 yetersiz: " + layout.dryRoomM2 + " m\u00B2 \u00d7 " + layout.tiers + " kat = " + layout.hangEq + " m\u00B2 as\u0131; bir \u00e7i\u00e7ek hasad\u0131 " + layout.hangNeed + " m\u00B2 ister." });
+  } else {
+    alerts.push({ t: "ok", m: "Kurutma boyutu: \u00e7i\u00e7ek odas\u0131 " + Math.round(s.roomM2) + " m\u00B2 \u2192 " + layout.tiers + " katta taban " + layout.dryRoomM2 + " m\u00B2 (\u2265 yar\u0131 oda kural\u0131). As\u0131 e\u015fde\u011feri " + layout.hangEq + " m\u00B2." });
+  }
+  alerts.push({ t: "ok", m: "Yerle\u015fim: veg / pre-veg / \u00e7elik alan\u0131 = \u00e7i\u00e7ek m\u00B2 \u00d7 (a\u015fama s\u00fcresi / \u00e7i\u00e7ek s\u00fcresi) / yo\u011funluk katsay\u0131s\u0131. Ana\u00e7 genetik say\u0131s\u0131yla b\u00fcy\u00fcr." });
+  if (mix.length) {
+    alerts.push({ t: "ok", m: "Genetik: " + mix.map(function (c) { return c.name; }).join(", ") + " (ort. \u00e7i\u00e7ek " + flowerDaysUse + " g\u00fcn / " + yieldUse + " g / ham ya\u011f %" + Math.round(((stats && stats.extractY) || 0.12) * 100) + ")." });
+  }
+  if (extractFeed > 0) {
+    alerts.push({ t: "ok", m: "Ekstraksiyon " + fmt(extractFeed, 0) + " kg/y\u0131l (~" + fmt(ex.kgDay, 1) + " kg/g\u00fcn, " + ex.tier + "), ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg. Hat kapasiteye g\u00f6re \u00f6l\u00e7ekli kriyo-etanol (C1D2)." });
+  }
+  alerts.push({ t: "ok", m: "OPEX Cannactive v2 + ekstraksiyon i\u015fletme (solvent/enerji + operat\u00f6r). Sera HVAC enerjisi, G&A ve d\u0131\u015f COA bu modelde yok." });
 
   return {
     roomM2: roomM2, usableFlower: usableFlower, plantsPerRoom: plantsPerRoom, density: density,
@@ -434,7 +639,9 @@ function simulate(s) {
     gacpCapex: gacpCapex, gmpCapex: gmpCapex, extractCapex: extractCapex, stability: stability,
     opexYear: opexYear, opex: ox, opexPerG: opexPerG, ebitda: ebitda, payback: payback, staffBase: staffBase, harvestCrew: harvestCrew,
     cycleDays: cycleDays, cyclesPerRoom: cyclesPerRoom, harvestsYear: harvestsYear,
-    cycleFlower: cycleFlower, cal: cal, alerts: alerts
+    cycleFlower: cycleFlower, cal: cal, alerts: alerts,
+    layout: layout, extract: ex, kgFlowerSold: kgFlowerSold, extractFeed: extractFeed, yieldUse: yieldUse,
+    stats: stats, flowerDaysLong: flowerDaysLong
   };
 }
 
@@ -466,11 +673,13 @@ function renderPlan(m, s, currentWeek) {
     const st = m.cal.rooms[i] ? m.cal.rooms[i][currentWeek] : "empty";
     const col = i % fCols;
     const row = Math.floor(i / fCols);
+    const g = m.cal.roomCultivars && m.cal.roomCultivars[i];
+    const short = g ? g.name.split(" ")[0] : "";
     rooms.push({
       id: "\u00c7i\u00e7ek " + (i + 1),
       x: 40 + col * (flowerW + gap),
       y: flowerY0 + row * (flowerH + gap),
-      w: flowerW, h: flowerH, tag: m2(m.roomM2),
+      w: flowerW, h: flowerH, tag: m2(m.roomM2) + (short ? (" \u00b7 " + short) : ""),
       fill: st === "harvest" ? "#d4c49a" : st === "flower" ? "#d4783a" : "#3a2c24"
     });
   }
@@ -488,28 +697,28 @@ function renderPlan(m, s, currentWeek) {
       y: 48 + row * 50,
       w: 82, h: 44,
       fill: kind === "gmp" ? "#5b8aa8" : kind === "clean" ? "#8aaeb8" : "#243038",
-      tag: kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f")
+      tag: (kind === "clean" ? ("\u00c7" + flowerNo + " temizlik") : (kind === "gmp" ? ("\u00c7i\u00e7ek " + flowerNo) : "bo\u015f")) + " \u00b7 " + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2"
     });
   }
   const blocks = [
     { id: "Ofis / QMS", x: 40, y: 48, w: 130, h: 90, fill: "#c9b56a", tag: "\u0130dare" },
     { id: "GACP giri\u015f", x: 180, y: 48, w: 70, h: 90, fill: "#a34a3a", tag: "Ak\u0131\u015f" },
     { id: "GMP giri\u015f", x: 258, y: 48, w: 70, h: 90, fill: "#a34a3a", tag: "Ak\u0131\u015f" },
-    { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", tag: "GMP" },
-    { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", tag: "GMP" }
+    { id: "Trim", x: 360, y: 48, w: 120, h: 90, fill: "#4d738a", tag: m2(m.layout.trimM2) },
+    { id: "Paket", x: 488, y: 48, w: 100, h: 90, fill: "#4d738a", tag: m2(m.layout.packM2) }
   ].concat(gmpDry).concat([
-    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", tag: "GACP" },
+    { id: "Ana\u00e7 \u00fcretim", x: 40, y: 168, w: 120, h: 100, fill: "#6f9e62", tag: m2(m.motherProd) },
     { id: "Ana\u00e7 bankas\u0131", x: 168, y: 168, w: 100, h: 48, fill: "#587c4e", tag: "GACP" },
     { id: "Karantina", x: 168, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
     { id: "Doku k\u00fclt.", x: 220, y: 220, w: 48, h: 48, fill: "#8b6bb0", tag: "R&D" },
-    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", tag: "GACP" },
+    { id: "\u00c7elik", x: 276, y: 168, w: 110, h: 100, fill: "#7aa56e", tag: m2(m.layout.cuttingsM2) },
     { id: "Pre-veg", x: 394, y: 168, w: 120, h: 100, fill: "#88b57a", tag: m2(m.preVeg) },
     { id: "Veg", x: 522, y: 168, w: 150, h: 100, fill: "#88b57a", tag: m2(m.veg) },
     {
-      id: s.extraction ? "Ekstraksiyon" : "Trim at\u0131k",
+      id: (m.extract && m.extract.m2) ? "Ekstraksiyon" : "Trim at\u0131k",
       x: 980, y: 168, w: 150, h: 100,
-      fill: s.extraction ? "#8b6bb0" : "#2a332e",
-      tag: s.extraction ? "pilot" : "\u2014"
+      fill: (m.extract && m.extract.m2) ? "#8b6bb0" : "#2a332e",
+      tag: (m.extract && m.extract.m2) ? (m.extract.m2 + " m\u00B2 \u00b7 " + fmt(m.extract.kgDay, 1) + " kg/g") : "\u2014"
     }
   ]).concat(rooms);
   const drawn = blocks;
@@ -532,7 +741,9 @@ function renderCalendar(m) {
   };
   const head = "<div class=\"week-row\"><b></b>" + Array.from({ length: 52 }, function (_, i) { return cell(i, "", "H" + (i + 1)); }).join("") + "</div>";
   const rows = m.cal.rooms.map(function (row, i) {
-    return "<div class=\"week-row\"><b>\u00c7i\u00e7ek " + (i + 1) + "</b>" + row.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " " + c); }).join("") + "</div>";
+    const g = m.cal.roomCultivars && m.cal.roomCultivars[i];
+    const short = g ? (" \u00b7 " + g.name.split(" ")[0]) : "";
+    return "<div class=\"week-row\"><b>\u00c7i\u00e7ek " + (i + 1) + short + "</b>" + row.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " " + c + (g ? (" " + g.name) : "")); }).join("") + "</div>";
   }).join("");
   const dry = m.cal.dryRows.map(function (row, i) {
     return "<div class=\"week-row\"><b>Kurutma " + (i + 1) + "</b>" + row.map(function (c, w) {
@@ -549,13 +760,15 @@ function renderTables(m, s) {
     "<table><tr><th>Kalem</th><th></th></tr>" +
     "<tr><td>Indoor GACP</td><td class=\"num\">" + eur(m.gacpCapex) + "</td></tr>" +
     "<tr><td>GMP</td><td class=\"num\">" + eur(m.gmpCapex) + "</td></tr>" +
-    "<tr><td>Pilot ekstraksiyon</td><td class=\"num\">" + eur(m.extractCapex) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon ekipman (kriyo-etanol + k\u0131\u015flama)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon C1D2 oda</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
     "<tr><td>Stabilite</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
     "<tr><td><strong>Toplam CAPEX</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
     "<tr><td>Substrate (pot+coco+perlit)</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
     "<tr><td>Su + g\u00fcbre + asit + otomasyon</td><td class=\"num\">" + eur(m.opex.waterFert) + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik</td><td class=\"num\">" + eur(m.opex.labor) + "</td></tr>" +
     "<tr><td>Malzeme (IPM, dripper, kurutma)</td><td class=\"num\">" + eur(m.opex.materials) + "</td></tr>" +
+    "<tr><td>Ekstraksiyon i\u015fletme</td><td class=\"num\">" + eur(m.opex.extract || 0) + "</td></tr>" +
     "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
     "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
     "<tr><td>Has\u0131lat</td><td class=\"num\">" + eur(m.revenue) + "</td></tr>" +
@@ -568,7 +781,11 @@ function renderTables(m, s) {
     "<tr><td>Bitki / oda</td><td class=\"num\">" + fmt(m.plantsPerRoom) + "</td></tr>" +
     "<tr><td>Hasat / oda / y\u0131l</td><td class=\"num\">" + fmt(s.harvestsPerRoom, 1) + "</td></tr>" +
     "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear, 1) + "</td></tr>" +
+    "<tr><td>Veg (algoritma)</td><td class=\"num\">" + m2(m.layout ? m.layout.vegM2 : m.veg) + "</td></tr>" +
+    "<tr><td>Pre-veg (algoritma)</td><td class=\"num\">" + m2(m.layout ? m.layout.preVegM2 : m.preVeg) + "</td></tr>" +
+    "<tr><td>\u00c7elik / k\u00f6klendirme</td><td class=\"num\">" + m2(m.layout ? m.layout.cuttingsM2 : 0) + "</td></tr>" +
     "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
+    "<tr><td>Kurutma taban / kat</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 2) + "</td></tr>" +
     "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
     "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
@@ -583,7 +800,7 @@ function renderTables(m, s) {
     ["Veg", s.vegDays + " g\u00fcn"],
     ["\u00c7i\u00e7ek", s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda"],
     ["Hasat", fmt(s.harvestsPerRoom, 1) + " / oda / y\u0131l"],
-    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda"]
+    ["Kurutma", s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 2) + " kat"]
   ];
   el("flow").innerHTML = nodes.map(function (pair, i) {
     return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node\"><strong>" + pair[0] + "</strong><span>" + pair[1] + "</span></div>";
@@ -608,7 +825,9 @@ function renderLabels(s, m) {
     yieldG: s.yieldG + " g",
     genetics: String(s.genetics),
     priceKg: eur(s.priceKg),
-    saleablePct: "%" + fmt(s.saleablePct * 100, 0)
+    saleablePct: "%" + fmt(s.saleablePct * 100, 0),
+    extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
+    dryTiers: String(s.dryTiers || 2) + " kat"
   };
   Object.keys(map).forEach(function (k) {
     const n = el("v-" + k);
@@ -616,8 +835,13 @@ function renderLabels(s, m) {
   });
   const hint = el("capacityHint");
   if (hint && m) {
-    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 " + fmt(m.plantsPerRoom) + " bitki/oda \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
+    const L = m.layout || {};
+    hint.textContent = "Oda " + m2(s.roomM2) + " \u00b7 kurutma taban " + (L.dryRoomM2 || 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 2) + " kat \u00b7 " + fmt(s.plantsPerM2, 1) + " bitki/m\u00B2 \u00b7 kurutma ihtiyac\u0131 " + m.drySuggest;
   }
+  const mixEl = el("geneticsMix");
+  if (mixEl && m && m.stats) {
+    mixEl.textContent = "Kar\u0131\u015f\u0131m ort.: \u00e7i\u00e7ek " + m.stats.flowerDays + " g\u00fcn \u00b7 veg " + m.stats.vegDays + " g\u00fcn \u00b7 k\u00f6k " + m.stats.rootDays + " g\u00fcn \u00b7 " + m.stats.yieldG + " g \u00b7 " + fmt(m.stats.dens, 1) + " /m\u00B2";
+  } else if (mixEl) mixEl.textContent = "";
 }
 
 let week = 0, playing = false, timer = null, lastM = null;
@@ -673,6 +897,7 @@ function exportJson() {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
+  renderGeneticsUI();
   document.querySelectorAll(".presets button").forEach(function (b) {
     b.addEventListener("click", function () { applyPreset(b.dataset.key); });
   });
@@ -681,7 +906,9 @@ window.addEventListener("DOMContentLoaded", function () {
       customMode = true;
       highlightPreset("custom");
       if (i.id === "dryRooms") pinDryRooms = true;
-      else if (i.id === "flowerRooms" || i.id === "harvestsPerRoom" || i.id === "flowerDays" || i.id === "dryDays" || i.id === "dryCleanDays") pinDryRooms = false;
+      if (i.id === "flowerDays" || i.id === "vegDays" || i.id === "preVegDays" || i.id === "rootDays" || i.id === "yieldG") cycleOverride = true;
+      if (i.id && i.id.indexOf("g-") === 0) { cycleOverride = false; pinDryRooms = false; applyMixToSliders(); }
+      else if (i.id === "flowerRooms" || i.id === "harvestsPerRoom" || i.id === "flowerDays" || i.id === "dryDays" || i.id === "dryCleanDays" || i.id === "dryTiers") pinDryRooms = false;
       week = 0;
       render();
     });

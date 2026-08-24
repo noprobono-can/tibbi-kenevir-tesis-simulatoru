@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body>
   <header class="app-header">
@@ -54,6 +54,9 @@
           <input id="flowerArea" type="range" min="50" max="9000" step="10" value="280" /></div>
         <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
+        <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">2 kat</span></header>
+          <input id="dryTiers" type="range" min="1" max="2" step="1" value="2" /></div>
+        <p class="hint">2 katlı kurutmada her oda tabanı en az çiçek odasının yarısıdır; ası kapasitesi bir oda hasadına yeter. Veg, pre-veg ve çelik alanları çiçek m&#178; ile genetik süre oranından hesaplanır.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
@@ -73,13 +76,21 @@
           <input id="dryCleanDays" type="range" min="1" max="7" step="1" value="7" /></div>
         <div class="control"><header><span>Verim / bitki</span><span id="v-yieldG">180 g</span></header>
           <input id="yieldG" type="range" min="80" max="280" step="5" value="180" /></div>
-        <div class="control"><header><span>Genetik sayısı</span><span id="v-genetics">4</span></header>
-          <input id="genetics" type="range" min="2" max="8" step="1" value="4" /></div>
+        <input id="genetics" type="hidden" value="4" />
         <div class="control"><header><span>Toptan fiyat</span><span id="v-priceKg">€3.500</span></header>
           <input id="priceKg" type="range" min="500" max="8000" step="50" value="3500" /></div>
         <div class="control"><header><span>Satılabilir oran</span><span id="v-saleablePct">%85</span></header>
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
-        <label class="check"><input id="extraction" type="checkbox" checked /> Pilot ekstraksiyon odası</label>
+        <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
+          <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
+        <p class="hint">0 = hat yok. Değer, yıllık kuru çiçek kütlesinin ekstraksiyona giden payıdır; hat kapasiteye göre ölçeklenir (kriyo-etanol, C1D2).</p>
+      </section>
+
+      <section class="panel">
+        <h2>Genetikler</h2>
+        <p class="hint">Seçilen çeşitler odalara sırayla dağıtılır. Çiçek, veg, kök süreleri, verim, yoğunluk ve ham yağ oranı çeşide göre modele işler.</p>
+        <p class="hint" id="geneticsMix"></p>
+        <div id="geneticsBox" class="genetics"></div>
       </section>
     </aside>
 
@@ -122,6 +133,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
