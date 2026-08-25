@@ -36,10 +36,10 @@ const YIELD_SKILL_DENS = 5.5;
 
 const OPEX_U = {
   potL: 12, cocoShare: 0.7, perlitShare: 0.3,
-  cocoEurL: 0.225, perlitEurL: 0.12, potEur: 1.2,
+  cocoEurL: 0.28, perlitEurL: 0.12, potEur: 1.5,
   wasteEurKg: 0.05, mixKgM3: 350,
   waterLPerM2Day: 8, drain: 0.2, eventsDay: 6,
-  waterEurM3: 1.2, fertEurL: 0.08, autoEurEvent: 0.35,
+  waterEurM3: 1.2, fertEurL: 0.045, autoEurEvent: 0.35,
   hno3EurL: 1.5, alk: 7.5, acidFactor: 0.0014,
   junior: 4, senior: 7, manager: 11,
   potPrepH: 0.05, transplantH: 0.033,
@@ -51,6 +51,28 @@ const OPEX_U = {
   ipmEurCycle: 150, ppeEurRoomMonth: 50, labEurRoomMonth: 30,
   dryingEurHarvest: 200, labelEurHarvest: 20,
   activeRatio: 0.85
+};
+
+const CAPEX_U = {
+  gacpM2: 4000,
+  gmpM2: 6500,
+  officeM2: 1200,
+  extractRoomM2: 3200,
+  lightPre: 220,
+  lightVeg: 380,
+  lightFlower: 480,
+  stabilityPerCultivar: 8000
+};
+const ENERGY_U = {
+  kwhPerG: 2.2,   // LED+HVAC mid of 1.5–3.5 kWh/g dry flower
+  eurPerKwh: 0.10
+};
+const GA_U = {
+  base: 28000,           // insurance, security, IT
+  perFlowerRoom: 5500,   // env monitoring / calibration share
+  coaPerHarvest: 480,    // external COA per harvest batch
+  licenseBase: 12000,
+  licensePerRoom: 1500
 };
 
 const GMP_FINISH = {
@@ -69,6 +91,118 @@ function cloneBufferFor(saleable) {
   if (saleable <= 0.82) return 0.15;
   if (saleable <= 0.86) return 0.12;
   return 0.1;
+}
+
+// Staffing: canopy ~1 FTE / 95 m2 flower (CBT ~1000 ft2; industry 800-1200 ft2).
+// Trim 6 kg/vardiya/istasyon = makine destekli; el trim ~0.45 kg/kisi/vardiya.
+const STAFF_RULES = {
+  canopyM2PerGrower: 95,
+  plantsPerHarvestHelper: 80,
+  dryRoomsPerOperator: 3,
+  qaCanopyM2: 450
+};
+
+function buildStaffPlan(s, ox, ex, trimSp, packSp, plantsPerRoom) {
+  const flowerM2 = Math.max(0, s.flowerArea || 0);
+  const dryRooms = Math.max(0, s.dryRooms || 0);
+  const rooms = Math.max(1, s.flowerRooms || 1);
+  const trimSt = Math.max(0, (trimSp && trimSp.stations) || 0);
+  const packSt = Math.max(0, (packSp && packSp.stations) || 0);
+  const extractOps = Math.max(0, (ex && ex.operators) || 0);
+  const hasExtract = !!(ex && ex.m2);
+
+  const growTech = Math.max(1, Math.ceil(flowerM2 / STAFF_RULES.canopyM2PerGrower));
+  const harvestExtra = Math.max(1, Math.ceil((plantsPerRoom || 0) / STAFF_RULES.plantsPerHarvestHelper));
+  const dryOps = Math.max(1, Math.ceil(dryRooms / STAFF_RULES.dryRoomsPerOperator));
+  const trimOps = Math.max(trimSt, Math.ceil(((ox && ox.trimH) || 0) / 1800));
+  const packOps = Math.max(packSt, Math.ceil(((ox && ox.packH) || 0) / 1800));
+  const qa = 1 + (flowerM2 >= STAFF_RULES.qaCanopyM2 ? 1 : 0);
+  const facility = rooms >= 6 ? 2 : 1;
+  const admin = 1;
+
+  const roles = [
+    {
+      role: "\u00dcretim m\u00fcd\u00fcr\u00fc",
+      fte: 1,
+      zone: "GACP",
+      tasks: "Genetik se\u00e7imi, IPM/besleme stratejisi, vardiya plan\u0131, seed-to-sale, hasat kalitesi"
+    },
+    {
+      role: "Yeti\u015ftirici teknisyen",
+      fte: growTech,
+      zone: "GACP",
+      tasks: "Oda turu, budama/defoliasyon, sulama kontrol\u00fc, scouting, transplant, kay\u0131t"
+    },
+    {
+      role: "IPM / iklim teknisyeni",
+      fte: rooms >= 4 ? 1 : 0,
+      zone: "GACP",
+      tasks: "Zararl\u0131 izleme, tuzak/biopreparat, sens\u00f6r kalibrasyonu, HVAC set-point kontrol\u00fc"
+    },
+    {
+      role: "Hasat ekibi (tepe g\u00fcn)",
+      fte: harvestExtra,
+      zone: "GACP\u2192GMP",
+      tasks: "Kesim, ta\u015f\u0131ma, asma, oda CIP; yaln\u0131zca hasat g\u00fcn\u00fc ekstra",
+      peak: true
+    },
+    {
+      role: "Kurutma operat\u00f6r\u00fc",
+      fte: dryOps,
+      zone: "GMP",
+      tasks: "Asma/alma, T/RH kayd\u0131, parti transferi, kurutma odas\u0131 temizli\u011fi"
+    },
+    {
+      role: "Trim operat\u00f6r\u00fc",
+      fte: Math.max(1, trimOps),
+      zone: "GMP",
+      tasks: "Kuru trim, kalite ay\u0131klama, istasyon sanitasyonu, kasa stok"
+    },
+    {
+      role: "Paket / etiket",
+      fte: Math.max(1, packOps),
+      zone: "GMP",
+      tasks: "Tart\u0131m, etiket, birincil ambalaj, lot kayd\u0131, kasa \u00e7\u0131k\u0131\u015f"
+    },
+    {
+      role: "QA / dok\u00fcmantasyon",
+      fte: qa,
+      zone: "GMP",
+      tasks: "G\u00f6rsel QC, numune, batch record, sapma/CAPA, serbest b\u0131rakma"
+    },
+    {
+      role: "Ekstraksiyon operat\u00f6r\u00fc",
+      fte: hasExtract ? Math.max(1, extractOps) : 0,
+      zone: "GMP",
+      tasks: "scCO\u2082 hat \u00e7al\u0131\u015ft\u0131rma, seperat\u00f6r, distilasyon, CIP, proses kayd\u0131"
+    },
+    {
+      role: "Tesis / sanitasyon",
+      fte: facility,
+      zone: "Ortak",
+      tasks: "Hava kilit, zemin/duvar CIP, at\u0131k, PPE stok, bak\u0131m koordinasyonu"
+    },
+    {
+      role: "Ofis / QMS",
+      fte: admin,
+      zone: "\u0130dare",
+      tasks: "SOP, e\u011fitim kayd\u0131, tedarik\u00e7i, izin/izlenebilirlik, raporlama"
+    }
+  ].filter(function (r) { return r.fte > 0; });
+
+  let baseFte = 0;
+  let peakExtra = 0;
+  roles.forEach(function (r) {
+    if (r.peak) peakExtra += r.fte;
+    else baseFte += r.fte;
+  });
+  return {
+    roles: roles,
+    baseFte: baseFte,
+    peakDayFte: baseFte + peakExtra,
+    peakExtra: peakExtra,
+    note: "Kanopi kural\u0131 ~1 yeti\u015ftirici / " + STAFF_RULES.canopyM2PerGrower + " m\u00B2 \u00e7i\u00e7ek (sekt\u00f6r 74\u2013111 m\u00B2). Trim " + GMP_FINISH.trimKgDay + " kg/vardiya/istasyon makine destekli varsay\u0131m."
+  };
 }
 
 
@@ -463,7 +597,7 @@ function sizeExtract(feedKg, crudeFrac) {
   const RATED_ISO = 8;
   const CAL_EUR = 340000;
   const ISO_EUR = 110000;
-  const DIST_Y = 0.78;
+  const DIST_Y = 0.72;
   const kgDay = feedKg / OP_DAYS;
   const crudeKg = feedKg * frac;
   const crudeDay = crudeKg / OP_DAYS;
@@ -472,7 +606,7 @@ function sizeExtract(feedKg, crudeFrac) {
   const nIso = Math.max(1, Math.ceil(crudeDay / RATED_ISO - 1e-9));
   const capexEq = nCal * CAL_EUR + nIso * ISO_EUR;
   const m2 = Math.round(96 + Math.max(0, nCal - 1) * 40 + Math.max(0, nIso - 1) * 22);
-  const capexRoom = m2 * 3200;
+  const capexRoom = m2 * CAPEX_U.extractRoomM2;
   const opexEnergy = feedKg * 1.4 * 0.09 + crudeKg * 2.2 * 0.09;
   const opexSolvent = feedKg * 0.04 * 0.55;
   const opexLabor = 39000 * nCal;
@@ -726,12 +860,20 @@ function computeOpex(s, plantsYear, harvestsYear, kgGross) {
   const drying = harvestsYear * U.dryingEurHarvest;
   const label = harvestsYear * U.labelEurHarvest;
   const materials = dripper + stake + ipm + ppe + lab + drying + label;
-  const total = substrate + waterFert + labor + materials;
+  const energy = (kgGross || 0) * 1000 * ENERGY_U.kwhPerG * ENERGY_U.eurPerKwh;
+  const ga = GA_U.base
+    + (s.flowerRooms || 0) * GA_U.perFlowerRoom
+    + (harvestsYear || 0) * GA_U.coaPerHarvest
+    + GA_U.licenseBase
+    + (s.flowerRooms || 0) * GA_U.licensePerRoom;
+  const total = substrate + waterFert + labor + materials + energy + ga;
   const buffer = cloneBufferFor(s.saleablePct);
   const clonesWeek = plantsYear * (1 + buffer) / 52;
 
   return {
-    substrate: substrate, waterFert: waterFert, labor: labor, materials: materials, total: total,
+    substrate: substrate, waterFert: waterFert, labor: labor, materials: materials,
+    energy: energy, ga: ga, energyKwh: (kgGross || 0) * 1000 * ENERGY_U.kwhPerG,
+    total: total,
     laborH: laborH, water: water, fert: fert, acid: acid, auto: auto,
     dripper: dripper, stake: stake, ipm: ipm, ppe: ppe, lab: lab, drying: drying, label: label,
     clonesWeek: clonesWeek, mixL: mixL, brutL: brutL,
@@ -1417,18 +1559,20 @@ function simulate(s) {
   const officeM2 = 36;
   const totalBuilt = gacpM2 + gmpM2 + officeM2 + extractM2;
 
-  const lightCapex = preVeg * 220 + veg * 380 + s.flowerArea * 480;
-  const gacpCapex = gacpM2 * 2800 + lightCapex;
-  const gmpCapex = gmpM2 * 5600;
+  const lightCapex = preVeg * CAPEX_U.lightPre + veg * CAPEX_U.lightVeg + s.flowerArea * CAPEX_U.lightFlower;
+  const gacpCapex = gacpM2 * CAPEX_U.gacpM2 + lightCapex;
+  const gmpCapex = gmpM2 * CAPEX_U.gmpM2;
+  const officeCapex = officeM2 * CAPEX_U.officeM2;
   const extractCapex = ex.capex;
-  const stability = (mix.length || s.genetics) * 8000;
-  const capex = gacpCapex + gmpCapex + officeM2 * 1400 + extractCapex + stability;
+  const stability = (mix.length || s.genetics) * CAPEX_U.stabilityPerCultivar;
+  const capex = gacpCapex + gmpCapex + officeCapex + extractCapex + stability;
   const ox = computeOpex(s, plantsYear, harvestsYear, kgGross);
   ox.extract = ex.opex;
   ox.total += ex.opex;
   const opexYear = ox.total;
-  const staffBase = Math.max(2, Math.ceil(ox.laborH / 1800) + (ex.operators || 0));
-  const harvestCrew = staffBase + Math.ceil(plantsPerRoom / 80);
+  const staff = buildStaffPlan(s, ox, ex, trimSp, packSp, plantsPerRoom);
+  const staffBase = staff.baseFte;
+  const harvestCrew = staff.peakDayFte;
   const ebitda = revenue - opexYear;
   const payback = ebitda > 0 ? capex / ebitda : Infinity;
   const opexPerG = kgYear > 0 ? opexYear / (kgYear * 1000) : 0;
@@ -1461,7 +1605,7 @@ function simulate(s) {
     alerts.push({ t: "ok", m: "Kurutma: " + s.dryRooms + " oda yeterli (ihtiya\u00e7 " + drySuggest + ", tepe " + cal.peakDry + ")." });
   }
   if (density > 10) {
-    alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 indoor ticari aral\u0131k genelde 7\u201311 /m\u00B2. Bitki ba\u015f\u0131 verim d\u00fc\u015fer; kanopi hastal\u0131k ve tekd\u00fczelik riski artar." });
+    alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 ticari bench genelde ~7\u201311 /m\u00B2 (0,65\u20131 /ft\u00B2); SOG daha y\u00fcksek. Bitki ba\u015f\u0131 verim d\u00fc\u015fer; kanopi hastal\u0131k ve tekd\u00fczelik riski artar (Frontiers/Horticulturae)." });
   }
   alerts.push({ t: "ok", m: "\u00dcretim seviyesi " + skillLabel(s.yieldSkill) + " \u2014 " + fmt(yieldRef, 0) + " g/bitki (5,5 /m\u00B2). Genetik katalog \u00b1%18 sapar. Yo\u011funluk art\u0131nca bitki ba\u015f\u0131 d\u00fc\u015fer, m\u00B2 doyarak artar (\u015fimdi ort. " + fmt(yieldUse, 0) + " g/bitki \u00b7 " + fmt(gM2Avg, 0) + " g/m\u00B2)." });
   if (densityOverride && stats && Math.abs(stats.dens - density) > 1) {
@@ -1526,15 +1670,20 @@ function simulate(s) {
     if (ex.overCap) alerts.push({ t: "bad", m: "Besleme Caladrius/Isolute anma kapasitesini a\u015f\u0131yor \u2014 ek hat veya ikinci vardiya gerekir." });
   }
   alerts.push({ t: "ok", m: "Has\u0131lat = sat\u0131lan \u00e7i\u00e7ek " + fmt(kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + "/kg (" + eur(flowerRevenue) + ")" + (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg (" + eur(extractRevenue) + ")") : "") + "." });
-  alerts.push({ t: "ok", m: "OPEX Cannactive v2 + scCO\u2082 i\u015fletme (elektrik ~1,4 kWh/kg biyok\u00fctle, CO\u2082 makyaj, 1 proses hatt\u0131 kadrosu, bak\u0131m %3,5). Sera HVAC enerjisi, G&A ve d\u0131\u015f COA bu modelde yok." });
+  alerts.push({ t: "ok", m: "OPEX v3: yeti\u015ftirme elektrik ~2,2 kWh/g @ 0,10 \u20AC/kWh (LED+HVAC), G&A/sigorta/g\u00fcvenlik, d\u0131\u015f COA/hasat, lisans, Cannactive girdiler, scCO\u2082 i\u015fletme (1,4 kWh/kg biyok\u00fctle, bak\u0131m %3,5). Distilat geri kazan\u0131m %72." });
+  alerts.push({
+    t: "ok",
+    m: "Kadro modeli: " + staffBase + " FTE taban + hasat g\u00fcn\u00fc +" + staff.peakExtra + " = " + harvestCrew + " ki\u015fi. " + staff.note
+  });
 
   return {
     roomM2: roomM2, usableFlower: usableFlower, plantsPerRoom: plantsPerRoom, density: density,
     plantsYear: plantsYear, plantsInFlower: plantsInFlower, kgYear: kgYear, kgGross: kgGross, revenue: revenue,
     staggerOk: staggerOk, gacpM2: gacpM2, gmpM2: gmpM2, totalBuilt: totalBuilt, drySuggest: drySuggest,
     preVeg: preVeg, veg: veg, motherProd: motherProd, motherBank: motherBank, capex: capex,
-    gacpCapex: gacpCapex, gmpCapex: gmpCapex, extractCapex: extractCapex, stability: stability,
+    gacpCapex: gacpCapex, gmpCapex: gmpCapex, officeCapex: officeCapex, extractCapex: extractCapex, stability: stability,
     opexYear: opexYear, opex: ox, opexPerG: opexPerG, ebitda: ebitda, payback: payback, staffBase: staffBase, harvestCrew: harvestCrew,
+    staff: staff,
     cycleDays: cycleDays, cyclesPerRoom: cyclesPerRoom, harvestsYear: harvestsYear,
     cycleFlower: cycleFlower, cal: cal, alerts: alerts,
     layout: layout, extract: ex, kgFlowerSold: kgFlowerSold, extractFeed: extractFeed, yieldUse: yieldUse,
@@ -1559,7 +1708,8 @@ function renderKpis(m, s) {
       (m.cal.unassigned || (m.postDry && (m.postDry.tooBig || m.postDry.avgFail || m.postDry.diverging || (m.postDry.maxHold > 3)))) ? "warn" : ""],
     ["Kuru \u00e7i\u00e7ek", kpiMain(fmt(m.kgYear, 0), "kg"), fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg", ""],
     ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0), ""],
-    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""]
+    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
+    ["Kadro", kpiMain(String(m.staffBase), "FTE"), "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + ((m.staff && m.staff.roles) ? m.staff.roles.length : 0) + " g\u00f6rev hatt\u0131", ""]
   ];
   el("kpis").innerHTML = items.map(function (row) {
     return "<article class=\"kpi " + row[3] + "\"><div class=\"label\">" + row[0] + "</div><div class=\"value\">" + row[1] + "</div><div class=\"sub\">" + row[2] + "</div></article>";
@@ -2265,11 +2415,14 @@ function renderTables(m, s) {
     "<tr><td>Ekstraksiyon ekipman (Caladrius 450 X + Isolute X, KDV hari\u00e7)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
     "<tr><td>Ekstraksiyon GMP oda (scCO2)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
     "<tr><td>Stabilite</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
+    "<tr><td>Ofis</td><td class=\"num\">" + eur(m.officeCapex) + "</td></tr>" +
     "<tr><td><strong>Toplam CAPEX</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
     "<tr><td>Substrate (pot+coco+perlit)</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
     "<tr><td>Su + g\u00fcbre + asit + otomasyon</td><td class=\"num\">" + eur(m.opex.waterFert) + "</td></tr>" +
     "<tr><td>\u0130\u015f\u00e7ilik</td><td class=\"num\">" + eur(m.opex.labor) + "</td></tr>" +
     "<tr><td>Malzeme (IPM, dripper, kurutma)</td><td class=\"num\">" + eur(m.opex.materials) + "</td></tr>" +
+    "<tr><td>Elektrik (ayd\u0131nlatma+HVAC)</td><td class=\"num\">" + eur(m.opex.energy || 0) + "</td></tr>" +
+    "<tr><td>G&A / sigorta / COA / lisans</td><td class=\"num\">" + eur(m.opex.ga || 0) + "</td></tr>" +
     "<tr><td>Ekstraksiyon i\u015fletme</td><td class=\"num\">" + eur(m.opex.extract || 0) + "</td></tr>" +
     "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
     "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
@@ -2303,6 +2456,16 @@ function renderTables(m, s) {
     "<tr><td>Clone / hafta (bufferli)</td><td class=\"num\">" + fmt(m.opex.clonesWeek, 0) + "</td></tr>" +
     "<tr><td>Ekstraksiyon hatt\u0131</td><td class=\"num\">" + (m.extract && m.extract.m2 ? (m.extract.nCal + "\u00d7 Caladrius \u00b7 " + fmt(m.extract.kgDay, 1) + " / " + fmt(m.extract.ratedKgDay, 0) + " kg/g") : "yok") + "</td></tr>" +
     "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
+
+  const staffRows = ((m.staff && m.staff.roles) || []).map(function (r) {
+    return "<tr><td><strong>" + r.role + "</strong> <span class=\"muted\">" + r.zone + "</span><div class=\"hint\" style=\"margin:4px 0 0\">" + r.tasks + (r.peak ? " \u00b7 tepe g\u00fcn" : "") + "</div></td><td class=\"num\">" + r.fte + (r.peak ? " *" : "") + "</td></tr>";
+  }).join("");
+  el("ops").innerHTML +=
+    "<table style=\"margin-top:14px\"><tr><th>G\u00f6rev / personel</th><th>FTE</th></tr>" +
+    staffRows +
+    "<tr><td><strong>Taban kadro</strong></td><td class=\"num\"><strong>" + m.staffBase + "</strong></td></tr>" +
+    "<tr><td><strong>Hasat g\u00fcn\u00fc toplam</strong></td><td class=\"num\"><strong>" + m.harvestCrew + "</strong></td></tr></table>" +
+    "<p class=\"hint\">" + ((m.staff && m.staff.note) || "") + " * tepe g\u00fcn ekstra.</p>";
 
   el("alerts").innerHTML = m.alerts.map(function (a) { return "<div class=\"alert " + a.t + "\">" + a.m + "</div>"; }).join("");
   renderProcessFlow(m, s, week);

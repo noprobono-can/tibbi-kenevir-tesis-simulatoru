@@ -497,6 +497,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
   line-height: 1.5;
   color: var(--muted);
 }
+.muted { color: var(--muted); font-size: 12px; font-weight: 500; }
 
 @media (max-width: 1180px) {
   html.view-phone .layout { grid-template-columns: minmax(0, 1fr); padding: 16px; }

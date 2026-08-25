@@ -169,7 +169,7 @@ function scenarioReportBlocks(m, s, plan) {
       { k: "Has\u0131lat", v: eur(m.revenue), s: "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0) },
       { k: "CAPEX", v: eur(m.capex), s: "marj " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + pay },
       { k: "Kapal\u0131 alan", v: m2(m.totalBuilt), s: "GACP " + m2(m.gacpM2) + " \u00b7 GMP " + m2(m.gmpM2) },
-      { k: "Kadro", v: String(m.staffBase) + " FTE", s: "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + fmt(ox.laborH || 0, 0) + " sa/y\u0131l" }
+      { k: "Kadro", v: String(m.staffBase) + " FTE", s: "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + (((m.staff && m.staff.roles) || []).length) + " g\u00f6rev" }
     ]
   });
 
@@ -298,11 +298,14 @@ function scenarioReportBlocks(m, s, plan) {
       ["Ekstraksiyon ekipman", eur(ex.capexEq || 0)],
       ["Ekstraksiyon oda", eur(ex.capexRoom || 0)],
       ["Stabilite", eur(m.stability)],
+      ["Ofis", eur(m.officeCapex || 0)],
       ["Toplam CAPEX", eur(m.capex)],
       ["Substrate", eur(ox.substrate || 0)],
       ["Su + g\u00fcbre + asit + otomasyon", eur(ox.waterFert || 0)],
       ["\u0130\u015f\u00e7ilik", eur(ox.labor || 0)],
       ["Malzeme", eur(ox.materials || 0)],
+      ["Elektrik (ayd\u0131nlatma+HVAC)", eur(ox.energy || 0)],
+      ["G&A / sigorta / COA / lisans", eur(ox.ga || 0)],
       ["Ekstraksiyon i\u015fletme", eur(ox.extract || 0)],
       ["Toplam OPEX", eur(m.opexYear)],
       ["OPEX / g sat\u0131labilir", fmt(m.opexPerG, 2) + " \u20AC"],
@@ -322,8 +325,21 @@ function scenarioReportBlocks(m, s, plan) {
       ["Yo\u011funluk (model)", fmt(m.density, 1) + "/m\u00B2"],
       ["Clone / hafta", fmt(ox.clonesWeek || 0, 0)],
       ["Trim saat / y\u0131l", fmt(ox.trimH || 0, 0)],
-      ["Paket saat / y\u0131l", fmt(ox.packH || 0, 0)]
+      ["Paket saat / y\u0131l", fmt(ox.packH || 0, 0)],
+      ["Taban kadro", String(m.staffBase) + " FTE"],
+      ["Hasat g\u00fcn\u00fc kadro", String(m.harvestCrew) + " ki\u015fi"]
     ]
+  });
+
+  blocks.push({ type: "h2", t: "Personel g\u00f6revleri" });
+  blocks.push({
+    type: "kv",
+    rows: ((m.staff && m.staff.roles) || []).map(function (r) {
+      return [
+        r.role + (r.peak ? " (tepe)" : "") + " \u00b7 " + r.fte + " FTE",
+        r.zone + " \u2014 " + r.tasks
+      ];
+    }).concat([["Not", (m.staff && m.staff.note) || "\u2014"]])
   });
 
   const calLines = (m.cal && m.cal.rooms ? m.cal.rooms : []).map(function (row, i) {
@@ -348,7 +364,7 @@ function scenarioReportBlocks(m, s, plan) {
   });
   blocks.push({
     type: "para",
-    t: "Indikatif model. Sera HVAC enerjisi, G&A ve d\u0131\u015f COA yok. CAPEX/OPEX yat\u0131r\u0131m tavsiyesi de\u011fildir."
+    t: "Indikatif model. Enerji (LED+HVAC) ve G&A/sigorta/COA/lisans dahildir. CAPEX/OPEX yat\u0131r\u0131m tavsiyesi de\u011fildir."
   });
   return blocks;
 }
