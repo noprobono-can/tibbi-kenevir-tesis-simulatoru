@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=31" />
+  <link rel="stylesheet" href="styles.css?v=35" />
   <script>
     (function () {
       try {
@@ -20,11 +20,21 @@
         document.documentElement.classList.add(v === "phone" ? "view-phone" : "view-desktop");
       } catch (e) {}
       try {
-        if (sessionStorage.getItem("tkts-gate") === "v1-9c2e4a71") {
-          document.documentElement.classList.add("unlocked");
-        } else {
-          document.documentElement.classList.add("locked");
+        var unlocked = false;
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf("sb-") === 0 && k.slice(-11) === "-auth-token") {
+            var raw = localStorage.getItem(k);
+            if (raw) {
+              var data = JSON.parse(raw);
+              if (data && data.access_token && data.expires_at > Math.floor(Date.now() / 1000)) {
+                unlocked = true;
+                break;
+              }
+            }
+          }
         }
+        document.documentElement.classList.add(unlocked ? "unlocked" : "locked");
       } catch (e) {
         document.documentElement.classList.add("locked");
       }
@@ -41,15 +51,15 @@
         </svg>
       </div>
       <h1 id="gateTitle">Tıbbi kenevir simülatörü</h1>
-      <p class="gate-lead">Simülatöre devam etmek için yetkili hesapla oturum açın.</p>
-      <label class="gate-field">Kullanıcı adı
-        <input id="gateUser" name="username" type="text" autocomplete="username" required />
+      <p id="gateLead" class="gate-lead">Yalnızca davet edilen hesaplarla oturum açılır. Davet mailindeki bağlantıyla şifrenizi belirleyin, sonra buradan giriş yapın.</p>
+      <label class="gate-field">E-posta
+        <input id="gateEmail" name="email" type="email" autocomplete="email" required />
       </label>
       <label class="gate-field">Şifre
-        <input id="gatePass" name="password" type="password" autocomplete="current-password" required />
+        <input id="gatePass" name="password" type="password" autocomplete="current-password" minlength="6" required />
       </label>
-      <p id="gateErr" class="gate-err" hidden>Kullanıcı adı veya şifre hatalı.</p>
-      <button type="submit">Giriş yap</button>
+      <p id="gateMsg" class="gate-msg" hidden></p>
+      <button id="gateSubmit" type="submit">Giriş yap</button>
     </form>
   </div>
 
@@ -75,6 +85,8 @@
         </div>
       </div>
       <div class="header-meta">
+        <span id="gateUserChip" class="chip chip-user" hidden></span>
+        <button type="button" id="gateLogout" class="chip chip-btn" hidden>Çıkış</button>
         <span class="chip">Indoor</span>
         <span class="chip">GACP</span>
         <span class="chip">GMP</span>
@@ -221,8 +233,10 @@
   </div>
   </div>
 
-  <script src="gate.js?v=31"></script>
-  <script src="app.js?v=31"></script>
-  <script src="pdf-export.js?v=31"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gate-config.js?v=35"></script>
+  <script src="gate.js?v=35"></script>
+  <script src="app.js?v=35"></script>
+  <script src="pdf-export.js?v=35"></script>
 </body>
 </html>

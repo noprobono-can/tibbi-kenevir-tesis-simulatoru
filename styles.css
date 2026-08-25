@@ -826,6 +826,27 @@ html.unlocked .gate { display: none; }
   font-size: 14px;
   line-height: 1.45;
 }
+.gate-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+.gate-tab {
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gate-tab.on {
+  background: rgba(196, 165, 106, 0.16);
+  border-color: var(--gold-2);
+  color: var(--gold);
+}
 .gate-field {
   display: grid;
   gap: 6px;
@@ -849,11 +870,14 @@ html.unlocked .gate { display: none; }
   outline: 1px solid var(--gold-2);
   border-color: var(--gold-2);
 }
-.gate-err {
+.gate-msg {
   margin: 0;
-  color: var(--danger);
   font-size: 13px;
+  line-height: 1.45;
 }
+.gate-msg.err { color: var(--danger); }
+.gate-msg.ok { color: var(--ok); }
+.gate-msg.warn { color: var(--warn); }
 .gate-card button[type="submit"] {
   margin-top: 6px;
   height: 44px;
@@ -865,3 +889,21 @@ html.unlocked .gate { display: none; }
   cursor: pointer;
 }
 .gate-card button[type="submit"]:hover { filter: brightness(1.06); }
+.gate-card button[type="submit"]:disabled { opacity: 0.6; cursor: wait; }
+.chip-user {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.chip-btn:hover { color: var(--gold); border-color: var(--gold-2); }

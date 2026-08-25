@@ -1,0 +1,4 @@
+window.TKTS_GATE_CONFIG = {
+  supabaseUrl: "https://wxcuongfmqhwtdfwbsyu.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4Y3VvbmdmbXFod3RkZndic3l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NTAxMzgsImV4cCI6MjEwMzIyNjEzOH0.0rG_IMT0M_x67H9oPWOAcCcTQJ-zXJmjMeV0JkJhdpc"
+};
