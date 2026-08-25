@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tıbbi Kenevir Tesis Simülatörü</title>
+  <title>Tıbbi Kenevir Simülatörü</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=30" />
   <script>
     (function () {
       try {
@@ -19,10 +19,40 @@
         document.documentElement.classList.remove("view-phone", "view-desktop");
         document.documentElement.classList.add(v === "phone" ? "view-phone" : "view-desktop");
       } catch (e) {}
+      try {
+        if (sessionStorage.getItem("tkts-gate") === "v1-9c2e4a71") {
+          document.documentElement.classList.add("unlocked");
+        } else {
+          document.documentElement.classList.add("locked");
+        }
+      } catch (e) {
+        document.documentElement.classList.add("locked");
+      }
     })();
   </script>
 </head>
 <body>
+  <div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" lang="tr">
+    <form id="gateForm" class="gate-card">
+      <div class="gate-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+          <path d="M16 4 L27 16 L16 28 L5 16 Z" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <h1 id="gateTitle">Tıbbi kenevir simülatörü</h1>
+      <p class="gate-lead">Simülatöre devam etmek için yetkili hesapla oturum açın.</p>
+      <label class="gate-field">Kullanıcı adı
+        <input id="gateUser" name="username" type="text" autocomplete="username" required />
+      </label>
+      <label class="gate-field">Şifre
+        <input id="gatePass" name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="gateErr" class="gate-err" hidden>Kullanıcı adı veya şifre hatalı.</p>
+      <button type="submit">Giriş yap</button>
+    </form>
+  </div>
+
   <header class="app-header">
     <div class="view-bar">
       <span class="view-bar-label">G&ouml;r&uuml;n&uuml;m</span>
@@ -40,7 +70,7 @@
           </svg>
         </div>
         <div>
-          <h1>Tıbbi kenevir tesis simülatörü</h1>
+          <h1>Tıbbi kenevir simülatörü</h1>
           <p>Tam indoor GACP üretim ve GMP işleme</p>
         </div>
       </div>
@@ -191,7 +221,8 @@
   </div>
   </div>
 
-  <script src="app.js?v=27"></script>
-  <script src="pdf-export.js?v=27"></script>
+  <script src="gate.js?v=30"></script>
+  <script src="app.js?v=30"></script>
+  <script src="pdf-export.js?v=30"></script>
 </body>
 </html>

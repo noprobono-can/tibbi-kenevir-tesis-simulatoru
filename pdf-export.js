@@ -159,7 +159,7 @@ function scenarioReportBlocks(m, s, plan) {
 
   blocks.push({
     type: "cover",
-    title: "T\u0131bbi kenevir tesis sim\u00fclat\u00f6r\u00fc",
+    title: "T\u0131bbi kenevir sim\u00fclat\u00f6r\u00fc",
     sub: "Senaryo \u00f6zeti \u00b7 indoor GACP + GMP",
     scenario: activePresetLabel(),
     date: new Date().toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" }),
@@ -376,7 +376,7 @@ function paintReportPages(blocks) {
     ctx.fillStyle = MUTED;
     ctx.font = "11px Segoe UI, Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("T\u0131bbi kenevir tesis sim\u00fclat\u00f6r\u00fc \u00b7 senaryo \u00f6zeti", M, H - 18);
+    ctx.fillText("T\u0131bbi kenevir sim\u00fclat\u00f6r\u00fc \u00b7 senaryo \u00f6zeti", M, H - 18);
     ctx.textAlign = "right";
     ctx.fillText(String(pageNo) + " / " + totalHolder.n, W - M, H - 18);
     ctx.textAlign = "left";
@@ -648,7 +648,7 @@ function exportScenarioPdfPrint(m, s) {
   if (!w) return;
   let html = "<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"utf-8\"/><title>Senaryo \u00f6zeti</title>";
   html += "<style>body{font-family:Segoe UI,Arial,sans-serif;color:#1c1914;max-width:820px;margin:24px auto;padding:0 20px}h1{font-size:22px}h2{font-size:15px;border-bottom:1px solid #d4cbb8;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px}td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left}th{color:#6a6458}@media print{@page{size:A4;margin:14mm}}</style></head><body>";
-  html += "<h1>T\u0131bbi kenevir tesis sim\u00fclat\u00f6r\u00fc \u2014 senaryo \u00f6zeti</h1>";
+  html += "<h1>T\u0131bbi kenevir sim\u00fclat\u00f6r\u00fc \u2014 senaryo \u00f6zeti</h1>";
   html += "<p>" + xmlEsc(activePresetLabel()) + " \u00b7 " + xmlEsc(new Date().toLocaleDateString("tr-TR")) + "</p>";
   blocks.forEach(function (b) {
     if (b.type === "h2") html += "<h2>" + xmlEsc(b.t) + "</h2>";
