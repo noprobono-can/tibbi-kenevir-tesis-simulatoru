@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=35" />
+  <link rel="stylesheet" href="styles.css?v=36" />
   <script>
     (function () {
       try {
@@ -52,11 +52,14 @@
       </div>
       <h1 id="gateTitle">Tıbbi kenevir simülatörü</h1>
       <p id="gateLead" class="gate-lead">Yalnızca davet edilen hesaplarla oturum açılır. Davet mailindeki bağlantıyla şifrenizi belirleyin, sonra buradan giriş yapın.</p>
-      <label class="gate-field">E-posta
+      <label id="gateEmailWrap" class="gate-field">E-posta
         <input id="gateEmail" name="email" type="email" autocomplete="email" required />
       </label>
-      <label class="gate-field">Şifre
+      <label class="gate-field"><span id="gatePassLabel">Şifre</span>
         <input id="gatePass" name="password" type="password" autocomplete="current-password" minlength="6" required />
+      </label>
+      <label id="gatePass2Wrap" class="gate-field" hidden>Şifre tekrar
+        <input id="gatePass2" name="password2" type="password" autocomplete="new-password" minlength="6" />
       </label>
       <p id="gateMsg" class="gate-msg" hidden></p>
       <button id="gateSubmit" type="submit">Giriş yap</button>
@@ -234,9 +237,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="gate-config.js?v=35"></script>
-  <script src="gate.js?v=35"></script>
-  <script src="app.js?v=35"></script>
-  <script src="pdf-export.js?v=35"></script>
+  <script src="gate-config.js?v=36"></script>
+  <script src="gate.js?v=36"></script>
+  <script src="app.js?v=36"></script>
+  <script src="pdf-export.js?v=36"></script>
 </body>
 </html>
