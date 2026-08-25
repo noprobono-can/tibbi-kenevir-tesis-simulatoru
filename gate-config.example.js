@@ -1,4 +1,6 @@
 window.TKTS_GATE_CONFIG = {
-  supabaseUrl: "https://YOUR_PROJECT_REF.supabase.co",
-  supabaseAnonKey: "YOUR_SUPABASE_ANON_KEY"
+  // Share these codes privately. Anyone with a code can open the simulator.
+  accessCodes: [
+    "your-invite-code"
+  ]
 };
