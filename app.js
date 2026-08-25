@@ -54,7 +54,9 @@ const OPEX_U = {
 };
 
 const CAPEX_U = {
-  gacpM2: 4000,
+  // Kannaplan all-in €4–5k/m² includes LED; we price shell+HVAC+fit separately + lightCapex.
+  gacpGrowM2: 2800,
+  gacpSupportM2: 1600,
   gmpM2: 6500,
   officeM2: 1200,
   extractRoomM2: 3200,
@@ -562,6 +564,9 @@ function layoutFromFlower(s, stats) {
   const dryArea = s.dryRooms * dryRoomM2;
   const hangEq = dryRoomM2 * tiers;
   const hangNeed = Math.round(room);
+  // Pre-flower sizing vs flower canopy (Next Big Crop / facility zoning):
+  // veg rooms ~20-30% of flower canopy total; mother ~5% of cultivation (~2.5-4% flower);
+  // clone/propagation high-density trays (multi-tier), much smaller footprint than flower.
   return {
     tiers: tiers,
     dryRoomM2: dryRoomM2,
@@ -569,10 +574,10 @@ function layoutFromFlower(s, stats) {
     hangEq: hangEq,
     hangNeed: hangNeed,
     hangOk: hangEq + 0.01 >= hangNeed,
-    motherM2: Math.max(12, Math.round(flower * 0.03 + nG * 6)),
-    cuttingsM2: Math.max(16, Math.round(flower * (rootDays / flowerDays) / 2.6)),
-    preVegM2: Math.max(20, Math.round(flower * (preVegDays / flowerDays) / 1.8)),
-    vegM2: Math.max(28, Math.round(flower * (vegDays / flowerDays) / 1.45)),
+    motherM2: Math.max(8, Math.round(flower * 0.025 + nG * 2.5)),
+    cuttingsM2: Math.max(6, Math.round(flower * (rootDays / flowerDays) / 5.0)),
+    preVegM2: Math.max(10, Math.round(flower * (preVegDays / flowerDays) / 3.2)),
+    vegM2: Math.max(14, Math.round(flower * (vegDays / flowerDays) / 2.4)),
     trimM2: Math.max(18, Math.round(s.trimM2 != null ? s.trimM2 : Math.max(24, room * 0.35))),
     packM2: Math.max(12, Math.round(s.packM2 != null ? s.packM2 : Math.max(18, s.flowerRooms * 6 + flower * 0.02))),
     flowerDays: flowerDays,
@@ -1548,11 +1553,13 @@ function simulate(s) {
 
 
   const motherProd = layout.motherM2;
-  const motherBank = Math.max(8, Math.round(layout.motherM2 * 0.5));
-  const quarantine = 4, tissue = 8, cuttings = layout.cuttingsM2;
+  const motherBank = Math.max(4, Math.round(layout.motherM2 * 0.35));
+  const quarantine = 4, tissue = 6, cuttings = layout.cuttingsM2;
   const preVeg = layout.preVegM2;
   const veg = layout.vegM2;
-  const gacpM2 = motherProd + motherBank + quarantine + tissue + cuttings + preVeg + veg + s.flowerArea + 40;
+  const gacpGrowM2 = motherProd + motherBank + cuttings + preVeg + veg + s.flowerArea;
+  const gacpSupportM2 = quarantine + tissue + 28;
+  const gacpM2 = gacpGrowM2 + gacpSupportM2;
   const dryM2 = layout.dryArea;
   const extractM2 = ex.m2;
   const gmpM2 = dryM2 + layout.trimM2 + layout.packM2 + 30;
@@ -1560,7 +1567,7 @@ function simulate(s) {
   const totalBuilt = gacpM2 + gmpM2 + officeM2 + extractM2;
 
   const lightCapex = preVeg * CAPEX_U.lightPre + veg * CAPEX_U.lightVeg + s.flowerArea * CAPEX_U.lightFlower;
-  const gacpCapex = gacpM2 * CAPEX_U.gacpM2 + lightCapex;
+  const gacpCapex = gacpGrowM2 * CAPEX_U.gacpGrowM2 + gacpSupportM2 * CAPEX_U.gacpSupportM2 + lightCapex;
   const gmpCapex = gmpM2 * CAPEX_U.gmpM2;
   const officeCapex = officeM2 * CAPEX_U.officeM2;
   const extractCapex = ex.capex;
@@ -1604,6 +1611,12 @@ function simulate(s) {
   } else {
     alerts.push({ t: "ok", m: "Kurutma: " + s.dryRooms + " oda yeterli (ihtiya\u00e7 " + drySuggest + ", tepe " + cal.peakDry + ")." });
   }
+  alerts.push({
+    t: "ok",
+    m: "GACP \u00e7i\u00e7ek \u00f6ncesi: veg+pre-veg ~%" + Math.round(100 * (preVeg + veg) / Math.max(1, s.flowerArea)) +
+      " \u00e7i\u00e7ek kanopisi (hedef %20\u201330); ana\u00e7+banka+\u00e7elik " +
+      Math.round(motherProd + motherBank + cuttings) + " m\u00B2 (yo\u011fun \u00e7elik / ana\u00e7 ~%2,5 kanopi)."
+  });
   if (density > 10) {
     alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 ticari bench genelde ~7\u201311 /m\u00B2 (0,65\u20131 /ft\u00B2); SOG daha y\u00fcksek. Bitki ba\u015f\u0131 verim d\u00fc\u015fer; kanopi hastal\u0131k ve tekd\u00fczelik riski artar (Frontiers/Horticulturae)." });
   }
@@ -1762,11 +1775,11 @@ function buildConceptSvg(m, s, currentWeek) {
   const mech = mSize(Math.max(18, Math.round((m.totalBuilt || 400) * 0.025)), 1.15);
   const staff = mSize(14, 1.4);
   const store = mSize(16, 1.3);
-  const mother = mSize(m.motherProd || L.motherM2 || 18, 1.25);
-  const bank = mSize(m.motherBank || 10, 1.6);
-  const cut = mSize(L.cuttingsM2 || 16, 1.2);
-  const prev = mSize(m.preVeg || L.preVegM2 || 20, 1.3);
-  const veg = mSize(m.veg || L.vegM2 || 28, 1.35);
+  const mother = mSize(m.motherProd || L.motherM2 || 12, 1.25);
+  const bank = mSize(m.motherBank || 6, 1.6);
+  const cut = mSize(L.cuttingsM2 || 8, 1.2);
+  const prev = mSize(m.preVeg || L.preVegM2 || 12, 1.3);
+  const veg = mSize(m.veg || L.vegM2 || 16, 1.35);
   const flower = mSize(s.roomM2, 1.32);
   const dry = mSize(L.dryRoomM2 || 24, 1.15);
   const trim = mSize(L.trimM2 || 24, 1.5);
