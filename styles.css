@@ -353,6 +353,22 @@ svg.plan .hit { transition: fill 0.18s ease, stroke 0.18s ease; }
 .room { cursor: pointer; }
 .room:hover .hit { filter: brightness(1.12); }
 .room.flow-on .hit { stroke: rgba(232, 244, 238, 0.9); stroke-width: 1.6; }
+@keyframes playBlink {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.7); }
+}
+html.playing .room.flow-trim .hit,
+html.playing .room.flow-pack .hit,
+html.playing .room.flow-hold .hit,
+html.playing .flow .node.live-trim,
+html.playing .flow .node.live-pack,
+html.playing .flow .node.live-hold,
+html.playing .cell.now.trim,
+html.playing .cell.now.pack,
+html.playing .cell.now.hold {
+  animation: playBlink 0.9s ease-in-out infinite;
+  animation-delay: var(--play-pulse, 0ms);
+}
 .legend {
   display: flex;
   gap: 16px;
@@ -756,7 +772,7 @@ html.view-phone input[type="range"]::-moz-range-thumb {
 html.view-desktop .layout { min-width: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
+  * { transition: none !important; animation: none !important; }
 }
 
 html.locked .app-header,

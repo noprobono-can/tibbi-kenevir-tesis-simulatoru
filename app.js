@@ -2039,7 +2039,7 @@ function renderPlan(m, s, currentWeek) {
     specs.forEach(function (q, i) {
       blocks.push({
         id: q.id, line2: q.line2 || "", line3: q.line3 || "", fill: q.fill,
-        x: x0, y: y, w: ws[i], h: height, i: q.i, on: q.on, flow: q.flow
+        x: x0, y: y, w: ws[i], h: height, i: q.i, on: q.on, flow: q.flow, flowCls: q.flowCls
       });
       x0 += ws[i] + boxGap;
     });
@@ -2122,6 +2122,7 @@ function renderPlan(m, s, currentWeek) {
       line3: tw === "trim" ? "kurutmadan i\u015fleniyor" : (tw === "hold" ? "kuru oda bekler" : "bo\u015f"),
       fill: finishTrimFill(tw),
       flow: tw !== "idle",
+      flowCls: tw === "hold" ? "flow-hold" : (tw === "trim" ? "flow-trim" : ""),
       flex: 1
     },
     {
@@ -2130,6 +2131,7 @@ function renderPlan(m, s, currentWeek) {
       line3: pw === "pack" ? "trimden i\u015fleniyor" : "bo\u015f",
       fill: finishPackFill(pw),
       flow: pw !== "idle",
+      flowCls: pw === "pack" ? "flow-pack" : "",
       flex: 0.9
     }
   ]);
@@ -2195,7 +2197,7 @@ function renderPlan(m, s, currentWeek) {
     const titleLines = wrapPlanText(b.id, innerWB, titleFs).slice(0, b.h < 40 ? 1 : 2);
     const di = (typeof b.i === "number") ? (" data-i=\"" + b.i + "\"") : "";
     const on = b.on ? " on" : "";
-    const flow = b.flow ? " flow-on" : "";
+    const flow = (b.flow ? " flow-on" : "") + (b.flowCls ? (" " + b.flowCls) : "");
     let out = "<g class=\"room" + on + flow + "\"" + di + " clip-path=\"url(#" + clip + ")\">";
     out += "<rect class=\"hit\" x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\" fill=\"" + b.fill + "\" opacity=\"0.92\"/>";
     titleLines.forEach(function (ln) {
@@ -2221,8 +2223,9 @@ function renderPlan(m, s, currentWeek) {
 
 function renderCalendar(m) {
   const cell = function (w, cls, title) {
+    const now = w === week ? " now" : "";
     const on = w === week ? " outline:1px solid #d4c49a;" : "";
-    return "<div class=\"cell " + cls + "\" style=\"" + on + "\" title=\"" + title + "\"></div>";
+    return "<div class=\"cell " + cls + now + "\" style=\"" + on + "\" title=\"" + title + "\"></div>";
   };
   const head = "<div class=\"week-row\"><b></b>" + Array.from({ length: 52 }, function (_, i) { return cell(i, "", "H" + (i + 1)); }).join("") + "</div>";
   const rows = m.cal.rooms.map(function (row, i) {
@@ -2391,6 +2394,19 @@ function renderLabels(s, m) {
 }
 
 let week = 0, playing = false, timer = null, lastM = null, lastS = null;
+let playPulseAt = 0;
+
+function syncPlayPulse() {
+  if (!playing) {
+    document.documentElement.classList.remove("playing");
+    document.documentElement.style.removeProperty("--play-pulse");
+    return;
+  }
+  document.documentElement.classList.add("playing");
+  const ms = 900;
+  const t0 = playPulseAt || Date.now();
+  document.documentElement.style.setProperty("--play-pulse", (-((Date.now() - t0) % ms)) + "ms");
+}
 let pinDryRooms = false;
 
 function ensureDryRooms(need) {
@@ -2431,8 +2447,16 @@ function play() {
   el("playBtn").textContent = playing ? "Durdur" : "Y\u0131l\u0131 oynat";
   if (timer) clearInterval(timer);
   if (playing) {
+    playPulseAt = Date.now();
+    syncPlayPulse();
+    if (lastM) {
+      renderPlan(lastM, lastS || readState(), week);
+      renderCalendar(lastM);
+      renderProcessFlow(lastM, lastS, week);
+    }
     timer = setInterval(function () {
       week = (week + 1) % 52;
+      syncPlayPulse();
       if (lastM) {
         renderPlan(lastM, lastS || readState(), week);
         renderCalendar(lastM);
@@ -2440,6 +2464,8 @@ function play() {
         el("weekLabel").textContent = "Hafta " + (week + 1);
       }
     }, 220);
+  } else {
+    syncPlayPulse();
   }
 }
 
