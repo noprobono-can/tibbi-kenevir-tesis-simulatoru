@@ -166,8 +166,8 @@ function scenarioReportBlocks(m, s, plan) {
     kpis: [
       { k: "Y\u0131ll\u0131k bitki", v: fmt(m.plantsYear), s: fmt(m.plantsInFlower) + " hasatta \u00b7 " + fmt(m.harvestsYear, 0) + " hasat" },
       { k: "Kuru \u00e7i\u00e7ek", v: fmt(m.kgYear, 0) + " kg", s: "sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg" },
-      { k: "Has\u0131lat", v: eur(m.revenue), s: "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0) },
-      { k: "CAPEX", v: eur(m.capex), s: "marj " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + pay },
+      { k: "Has\u0131lat", v: eur(m.revenue), s: "Y3+ EU-GMP \u00b7 Y1\u20132 GACP " + eur(m.revenueGacp || 0) },
+      { k: "CAPEX", v: eur(m.capex), s: "marj Y3+ " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + pay },
       { k: "Kapal\u0131 alan", v: m2(m.totalBuilt), s: "GACP " + m2(m.gacpM2) + " \u00b7 GMP " + m2(m.gmpM2) },
       { k: "Kadro", v: String(m.staffBase) + " FTE", s: "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + (((m.staff && m.staff.roles) || []).length) + " g\u00f6rev" }
     ]
@@ -207,7 +207,8 @@ function scenarioReportBlocks(m, s, plan) {
       ["\u00c7evrim", fmt(m.cycleDays) + " g\u00fcn"],
       ["Sat\u0131labilir oran", "%" + fmt(s.saleablePct * 100, 0)],
       ["Ekstraksiyon besleme", "%" + fmt((s.extractPct || 0) * 100, 0)],
-      ["\u00c7i\u00e7ek sat\u0131\u015f", eur(s.priceKg) + "/kg"],
+      ["\u00c7i\u00e7ek GACP (y\u0131l 1\u20132)", eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) + "/kg"],
+      ["\u00c7i\u00e7ek EU-GMP (y\u0131l 3+)", eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + "/kg"],
       ["Ekstrakt sat\u0131\u015f", eur(s.extractPriceKg || 0) + "/kg"],
       ["Bitki ba\u015f\u0131 verim", fmt(m.yieldUse, 0) + " g (yo\u011funluk ayarl\u0131)"],
       ["Verim / m\u00B2", fmt(m.gM2Avg || 0, 0) + " g"]
@@ -309,11 +310,14 @@ function scenarioReportBlocks(m, s, plan) {
       ["Ekstraksiyon i\u015fletme", eur(ox.extract || 0)],
       ["Toplam OPEX", eur(m.opexYear)],
       ["OPEX / g sat\u0131labilir", fmt(m.opexPerG, 2) + " \u20AC"],
-      ["\u00c7i\u00e7ek has\u0131lat\u0131", eur(m.flowerRevenue || 0)],
+      ["\u00c7i\u00e7ek has\u0131lat\u0131 GACP (Y1\u20132)", eur(m.flowerRevenueGacp || 0)],
+      ["\u00c7i\u00e7ek has\u0131lat\u0131 EU-GMP (Y3+)", eur(m.flowerRevenueGmp || 0)],
       ["Ekstrakt has\u0131lat\u0131", eur(m.extractRevenue || 0)],
-      ["Toplam has\u0131lat", eur(m.revenue)],
-      ["Marj (has\u0131lat \u2212 OPEX)", eur(m.ebitda)],
-      ["Geri \u00f6deme", pay]
+      ["Has\u0131lat / marj Y1\u20132", eur(m.revenueGacp || 0) + " / " + eur(m.ebitdaGacp || 0)],
+      ["Has\u0131lat / marj Y3+", eur(m.revenueGmp || 0) + " / " + eur(m.ebitdaGmp || 0)],
+      ["Toplam has\u0131lat (olgun Y3+)", eur(m.revenue)],
+      ["Marj olgun (has\u0131lat \u2212 OPEX)", eur(m.ebitda)],
+      ["Geri \u00f6deme (GACP\u2192GMP rampa)", pay]
     ]
   });
 

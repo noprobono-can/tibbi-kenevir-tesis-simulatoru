@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=41" />
+  <link rel="stylesheet" href="styles.css?v=42" />
   <script>
     (function () {
       try {
@@ -150,8 +150,10 @@
         <div class="control"><header><span>Özel g/bitki</span><span id="v-yieldG">105 g</span></header>
           <input id="yieldG" type="range" min="50" max="180" step="5" value="105" /></div>
         <input id="genetics" type="hidden" value="4" />
-        <div class="control"><header><span>Çiçek satış fiyatı (kg başına)</span><span id="v-priceKg">€3.500/kg</span></header>
-          <input id="priceKg" type="range" min="500" max="8000" step="50" value="3500" /></div>
+        <div class="control"><header><span>Çiçek GACP fiyatı (yıl 1–2)</span><span id="v-priceKgGacp">€2.500/kg</span></header>
+          <input id="priceKgGacp" type="range" min="500" max="8000" step="50" value="2500" /></div>
+        <div class="control"><header><span>Çiçek EU-GMP fiyatı (yıl 3+)</span><span id="v-priceKgGmp">€3.500/kg</span></header>
+          <input id="priceKgGmp" type="range" min="500" max="8000" step="50" value="3500" /></div>
         <div class="control"><header><span>Ekstrakt satış fiyatı (kg başına)</span><span id="v-extractPriceKg">€4.200/kg</span></header>
           <input id="extractPriceKg" type="range" min="500" max="20000" step="50" value="4200" /></div>
 
@@ -159,7 +161,7 @@
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
         <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
           <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
-        <p class="hint">Yoğunluk artınca bitki başı verim düşer, m² verimi doyarak artar (katlı değil). Hasılat = satılan kuru çiçek × çiçek fiyatı + ham yağ × ekstrakt fiyatı. Besleme 0 ise hat yoktur. Aksi halde brüt kuru kütlenin payı scCO2 hatta gider (Caladrius 450 X + Isolute X, KDV hariç indikatif). Satılamayan kütle önce ekstraksiyona yazılır.</p>
+        <p class="hint">İlk 2 yıl GACP çiçek satışı, sonraki yıllar EU-GMP (daha yüksek €/kg). Hasılat = satılan kuru çiçek × ilgili yıl fiyatı + distilat × ekstrakt fiyatı. Geri ödeme bu rampa ile hesaplanır. Besleme 0 ise scCO2 hat yoktur.</p>
       </section>
 
     </aside>
@@ -220,9 +222,9 @@
   </div>
   </div>
 
-  <script src="gate-config.js?v=41"></script>
-  <script src="gate.js?v=41"></script>
-  <script src="app.js?v=41"></script>
-  <script src="pdf-export.js?v=41"></script>
+  <script src="gate-config.js?v=42"></script>
+  <script src="gate.js?v=42"></script>
+  <script src="app.js?v=42"></script>
+  <script src="pdf-export.js?v=42"></script>
 </body>
 </html>

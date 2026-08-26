@@ -2,22 +2,22 @@ const PRESETS = {
   pilot: {
     plantsYear: 3060, plantsPerM2: 5, harvestsPerRoom: 4, flowerRooms: 3, roomM2: 60, flowerArea: 180,
     dryRooms: 1, flowerDays: 56, vegDays: 18, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 65, yieldSkill: "starter", genetics: 3, priceKg: 3500, extractPriceKg: 4200, saleablePct: 80, extraction: false, dryTiers: 3, trimM2: 24, packM2: 22
+    dryDays: 14, dryCleanDays: 7, yieldG: 65, yieldSkill: "starter", genetics: 3, priceKgGacp: 2500, priceKgGmp: 3500, extractPriceKg: 4200, saleablePct: 80, extraction: false, dryTiers: 3, trimM2: 24, packM2: 22
   },
   dengeli: {
     plantsYear: 5360, plantsPerM2: 4.5, harvestsPerRoom: 5, flowerRooms: 4, roomM2: 70, flowerArea: 280,
     dryRooms: 2, flowerDays: 56, vegDays: 24, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 105, yieldSkill: "mid", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 85, extraction: true, dryTiers: 3, trimM2: 24, packM2: 30
+    dryDays: 14, dryCleanDays: 7, yieldG: 105, yieldSkill: "mid", genetics: 4, priceKgGacp: 2500, priceKgGmp: 3500, extractPriceKg: 4200, saleablePct: 85, extraction: true, dryTiers: 3, trimM2: 24, packM2: 30
   },
   yuksek: {
     plantsYear: 16320, plantsPerM2: 5, harvestsPerRoom: 6, flowerRooms: 8, roomM2: 80, flowerArea: 640,
     dryRooms: 3, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 4, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 28, packM2: 61
+    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 4, priceKgGacp: 2500, priceKgGmp: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 28, packM2: 61
   },
   faz2: {
     plantsYear: 19300, plantsPerM2: 4.5, harvestsPerRoom: 6, flowerRooms: 12, roomM2: 70, flowerArea: 840,
     dryRooms: 5, flowerDays: 49, vegDays: 21, preVegDays: 14, rootDays: 14,
-    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 5, priceKg: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 24, packM2: 89
+    dryDays: 14, dryCleanDays: 7, yieldG: 145, yieldSkill: "pro", genetics: 5, priceKgGacp: 2500, priceKgGmp: 3500, extractPriceKg: 4200, saleablePct: 88, extraction: true, dryTiers: 3, trimM2: 24, packM2: 89
   }
 };
 
@@ -65,6 +65,8 @@ const CAPEX_U = {
   lightFlower: 480,
   stabilityPerCultivar: 8000
 };
+// Sales ramp: years 1–2 GACP flower price, then EU-GMP pharmacy-grade premium.
+const PRICE_RAMP = { gacpYears: 2 };
 const ENERGY_U = {
   kwhPerG: 2.2,   // LED+HVAC mid of 1.5–3.5 kWh/g dry flower
   eurPerKwh: 0.10
@@ -587,6 +589,20 @@ function layoutFromFlower(s, stats) {
   };
 }
 
+function paybackWithRamp(capex, ebitdaEarly, ebitdaLate, earlyYears) {
+  const early = Math.max(0, earlyYears || 0);
+  if (!(capex > 0)) return 0;
+  let cum = 0;
+  for (let y = 1; y <= 40; y++) {
+    const e = y <= early ? ebitdaEarly : ebitdaLate;
+    const prev = cum;
+    cum += e;
+    if (e > 0 && cum >= capex) return (y - 1) + (capex - prev) / e;
+    if (e <= 0 && y > early + 5 && cum <= prev) return Infinity;
+  }
+  return Infinity;
+}
+
 function sizeExtract(feedKg, crudeFrac) {
   const off = {
     capexEq: 0, capexRoom: 0, capex: 0, m2: 0, opex: 0,
@@ -994,7 +1010,8 @@ function readState() {
     roomMap: alloc.map,
     alloc: alloc,
     roomBoard: roomBoard.map(function (r) { return { cultivarId: r.cultivarId, dens: r.dens }; }),
-    priceKg: +el("priceKg").value,
+    priceKgGacp: el("priceKgGacp") ? +el("priceKgGacp").value : 2500,
+    priceKgGmp: el("priceKgGmp") ? +el("priceKgGmp").value : (el("priceKg") ? +el("priceKg").value : 3500),
     extractPriceKg: el("extractPriceKg") ? +el("extractPriceKg").value : 4200,
     saleablePct: Math.max(0.8, Math.min(0.88, +el("saleablePct").value / 100)),
     extractPct: Math.max(0, Math.min(1, +el("extractPct").value / 100)),
@@ -1546,10 +1563,14 @@ function simulate(s) {
   cal.packOcc = post.packOcc;
   cal.trimKgW = post.trimKgW;
   cal.packKgW = post.packKgW;
-  const flowerRevenue = kgFlowerSold * s.priceKg;
+  const flowerRevenueGacp = kgFlowerSold * (s.priceKgGacp != null ? s.priceKgGacp : 2500);
+  const flowerRevenueGmp = kgFlowerSold * (s.priceKgGmp != null ? s.priceKgGmp : (s.priceKg || 3500));
   const extractSoldKg = ex.productKg != null ? ex.productKg : (ex.crudeKg || 0);
   const extractRevenue = extractSoldKg * (s.extractPriceKg || 0);
-  const revenue = flowerRevenue + extractRevenue;
+  const revenueGacp = flowerRevenueGacp + extractRevenue;
+  const revenueGmp = flowerRevenueGmp + extractRevenue;
+  const flowerRevenue = flowerRevenueGmp;
+  const revenue = revenueGmp;
 
 
   const motherProd = layout.motherM2;
@@ -1580,8 +1601,10 @@ function simulate(s) {
   const staff = buildStaffPlan(s, ox, ex, trimSp, packSp, plantsPerRoom);
   const staffBase = staff.baseFte;
   const harvestCrew = staff.peakDayFte;
-  const ebitda = revenue - opexYear;
-  const payback = ebitda > 0 ? capex / ebitda : Infinity;
+  const ebitdaGacp = revenueGacp - opexYear;
+  const ebitdaGmp = revenueGmp - opexYear;
+  const ebitda = ebitdaGmp;
+  const payback = paybackWithRamp(capex, ebitdaGacp, ebitdaGmp, PRICE_RAMP.gacpYears);
   const opexPerG = kgYear > 0 ? opexYear / (kgYear * 1000) : 0;
   const cycleDays = (stats && !cycleOverride)
     ? stats.rootDays + stats.preVegDays + stats.vegDays + stats.flowerDays
@@ -1682,7 +1705,14 @@ function simulate(s) {
     alerts.push({ t: ex.overCap ? "warn" : "ok", m: "Ekstraksiyon scCO\u2082 (TR indikatif, KDV hari\u00e7): " + fmt(extractFeed, 0) + " kg kuru \u00e7i\u00e7ek/y\u0131l (~" + fmt(ex.kgDay, 1) + " / " + fmt(ex.ratedKgDay, 0) + " kg/g\u00fcn). 1. ad\u0131m Caladrius 450 X 2\u00d730 L + 2\u00d710 L seperat\u00f6r + 5 L terpen tutucu (max 450 bar / 80 \u00b0C; seperat\u00f6r 150 bar / 40 \u00b0C). 2\u20133. ad\u0131m Isolute X dist+kristal " + fmt(ex.isoluteKgDay, 0) + " kg ya\u011f/g\u00fcn. Ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u2192 sat\u0131lan distilat " + fmt(ex.productKg, 0) + " kg. Ekipman " + eur(ex.capexEq) + " \u00b7 CO\u2082 geri kazan\u0131m %95\u201398 \u00b7 C1D2 yok \u00b7 8 sa / 1 vardiya." });
     if (ex.overCap) alerts.push({ t: "bad", m: "Besleme Caladrius/Isolute anma kapasitesini a\u015f\u0131yor \u2014 ek hat veya ikinci vardiya gerekir." });
   }
-  alerts.push({ t: "ok", m: "Has\u0131lat = sat\u0131lan \u00e7i\u00e7ek " + fmt(kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + "/kg (" + eur(flowerRevenue) + ")" + (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg (" + eur(extractRevenue) + ")") : "") + "." });
+  alerts.push({
+    t: "ok",
+    m: "Sat\u0131\u015f rampas\u0131: y\u0131l 1\u2013" + PRICE_RAMP.gacpYears + " GACP \u00e7i\u00e7ek " + eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) +
+      "/kg (" + eur(flowerRevenueGacp) + ") \u00b7 y\u0131l " + (PRICE_RAMP.gacpYears + 1) + "+ EU-GMP " +
+      eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + "/kg (" + eur(flowerRevenueGmp) + ")" +
+      (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg") : "") +
+      ". Geri \u00f6deme bu rampa ile."
+  });
   alerts.push({ t: "ok", m: "OPEX v3: yeti\u015ftirme elektrik ~2,2 kWh/g @ 0,10 \u20AC/kWh (LED+HVAC), G&A/sigorta/g\u00fcvenlik, d\u0131\u015f COA/hasat, lisans, Cannactive girdiler, scCO\u2082 i\u015fletme (1,4 kWh/kg biyok\u00fctle, bak\u0131m %3,5). Distilat geri kazan\u0131m %72." });
   alerts.push({
     t: "ok",
@@ -1700,7 +1730,9 @@ function simulate(s) {
     cycleDays: cycleDays, cyclesPerRoom: cyclesPerRoom, harvestsYear: harvestsYear,
     cycleFlower: cycleFlower, cal: cal, alerts: alerts,
     layout: layout, extract: ex, kgFlowerSold: kgFlowerSold, extractFeed: extractFeed, yieldUse: yieldUse,
-    flowerRevenue: flowerRevenue, extractRevenue: extractRevenue, kgById: kgById,
+    flowerRevenue: flowerRevenue, flowerRevenueGacp: flowerRevenueGacp, flowerRevenueGmp: flowerRevenueGmp,
+    extractRevenue: extractRevenue, revenueGacp: revenueGacp, revenueGmp: revenueGmp,
+    ebitdaGacp: ebitdaGacp, ebitdaGmp: ebitdaGmp, kgById: kgById,
     stats: stats, flowerDaysLong: flowerDaysLong, roomModels: roomModels, gM2Avg: gM2Avg, yieldRef: yieldRef,
     postDry: post, trimSpec: trimSp, packSpec: packSp
   };
@@ -1720,8 +1752,8 @@ function renderKpis(m, s) {
     ["Kurutma", kpiMain(String(s.dryRooms), ""), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 trim kuyruk " + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + " kg \u00b7 trim/paket " + ((m.postDry && m.postDry.trimNeed) || 0) + "/" + ((m.postDry && m.postDry.packNeed) || 0) + " m\u00B2",
       (m.cal.unassigned || (m.postDry && (m.postDry.tooBig || m.postDry.avgFail || m.postDry.diverging || (m.postDry.maxHold > 3)))) ? "warn" : ""],
     ["Kuru \u00e7i\u00e7ek", kpiMain(fmt(m.kgYear, 0), "kg"), fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg", ""],
-    ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "\u00e7i\u00e7ek " + eur(m.flowerRevenue || 0) + " \u00b7 ekstrakt " + eur(m.extractRevenue || 0), ""],
-    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj " + eur(m.ebitda) + " \u00b7 " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014"), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
+    ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "Y3+ EU-GMP \u00b7 Y1\u20132 GACP " + eur(m.revenueGacp || 0), ""],
+    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj Y3+ " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014") + " (rampa)", m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
     ["Kadro", kpiMain(String(m.staffBase), "FTE"), "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + ((m.staff && m.staff.roles) ? m.staff.roles.length : 0) + " g\u00f6rev hatt\u0131", ""]
   ];
   el("kpis").innerHTML = items.map(function (row) {
@@ -2439,10 +2471,14 @@ function renderTables(m, s) {
     "<tr><td>Ekstraksiyon i\u015fletme</td><td class=\"num\">" + eur(m.opex.extract || 0) + "</td></tr>" +
     "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
     "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
-    "<tr><td>\u00c7i\u00e7ek sat\u0131\u015f\u0131 (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKg) + ")</td><td class=\"num\">" + eur(m.flowerRevenue || 0) + "</td></tr>" +
+    "<tr><td>\u00c7i\u00e7ek GACP y\u0131l 1\u20132 (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) + ")</td><td class=\"num\">" + eur(m.flowerRevenueGacp || 0) + "</td></tr>" +
+    "<tr><td>\u00c7i\u00e7ek EU-GMP y\u0131l 3+ (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + ")</td><td class=\"num\">" + eur(m.flowerRevenueGmp || 0) + "</td></tr>" +
     "<tr><td>Ekstrakt sat\u0131\u015f\u0131 (" + fmt(m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + ")</td><td class=\"num\">" + eur(m.extractRevenue || 0) + "</td></tr>" +
-    "<tr><td><strong>Toplam has\u0131lat</strong></td><td class=\"num\"><strong>" + eur(m.revenue) + "</strong></td></tr>" +
-    "<tr><td>Marj (has\u0131lat \u2212 OPEX)</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr></table>";
+    "<tr><td>Has\u0131lat / marj y\u0131l 1\u20132 (GACP)</td><td class=\"num\">" + eur(m.revenueGacp || 0) + " / " + eur(m.ebitdaGacp || 0) + "</td></tr>" +
+    "<tr><td>Has\u0131lat / marj y\u0131l 3+ (EU-GMP)</td><td class=\"num\">" + eur(m.revenueGmp || 0) + " / " + eur(m.ebitdaGmp || 0) + "</td></tr>" +
+    "<tr><td><strong>Toplam has\u0131lat (olgun Y3+)</strong></td><td class=\"num\"><strong>" + eur(m.revenue) + "</strong></td></tr>" +
+    "<tr><td>Marj olgun (has\u0131lat \u2212 OPEX)</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr>" +
+    "<tr><td>Geri \u00f6deme (GACP\u2192GMP rampa)</td><td class=\"num\">" + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014") + "</td></tr></table>";
 
   el("ops").innerHTML =
     "<table><tr><th>Operasyon</th><th></th></tr>" +
@@ -2536,7 +2572,8 @@ function renderLabels(s, m) {
     yieldG: (m && m.yieldUse != null ? fmt(m.yieldUse, 0) : String(s.yieldG)) + " g",
     yieldSkill: skillLabel(s.yieldSkill) + " \u00b7 " + s.yieldG + " g",
     genetics: String(s.genetics),
-    priceKg: eur(s.priceKg) + "/kg",
+    priceKgGacp: eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) + "/kg",
+    priceKgGmp: eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + "/kg",
     extractPriceKg: eur(s.extractPriceKg || 0) + "/kg",
     saleablePct: "%" + fmt(s.saleablePct * 100, 0),
     extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
