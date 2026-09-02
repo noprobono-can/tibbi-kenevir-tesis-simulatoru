@@ -711,6 +711,7 @@ function renderRoomCards(m, s) {
       "</article>";
   }
   box.innerHTML = html;
+  if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll(box);
 }
 
 function bindRoomCards() {
@@ -989,7 +990,7 @@ function readState() {
   const harvestsPerRoom = round1(+el("harvestsPerRoom").value);
   const flowerArea = +el("flowerArea").value;
   const plantsPerM2 = +el("plantsPerM2").value;
-  return {
+  const s = {
     plantsYear: Math.max(400, +el("plantsYear").value),
     plantsPerM2: plantsPerM2,
     harvestsPerRoom: harvestsPerRoom,
@@ -1058,33 +1059,82 @@ function setYieldSkill(key, fromPreset) {
 function applyPreset(key) {
   if (key === "custom") {
     customMode = true;
+    window.marketAutoMode = false;
     highlightPreset("custom");
     week = 0;
     render();
     return;
   }
+  window.marketAutoMode = false;
   customMode = false;
   pinDryRooms = false;
   const p = PRESETS[key];
-  Object.entries(p).forEach(([k, v]) => {
-    if (k === "extraction") {
-      if (el("extractPct")) el("extractPct").value = v ? "20" : "0";
-    } else if (k === "genetics") {
-      applyGeneticsCount(v);
-    } else if (k === "yieldSkill") {
-      setYieldSkill(v, true);
-    } else if (k === "yieldG") {
-      if (el("yieldG")) el("yieldG").value = v;
-    } else if (el(k)) el(k).value = v;
+  applyFacilityParams(p, { render: true, presetKey: key });
+}
+
+function applyFacilityParams(p, opts) {
+  opts = opts || {};
+  if (!p) return;
+  customMode = false;
+  pinDryRooms = false;
+
+  [
+    "flowerRooms", "roomM2", "flowerArea", "plantsPerM2", "harvestsPerRoom", "plantsYear",
+    "dryRooms", "dryTiers", "trimM2", "packM2",
+    "flowerDays", "vegDays", "preVegDays", "rootDays", "dryDays", "dryCleanDays",
+    "priceKgGacp", "priceKgGmp", "extractPriceKg", "saleablePct"
+  ].forEach(function (k) {
+    if (p[k] == null || !el(k)) return;
+    el(k).value = String(p[k]);
   });
+
+  if (el("extractPct")) {
+    if (p.extractPct != null) el("extractPct").value = String(p.extractPct);
+    else if (p.extraction != null) el("extractPct").value = p.extraction ? String(p.extractPct != null ? p.extractPct : 20) : "0";
+  }
+
+  if (p.yieldSkill) setYieldSkill(p.yieldSkill, true);
+  else if (p.yieldG != null && el("yieldG")) el("yieldG").value = String(p.yieldG);
+
+  if (opts.cultivarIds && opts.cultivarIds.length) {
+    fillRoomBoardEven(opts.cultivarIds, Math.max(1, +p.flowerRooms || flowerRoomCount()));
+    if (el("genetics")) el("genetics").value = String(Math.min(opts.cultivarIds.length, p.genetics || opts.cultivarIds.length));
+  } else if (p.genetics) {
+    applyGeneticsCount(p.genetics);
+  }
+
   cycleOverride = false;
   densityOverride = false;
   applyMixToSliders();
-  highlightPreset(key);
+  if (opts.presetKey) highlightPreset(opts.presetKey);
+  else document.querySelectorAll(".presets button").forEach(function (b) { b.classList.remove("active"); });
   syncLayout("roomM2");
   syncPlantsFromGenetics();
   week = 0;
-  render();
+  if (opts.render !== false) render();
+}
+
+function applyMarketFacility(renderAfter) {
+  if (renderAfter === undefined) renderAfter = true;
+  if (!window.TKTS_market || !window.TKTS_market.computeFacilityParams) {
+    applyPreset("dengeli");
+    return null;
+  }
+  const c = window.TKTS_market.getCountry();
+  if (!c) {
+    applyPreset("dengeli");
+    return null;
+  }
+  const pack = window.TKTS_market.computeFacilityParams(c);
+  if (!pack || !pack.params) return null;
+  const cultivars = window.TKTS_market.matchCultivars(window.TKTS_market.getSelected(), pack.params.genetics);
+  window.marketAutoMode = true;
+  applyFacilityParams(pack.params, {
+    cultivarIds: cultivars.map(function (cv) { return cv.id; }),
+    meta: pack,
+    render: renderAfter
+  });
+  return pack;
 }
 
 function assignDryBatches(events, dryRooms, dryDays, cleanDays) {
@@ -2721,6 +2771,9 @@ function exportJson() {
 window.exportJson = exportJson;
 window.render = render;
 window.applyPreset = applyPreset;
+window.applyMarketFacility = applyMarketFacility;
+window.applyFacilityParams = applyFacilityParams;
+window.marketAutoMode = true;
 window.ensureRoomBoard = ensureRoomBoard;
 window.flowerRoomCount = flowerRoomCount;
 window.PRICE_RAMP = PRICE_RAMP;
@@ -2747,6 +2800,7 @@ window.addEventListener("DOMContentLoaded", function () {
     i.addEventListener("input", function () {
       if (i.classList && (i.classList.contains("room-dens") || i.classList.contains("room-cultivar"))) return;
       customMode = true;
+      window.marketAutoMode = false;
       highlightPreset("custom");
       if (i.id === "dryRooms") pinDryRooms = true;
       if (i.id === "flowerDays" || i.id === "vegDays" || i.id === "preVegDays" || i.id === "rootDays" || i.id === "yieldG") cycleOverride = true;
@@ -2762,7 +2816,8 @@ window.addEventListener("DOMContentLoaded", function () {
   el("exportBtn").addEventListener("click", exportJson);
   if (el("conceptBtn")) el("conceptBtn").addEventListener("click", downloadConceptPng);
   function bootSimulator() {
-    applyPreset("dengeli");
+    if (window.applyMarketFacility) window.applyMarketFacility(false);
+    else applyPreset("dengeli");
   }
   if (window.TKTS_market && window.TKTS_market.ready) {
     window.TKTS_market.ready.then(bootSimulator).catch(bootSimulator);

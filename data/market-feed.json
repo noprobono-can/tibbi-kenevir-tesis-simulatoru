@@ -1,10 +1,17 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-09-02",
+  "generatedAt": "2026-09-02T20:15:00+00:00",
   "source": "cannastream-app",
   "sourceUrl": "https://github.com/noprobono-can/cannastream-app",
   "streamlitUrl": "https://cannastream-app-v3.streamlit.app/",
   "refreshMinutes": 15,
+  "autoSync": true,
+  "integrations": [
+    "cannastream",
+    "linkup",
+    "firecrawl"
+  ],
   "countries": {
     "Türkiye": {
       "status": "Sıkı Kontrollü",
@@ -59,6 +66,30 @@
       "officialSource": {
         "label": "TMO Kenevir Yönetmelikleri",
         "url": "https://www.tmo.gov.tr/Upload/Document/kenevir/kenevirYonm.pdf"
+      },
+      "intelligence": {
+        "linkup": {
+          "query": "Turkey medical cannabis TMO CANNABI kenevir regulation GACP cultivation pricing 2026",
+          "snippets": [
+            "31.01.2026 Resmî Gazete: Kenevir Yetiştiriciliği ve Kontrolü + Kenevirden Elde Edilen Ürünlere Dair Yönetmelik yürürlükte.",
+            "TMO kontrolünde tıbbi amaçlı kenevir yetiştiriciliği; ilaç etkin maddesi üretimi çerçevesi netleşiyor.",
+            "Sağlık Bakanlığı 2026 Kamu Sağlık Hizmetleri Fiyat Tarifesi güncellendi (kenevir fiyat bandı ayrı duyurulacak)."
+          ],
+          "sources": [
+            {"name": "Resmî Gazete — 31.01.2026 yönetmelikler", "url": "https://www.resmigazete.gov.tr/fihrist?tarih=2026-01-31"},
+            {"name": "TMO — kenevir görevi", "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi"},
+            {"name": "Kenevir Yetiştiriciliği Yönetmeliği", "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm"}
+          ],
+          "fetchedAt": "2026-09-02T20:15:00+00:00"
+        },
+        "regulation": {
+          "query": "Turkey medical cannabis TMO licensing regulation GACP cultivation 2026",
+          "items": [
+            {"title": "Kenevir Yetiştiriciliği ve Kontrolüne Dair Yönetmelik", "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm", "snippet": "GACP yetiştiricilik, hasat, işleme ve denetim usulleri Tarım ve Orman Bakanlığı çerçevesinde."},
+            {"title": "TMO kenevir görevi — resmi duyuru", "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi", "snippet": "TMO kontrol ve denetiminde tıbbi amaçlı kenevir üretimi."}
+          ],
+          "fetchedAt": "2026-09-02T20:15:00+00:00"
+        }
       }
     },
     "Almanya": {
@@ -124,6 +155,31 @@
       "officialSource": {
         "label": "BfArM · Medizinal-Cannabis",
         "url": "https://www.bfarm.de/DE/Bundesopiumstelle/Medizinisches-Cannabis/_node.html"
+      },
+      "intelligence": {
+        "linkup": {
+          "query": "Germany medical cannabis pharmacy flower wholesale import price per gram 2025 2026 BfArM",
+          "snippets": [
+            "Almanya eczane fiyatı ~€4/g; toptan ~€2/g — 2025 sonrası fiyat sıkışması devam ediyor.",
+            "BfArM yerli üretim ex-factory €4.30/g; ithalat pazarının büyük kısmını karşılıyor.",
+            "2025 H1 ithalat ~80 ton; telemedicine ve eczane kanalları paralel büyüyor."
+          ],
+          "sources": [
+            {"name": "MMJ Daily — Germany imports Q1 2026", "url": "https://www.mmjdaily.com/article/9844648/germany-s-medical-cannabis-imports-post-first-quarterly-decline-since-early-2024/"},
+            {"name": "BfArM / Pharmazie market guide", "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market"},
+            {"name": "Mondaq — BfArM pricing", "url": "https://www.mondaq.com/germany/cannabis/1472636/dynamic-german-cannabis-market-rising-medical-use-today-%7C-recreational-use-tomorrow"}
+          ],
+          "priceHint": {"gacpKg": 1240, "gmpKg": 1600, "extractKg": 1800},
+          "fetchedAt": "2026-09-02T20:15:00+00:00"
+        },
+        "regulation": {
+          "query": "Germany BfArM medical cannabis cultivation import license 2026",
+          "items": [
+            {"title": "MedCanG sonrası yüz yüze muayene ve posta yasağı tasarıları", "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market", "snippet": "2025 kabine tasarısı: ilk reçete için yüz yüze görüşme, telehealth tekrarları sınırlandırılıyor."},
+            {"title": "BfArM — tıbbi cannabis yetki çerçevesi", "url": "https://www.bfarm.de/DE/Bundesopiumstelle/Medizinisches-Cannabis/_node.html", "snippet": "İthalat kotası ve Bundesopiumstelle izinleri pazar arzını doğrudan sınırlıyor."}
+          ],
+          "fetchedAt": "2026-09-02T20:15:00+00:00"
+        }
       }
     },
     "İngiltere": {
@@ -179,7 +235,8 @@
       "officialSource": {
         "label": "UK GOV · CBPM",
         "url": "https://www.gov.uk/government/calls-for-evidence/cannabis-based-products-for-medicinal-use"
-      }
+      },
+      "intelligence": {}
     },
     "Hollanda": {
       "status": "Reçeteli Tıbbi Erişim",
@@ -303,7 +360,8 @@
       "officialSource": {
         "label": "INFARMED",
         "url": "https://www.infarmed.pt/web/infarmed/substancias-controladas/canabis-para-fins-medicinais"
-      }
+      },
+      "intelligence": {}
     },
     "Polonya": {
       "status": "Reçeteli Erişim",
@@ -818,5 +876,13 @@
         "Not": "Türkiye pazarı olgunlaşana kadar Almanya/İngiltere bandı karşılaştırma referansı"
       }
     ]
+  },
+  "linkupCacheCount": 0,
+  "newsCount": 0,
+  "enrichment": {
+    "enriched": 0,
+    "hasLinkup": false,
+    "hasFirecrawl": false,
+    "at": "2026-09-02T20:08:33+00:00"
   }
 }

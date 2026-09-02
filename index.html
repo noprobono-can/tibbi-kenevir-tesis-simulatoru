@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=47" />
+  <link rel="stylesheet" href="styles.css?v=50" />
   <script>
     (function () {
       try {
@@ -171,7 +171,7 @@
 
       <section class="panel" data-panel="pazar" hidden>
         <h2>Hedef pazar · otomatik</h2>
-        <p class="hint">Cannastream verisi arka planda çalışır: fiyatlar, pazar payı ve satış projeksiyonu her simülasyonda güncellenir. GitHub Actions 6 saatte bir feed'i senkronlar.</p>
+        <p class="hint">Cannastream verisi arka planda çalışır: ülke seçildiğinde pazar genişliğine göre tüm tesis parametreleri (kapasite, proses, fiyat, genetik) otomatik güncellenir.</p>
         <div class="control">
           <header><span>İhracat / hedef ülke</span></header>
           <select id="marketCountry" class="market-select"></select>
@@ -249,10 +249,11 @@
   </div>
   </div>
 
-  <script src="gate-config.js?v=47"></script>
-  <script src="gate.js?v=47"></script>
-  <script src="cannastream-engine.js?v=47"></script>
-  <script src="app.js?v=47"></script>
-  <script src="pdf-export.js?v=47"></script>
+  <script src="gate-config.js?v=50"></script>
+  <script src="gate.js?v=50"></script>
+  <script src="dark-select.js?v=50"></script>
+  <script src="cannastream-engine.js?v=50"></script>
+  <script src="app.js?v=50"></script>
+  <script src="pdf-export.js?v=50"></script>
 </body>
 </html>

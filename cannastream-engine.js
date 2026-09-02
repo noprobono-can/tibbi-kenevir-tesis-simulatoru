@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 47;
+  const CACHE_VERSION = 50;
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
@@ -91,6 +91,134 @@
       kg = kg ? (kg + fromMarket) / 2 : fromMarket;
     }
     return kg ? Math.round(kg) : null;
+  }
+
+  function clampNum(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function lerpNum(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function lerpInt(a, b, t) {
+    return Math.round(lerpNum(a, b, t));
+  }
+
+  function round1(n) {
+    return Math.round(n * 10) / 10;
+  }
+
+  function marketWidthScore(c) {
+    if (!c) return 0.35;
+    const scores = [];
+    if (c.marketMEur != null && c.marketMEur > 0) {
+      const logM = (Math.log10(Math.max(8, c.marketMEur)) - Math.log10(8)) / (Math.log10(900) - Math.log10(8));
+      scores.push(clampNum(logM, 0, 1));
+    }
+    if (c.patientsN != null && c.patientsN > 0) {
+      scores.push(clampNum(c.patientsN / 280000, 0, 1));
+    }
+    const demand = estimateMarketDemandKg(c);
+    if (demand) scores.push(clampNum(demand / 180000, 0, 1));
+
+    let t = scores.length ? scores.reduce(function (a, b) { return a + b; }, 0) / scores.length : 0.22;
+    const outlook = String(c.outlook || "");
+    if (outlook.indexOf("KAPALI") >= 0 || outlook.indexOf("R\u0130SK") >= 0) t *= 0.22;
+    else if (outlook.indexOf("MEVZUAT") >= 0 || outlook.indexOf("NETLE") >= 0) t *= 0.52;
+    else if (outlook.indexOf("G\u00dc\u00c7L\u00dc") >= 0 || outlook.indexOf("B\u00dcY\u00dcME") >= 0) t = Math.min(1, t * 1.08);
+
+    if (c.growthPct != null) {
+      if (c.growthPct > 80) t = Math.min(1, t + 0.06);
+      else if (c.growthPct < 0) t *= 0.85;
+    }
+    const status = String(c.status || "");
+    if (/kapal\u0131|yasak|s\u0131k\u0131 kontroll\u00fc/i.test(status) && !c.marketMEur) t = Math.min(t, 0.38);
+    if (/tam legal/i.test(status)) t = Math.min(1, t + 0.05);
+    return clampNum(t, 0.06, 1);
+  }
+
+  function countryWantsExtract(c) {
+    const bits = [c.products, c.notes, c.import_export];
+    (c.prices && c.prices.benchmarks || []).forEach(function (b) {
+      bits.push(b["Urun Formu"], b.Not);
+    });
+    return /ekstrakt|extract|magistral|API|distilat|ya\u011f/i.test(bits.join(" "));
+  }
+
+  function facilityTierLabel(t) {
+    if (t <= 0.2) return "Mikro pilot \u2014 kapal\u0131 veya erken pazar";
+    if (t <= 0.4) return "K\u00fc\u00e7\u00fck \u00f6l\u00e7ek \u2014 ni\u015f ihracat";
+    if (t <= 0.6) return "Dengeli \u2014 orta pazar pay\u0131";
+    if (t <= 0.8) return "Y\u00fcksek kapasite \u2014 geni\u015f pazar";
+    return "Geni\u015fleme faz\u0131 \u2014 lider pazar hacmi";
+  }
+
+  function estimateKgPerRoom(params) {
+    return params.roomM2 * 0.85 * params.plantsPerM2 * (params.yieldG / 1000) * params.harvestsPerRoom;
+  }
+
+  function computeFacilityParams(c) {
+    const t = marketWidthScore(c);
+    const demandKg = estimateMarketDemandKg(c);
+    const targetSharePct = lerpNum(0.15, 1.2, t);
+    const prices = (c && c.prices) || {};
+    const wantsExtract = countryWantsExtract(c);
+
+    const params = {
+      plantsPerM2: round1(lerpNum(5, 4.5, t)),
+      harvestsPerRoom: round1(lerpNum(4, 6, t)),
+      roomM2: lerpInt(60, 80, t),
+      flowerDays: t >= 0.55 ? 49 : 56,
+      vegDays: lerpInt(18, 24, t),
+      preVegDays: 14,
+      rootDays: 14,
+      dryDays: 14,
+      dryCleanDays: t >= 0.65 ? 5 : 7,
+      dryTiers: t >= 0.4 ? 3 : 2,
+      yieldSkill: t < 0.22 ? "starter" : t < 0.58 ? "mid" : "pro",
+      yieldG: t < 0.22 ? 65 : t < 0.58 ? 105 : 145,
+      genetics: lerpInt(3, 5, t),
+      saleablePct: lerpInt(80, 88, t),
+      extraction: t >= 0.28 && (wantsExtract || t >= 0.45),
+      extractPct: 0,
+      priceKgGacp: prices.gacpKg || lerpInt(2200, 4800, 1 - t),
+      priceKgGmp: prices.gmpKg || lerpInt(3200, 6200, 1 - t),
+      extractPriceKg: prices.extractKg || lerpInt(3800, 7500, t)
+    };
+    params.extractPct = params.extraction ? lerpInt(10, 28, t) : 0;
+
+    let flowerRooms = lerpInt(3, 12, t);
+    if (demandKg && demandKg > 0) {
+      const targetKg = demandKg * (targetSharePct / 100);
+      const kgPerRoom = estimateKgPerRoom(params);
+      if (kgPerRoom > 0) flowerRooms = clampNum(Math.ceil(targetKg / kgPerRoom), 1, 30);
+    }
+    params.flowerRooms = flowerRooms;
+    params.flowerArea = flowerRooms * params.roomM2;
+    params.plantsYear = Math.round(params.flowerArea * 0.85 * params.plantsPerM2 * params.harvestsPerRoom);
+    params.dryRooms = clampNum(Math.ceil(flowerRooms / (t > 0.55 ? 2.2 : 2.8)), 1, 20);
+
+    const kgEst = params.plantsYear * params.yieldG / 1000 * (params.saleablePct / 100);
+    params.trimM2 = clampNum(Math.round(lerpNum(20, 36, t) + flowerRooms * 2 + kgEst / 800), 18, 240);
+    params.packM2 = clampNum(Math.round(lerpNum(18, 55, t) + flowerRooms * 4 + kgEst / 600), 12, 200);
+
+    return {
+      params: params,
+      score: t,
+      demandKg: demandKg,
+      targetSharePct: targetSharePct,
+      label: facilityTierLabel(t),
+      country: selectedCountry
+    };
+  }
+
+  function applyCountryFacilityFromMarket() {
+    if (typeof window.applyMarketFacility === "function") {
+      window.marketAutoMode = true;
+      return window.applyMarketFacility(false);
+    }
+    return null;
   }
 
   function computeSalesProjection(s, m, c) {
@@ -188,6 +316,7 @@
       sel.value = value;
       sel.disabled = false;
     });
+    if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll();
   }
 
   function onCountryChange(fromId) {
@@ -202,7 +331,52 @@
     panelDirty = true;
     syncDomPrices(getLivePrices());
     renderMarketPanel(false);
+    applyCountryFacilityFromMarket();
     if (typeof window.render === "function") window.render();
+  }
+
+  function renderIntelligence(c) {
+    const intel = c && c.intelligence;
+    if (!intel || (!intel.linkup && !intel.firecrawl && !intel.news && !intel.regulation)) return "";
+    let html = '<div class="market-intel"><div class="market-intel-tags">';
+    if (intel.linkup) html += '<span>Linkup</span>';
+    if (intel.firecrawl) html += '<span>Firecrawl</span>';
+    if (intel.news) html += '<span>Cannastream haber</span>';
+    if (intel.regulation) html += '<span>Regülasyon</span>';
+    html += "</div>";
+    if (intel.linkup && intel.linkup.snippets && intel.linkup.snippets.length) {
+      html += "<h4>Canlı pazar taraması</h4><ul>";
+      intel.linkup.snippets.slice(0, 3).forEach(function (s) {
+        html += "<li>" + String(s).replace(/</g, "&lt;").slice(0, 220) + "…</li>";
+      });
+      html += "</ul>";
+      if (intel.linkup.sources && intel.linkup.sources.length) {
+        html += '<p class="hint">';
+        intel.linkup.sources.slice(0, 3).forEach(function (src, i) {
+          if (src.url) html += (i ? " · " : "") + '<a href="' + src.url + '" target="_blank" rel="noopener">' + (src.name || "Kaynak") + "</a>";
+        });
+        html += "</p>";
+      }
+    }
+    if (intel.regulation && intel.regulation.items && intel.regulation.items.length) {
+      html += "<h4>Regülasyon sinyalleri</h4><ul>";
+      intel.regulation.items.forEach(function (it) {
+        html += "<li>" + (it.url ? '<a href="' + it.url + '" target="_blank" rel="noopener">' : "") + String(it.title || it.snippet || "").replace(/</g, "&lt;").slice(0, 120) + (it.url ? "</a>" : "") + "</li>";
+      });
+      html += "</ul>";
+    }
+    if (intel.firecrawl && intel.firecrawl.excerpt) {
+      html += "<h4>Resmi kaynak (Firecrawl)</h4><p class=\"hint\">" + String(intel.firecrawl.excerpt).replace(/</g, "&lt;").slice(0, 360) + "…</p>";
+    }
+    if (intel.news && intel.news.length) {
+      html += "<h4>İlgili haberler</h4><ul>";
+      intel.news.forEach(function (n) {
+        html += "<li>" + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener">' : "") + String(n.title || "").replace(/</g, "&lt;") + (n.link ? "</a>" : "") + "</li>";
+      });
+      html += "</ul>";
+    }
+    html += "</div>";
+    return html;
   }
 
   function renderMarketPanel(triggerRender) {
@@ -218,7 +392,8 @@
     panelDirty = false;
 
     const p = c.prices || {};
-    const fac = c.facility || {};
+    const facPack = computeFacilityParams(c);
+    const fac = facPack || { label: (c.facility && c.facility.label) || "", params: {} };
     const strains = matchCultivars(selectedCountry, 4);
     const strainHtml = strains.length
       ? '<div class="market-strains"><small>Pazar genetiği (otomatik öneri)</small><div class="market-strain-list">' +
@@ -245,8 +420,18 @@
         '<div><span>Ekstrakt (arka plan)</span><strong>' + eur(p.extractKg || 0) + "/kg</strong></div>" +
       "</div>" +
       '<p class="hint market-basis">' + (p.basis || "") + (p.retailBand ? " · " + p.retailBand : "") + "</p>" +
-      (fac.label ? '<div class="market-facility"><span>Otomatik tesis önerisi</span><strong>' + fac.label + '</strong><button type="button" id="marketApplyPreset" class="secondary" data-preset="' + (fac.preset || "dengeli") + '">Senaryoyu uygula</button></div>' : "") +
+      '<div class="market-facility">' +
+        '<span>Pazar genişliği algoritması</span>' +
+        '<strong>' + fac.label + "</strong>" +
+        '<p class="hint market-facility-meta">Skor %' + fmt(facPack.score * 100, 0) +
+          " · hedef pay ~%" + fmt(facPack.targetSharePct, 2) +
+          (facPack.demandKg ? " · talep ~" + fmt(facPack.demandKg, 0) + " kg/yıl" : "") +
+          " · " + facPack.params.flowerRooms + " oda · " + fmt(facPack.params.plantsYear, 0) + " bitki/yıl · " +
+          facPack.params.dryRooms + " kurutma · ekstrakt %" + facPack.params.extractPct + "</p>" +
+        '<button type="button" id="marketApplyPreset" class="secondary">Tüm tesis parametrelerini uygula</button>' +
+      "</div>" +
       strainHtml +
+      renderIntelligence(c) +
       (c.officialSource && c.officialSource.url
         ? '<p class="hint"><a href="' + c.officialSource.url + '" target="_blank" rel="noopener">' + (c.officialSource.label || "Resmi kaynak") + " ↗</a></p>"
         : "");
@@ -320,7 +505,8 @@
     if (presetBtn && !presetBtn._bound) {
       presetBtn._bound = true;
       presetBtn.addEventListener("click", function () {
-        if (typeof window.applyPreset === "function") window.applyPreset(presetBtn.getAttribute("data-preset") || "dengeli");
+        applyCountryFacilityFromMarket();
+        if (typeof window.render === "function") window.render();
       });
     }
     document.querySelectorAll(".market-strain").forEach(function (btn) {
@@ -389,6 +575,9 @@
     bindMarketUi();
     scheduleRefresh();
     updateSyncChip("ok");
+    if (isRefresh && window.marketAutoMode !== false && typeof window.applyMarketFacility === "function") {
+      window.applyMarketFacility(false);
+    }
     if (isRefresh && prev !== lastFeedUpdated && typeof window.render === "function") {
       window.render();
     }
@@ -424,6 +613,7 @@
 
   function initDom() {
     bindMarketUi();
+    if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll();
     ready.then(function () {
       if (feed) {
         fillCountrySelects(false);
@@ -449,7 +639,10 @@
     mergeMarketAlerts: mergeMarketAlerts,
     refresh: function () { return loadFeed(true); },
     matchCultivars: matchCultivars,
-    onTabOpen: onTabOpen
+    onTabOpen: onTabOpen,
+    computeFacilityParams: computeFacilityParams,
+    marketWidthScore: marketWidthScore,
+    applyCountryFacility: applyCountryFacilityFromMarket
   };
 
   if (document.readyState === "loading") {

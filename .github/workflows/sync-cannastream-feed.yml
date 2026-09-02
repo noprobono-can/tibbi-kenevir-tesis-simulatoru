@@ -7,6 +7,8 @@ on:
   push:
     paths:
       - scripts/export-market-feed.py
+      - scripts/enrich_market_external.py
+      - data/market-feed.json
 
 permissions:
   contents: write
@@ -21,12 +23,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Clone Cannastream and export feed
+      - name: Install enrichment dependencies
+        run: pip install requests
+
+      - name: Clone Cannastream, export and enrich feed
+        env:
+          LINKUP_API_KEY: ${{ secrets.LINKUP_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          ENRICH_MARKET_FEED: "1"
         run: |
           git clone --depth 1 https://github.com/noprobono-can/cannastream-app /tmp/cannastream-app
-          python scripts/export-market-feed.py \
+          cd scripts
+          python export-market-feed.py \
             --cannastream /tmp/cannastream-app \
-            --out data/market-feed.json
+            --out ../data/market-feed.json \
+            --enrich
 
       - name: Commit and push if changed
         run: |
@@ -37,5 +48,5 @@ jobs:
             echo "Market feed unchanged."
             exit 0
           fi
-          git commit -m "Auto-sync Cannastream market feed."
+          git commit -m "Auto-sync Cannastream market feed with Linkup/Firecrawl enrichment."
           git push

@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import sys
 from collections import OrderedDict
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from enrich_market_external import enrich_countries, load_linkup_cache, load_regulation_news
 
 
 def _extract_return_expr(source: str, func_name: str) -> str:
@@ -220,7 +224,7 @@ def load_cannastream_data(root: Path) -> tuple[OrderedDict, dict, dict]:
     return countries, benchmarks, db
 
 
-def build_feed(root: Path) -> dict:
+def build_feed(root: Path, *, do_enrich: bool = False) -> dict:
     countries_raw, benchmarks, db = load_cannastream_data(root)
 
     country_sources = {
@@ -263,28 +267,50 @@ def build_feed(root: Path) -> dict:
         strains_by_country.setdefault(c, []).append(row)
 
     live_prices = db.get("prices") or []
+    news_db = root / "cannastream_news_cache.db"
+    linkup_cache = load_linkup_cache(news_db)
+    regulation_news = load_regulation_news(news_db)
 
-    return {
-        "version": 2,
+    payload = {
+        "version": 3,
         "updated": date.today().isoformat(),
+        "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "source": "cannastream-app",
         "sourceUrl": "https://github.com/noprobono-can/cannastream-app",
         "streamlitUrl": "https://cannastream-app-v3.streamlit.app/",
         "refreshMinutes": 15,
         "autoSync": True,
-        "autoSync": true,
+        "integrations": ["cannastream", "linkup", "firecrawl"],
         "countries": countries,
         "livePrices": live_prices[:120],
         "strains": db.get("strains") or [],
         "strainsByCountry": strains_by_country,
         "benchmarks": benchmarks,
+        "linkupCacheCount": len(linkup_cache),
+        "newsCount": len(regulation_news),
     }
+
+    if do_enrich or os.environ.get("ENRICH_MARKET_FEED") == "1":
+        meta = enrich_countries(
+            payload["countries"],
+            linkup_cache=linkup_cache,
+            news=regulation_news,
+        )
+        payload["enrichment"] = {
+            "enriched": meta.get("enriched", 0),
+            "hasLinkup": meta.get("hasLinkup"),
+            "hasFirecrawl": meta.get("hasFirecrawl"),
+            "at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        }
+
+    return payload
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cannastream", required=True, help="Path to cannastream-app clone")
     parser.add_argument("--out", default="data/market-feed.json", help="Output JSON path")
+    parser.add_argument("--enrich", action="store_true", help="Run Linkup + Firecrawl enrichment")
     args = parser.parse_args()
 
     root = Path(args.cannastream).resolve()
@@ -292,7 +318,7 @@ def main() -> int:
         print("cannastream/chat.py not found under", root, file=sys.stderr)
         return 1
 
-    payload = build_feed(root)
+    payload = build_feed(root, do_enrich=args.enrich)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
