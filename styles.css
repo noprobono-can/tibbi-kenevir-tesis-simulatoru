@@ -927,15 +927,57 @@ html.unlocked .gate { display: none; }
   display: inline-flex;
   align-items: center;
 }
+.market-select,
+.market-select-header {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--line-2);
+  background-color: var(--panel-2);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23e2d4ae' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 12px center;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
 .market-select {
   width: 100%;
   margin-top: 6px;
-  padding: 10px 12px;
+  padding: 11px 36px 11px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.25);
-  color: var(--text);
-  font: inherit;
+  font-size: 14px;
+}
+.market-select-header {
+  border-radius: 999px;
+  padding: 7px 32px 7px 12px;
+  font-size: 12px;
+  max-width: 160px;
+}
+.market-select:hover,
+.market-select-header:hover {
+  border-color: var(--gold-2);
+  background-color: #1a2420;
+}
+.market-select:focus,
+.market-select-header:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(196, 165, 106, 0.28);
+}
+.market-select option,
+.market-select-header option {
+  background: #161e1a;
+  color: #eef3ec;
+  padding: 8px;
+}
+.market-select:disabled,
+.market-select-header:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 .market-actions {
   display: flex;
@@ -1023,7 +1065,7 @@ html.view-phone .market-prices { grid-template-columns: 1fr; }
 .market-strain {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.03);
-  color: var(--text);
+  color: var(--ink);
   border-radius: 999px;
   padding: 6px 12px;
   font: inherit;
@@ -1037,16 +1079,8 @@ html.view-phone .market-prices { grid-template-columns: 1fr; }
 #marketSyncChip.on { border-color: rgba(63, 185, 80, 0.5); color: #8fd9a0; }
 #marketSyncChip.warn { border-color: rgba(210, 153, 34, 0.5); color: #d29922; }
 .header-market { display: inline-flex; align-items: center; }
-.market-select-header {
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.25);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 12px;
-  max-width: 140px;
-}
+html.view-phone .header-market { display: none; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1057,4 +1091,3 @@ html.view-phone .market-prices { grid-template-columns: 1fr; }
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
-html.view-phone .header-market { display: none; }
