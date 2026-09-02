@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 50;
+  const CACHE_VERSION = 51;
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
@@ -47,30 +47,117 @@
     return String(s || "").toLowerCase().replace(/[^a-z0-9\u00c0-\u024f]+/gi, " ").trim();
   }
 
+  /* ── Endüstri sabitleri (GMP_FINISH / CannaCribs / EU tesis referansları) ── */
+  const GMP = {
+    trimM2PerSt: 6, packM2PerSt: 5, trimKgDay: 6, packKgDay: 8, workDays: 5,
+    trimVaultPerSt: 12, packVaultPerSt: 16, trimVaultPerM2: 1.8, packVaultPerM2: 3
+  };
+  const FAC = {
+    usable: 0.85,
+    roomM2Min: 65,
+    roomM2Max: 150,
+    wholesaleEurKg: 4800,
+    kgPerPatientY: 0.35,
+    roomSchedule: [4, 4, 6, 8, 12, 16, 20]
+  };
+
+  /* flowzz 2025, MedBud, Bedrocan/OMC, Cannastream feed — ülke genetik profilleri */
+  const COUNTRY_GENETICS = {
+    "Almanya": { ids: ["jfg", "pk", "ww", "gth", "jeal", "lcg", "gel", "km", "gmo"], genetics: 5, extractBias: 0.18, densAdj: 0 },
+    "İngiltere": { ids: ["pk", "ww", "bd", "hk", "chs", "jfg", "km", "gel"], genetics: 4, extractBias: 0.12, densAdj: 0 },
+    "Hollanda": { ids: ["jh", "ww", "nl", "pp", "amh", "bd", "hk"], genetics: 4, extractBias: 0.08, densAdj: -0.3 },
+    "Türkiye": { ids: ["crp", "nl", "hk", "km", "gmo", "wc", "gel"], genetics: 3, extractBias: 0.35, densAdj: 0.5 },
+    "Portekiz": { ids: ["crp", "pp", "nl", "bd", "wc", "km"], genetics: 4, extractBias: 0.15, densAdj: 0.2 },
+    "Polonya": { ids: ["pk", "ww", "nl", "bd", "km", "gel"], genetics: 4, extractBias: 0.10, densAdj: 0 },
+    "İtalya": { ids: ["pk", "ww", "bd", "nl", "km", "gel"], genetics: 4, extractBias: 0.12, densAdj: 0 },
+    "Fransa": { ids: ["pk", "bd", "nl", "hk", "ww", "gel"], genetics: 4, extractBias: 0.10, densAdj: 0 },
+    "Kanada": { ids: ["bd", "pk", "gmo", "gg4", "km", "gel", "wc"], genetics: 5, extractBias: 0.22, densAdj: 0 },
+    "Avustralya": { ids: ["bd", "pk", "ww", "km", "gel", "jfg"], genetics: 4, extractBias: 0.14, densAdj: 0 },
+    "İsrail": { ids: ["gmo", "mac1", "pk", "bd", "gel", "km"], genetics: 4, extractBias: 0.28, densAdj: 0 },
+    "İsviçre": { ids: ["pk", "mac1", "gel", "jfg", "km", "ww"], genetics: 4, extractBias: 0.16, densAdj: 0 },
+    "ABD": { ids: ["bd", "gsc", "gg4", "gmo", "wc", "km", "lcg"], genetics: 5, extractBias: 0.20, densAdj: 0 },
+    "Fas": { ids: ["crp", "nl", "hk", "bd", "wc"], genetics: 3, extractBias: 0.25, densAdj: 0.3 },
+    "Ürdün": { ids: ["crp", "nl", "hk", "km", "bd"], genetics: 3, extractBias: 0.30, densAdj: 0.3 },
+    "BAE": { ids: ["pk", "bd", "gel", "km", "wc"], genetics: 3, extractBias: 0.20, densAdj: 0 },
+    "Suudi Arabistan": { ids: ["pk", "bd", "hk", "nl", "wc"], genetics: 3, extractBias: 0.18, densAdj: 0 },
+    "Katar": { ids: ["pk", "bd", "gel", "km", "wc"], genetics: 3, extractBias: 0.15, densAdj: 0 },
+    _default: { ids: ["wc", "km", "gel", "nl", "bd", "pk", "ww"], genetics: 4, extractBias: 0.12, densAdj: 0 }
+  };
+
+  function countryProfile(name) {
+    return COUNTRY_GENETICS[name] || COUNTRY_GENETICS._default;
+  }
+
+  function mixStatsFromCultivars(list) {
+    if (!list || !list.length) return null;
+    const n = list.length;
+    const avg = function (k) { return list.reduce(function (s, c) { return s + c[k]; }, 0) / n; };
+    return {
+      flowerDays: Math.round(avg("flowerDays")),
+      vegDays: Math.round(avg("vegDays")),
+      preVegDays: Math.round(avg("preVegDays")),
+      rootDays: Math.round(avg("rootDays")),
+      yieldG: Math.round(avg("yieldG")),
+      dens: Math.round(avg("dens") * 10) / 10,
+      extractY: Math.round(avg("extractY") * 1000) / 1000
+    };
+  }
+
+  function maxFlowerDaysForHarvests(harvests) {
+    return Math.floor(365 / Math.max(4, harvests)) - 7;
+  }
+
+  function snapFlowerRooms(n) {
+    const v = Math.max(4, Math.ceil(n));
+    for (let i = 0; i < FAC.roomSchedule.length; i++) {
+      if (v <= FAC.roomSchedule[i]) return FAC.roomSchedule[i];
+    }
+    return Math.min(30, Math.ceil(v / 4) * 4);
+  }
+
+  function sizeTrimM2(annualKg, flowerRooms) {
+    const stations = Math.max(1, Math.ceil(annualKg / (GMP.trimKgDay * GMP.workDays * 52)));
+    return clampNum(Math.round(stations * GMP.trimM2PerSt + flowerRooms * 2), 18, 240);
+  }
+
+  function sizePackM2(annualKg, flowerRooms) {
+    const stations = Math.max(1, Math.ceil(annualKg / (GMP.packKgDay * GMP.workDays * 52)));
+    return clampNum(Math.round(stations * GMP.packM2PerSt + flowerRooms * 3), 12, 200);
+  }
+
   function matchCultivars(countryName, limit) {
     limit = limit || 5;
     if (!window.CULTIVARS) return [];
+    const profile = countryProfile(countryName);
     const c = getCountry(countryName);
-    const hints = [];
+    const feedHints = [];
     (feed && feed.strains || []).forEach(function (st) {
-      hints.push(normStr(st.strain));
+      feedHints.push(normStr(st.strain));
     });
     if (c && c.prices && c.prices.benchmarks) {
       c.prices.benchmarks.forEach(function (b) {
-        hints.push(normStr(b["Urun Formu"]));
+        feedHints.push(normStr(b["Urun Formu"]), normStr(b.Not));
       });
     }
+    const blob = [c && c.products, c && c.notes].join(" ");
+
     const scored = window.CULTIVARS.map(function (cv) {
-      const n = normStr(cv.name);
       let score = 0;
-      hints.forEach(function (h) {
+      const pIdx = profile.ids.indexOf(cv.id);
+      if (pIdx >= 0) score += 120 - pIdx * 8;
+      feedHints.forEach(function (h) {
         if (!h) return;
-        if (n.indexOf(h) >= 0 || h.indexOf(n.split(" ")[0]) >= 0) score += 3;
+        const n = normStr(cv.name);
+        if (n.indexOf(h) >= 0 || h.indexOf(n.split(" ")[0]) >= 0) score += 12;
       });
-      if (cv.origin && cv.origin.indexOf("AB") >= 0 && countryName !== "Türkiye") score += 1;
-      if (countryName === "Almanya" && (cv.note || "").toLowerCase().indexOf("eczane") >= 0) score += 2;
+      if (/ekstrakt|extract|API|magistral|yağ|oil/i.test(blob) && cv.extractY >= 0.13) score += 18;
+      if (/çiçek|flower|blüten|bluten/i.test(blob) && cv.extractY < 0.12) score += 8;
+      if (countryName === "Hollanda" && (cv.note || "").indexOf("Bedrocan") >= 0) score += 25;
+      if (countryName === "Almanya" && (cv.note || "").toLowerCase().indexOf("eczane") >= 0) score += 20;
+      if (countryName === "Türkiye" && (cv.yieldG >= 170 || cv.extractY >= 0.13)) score += 10;
+      if (cv.origin && cv.origin.indexOf("AB") >= 0 && countryName !== "Türkiye" && countryName !== "ABD") score += 4;
       return { cv: cv, score: score };
-    }).filter(function (x) { return x.score > 0; });
+    });
     scored.sort(function (a, b) { return b.score - a.score; });
     const out = [];
     const seen = {};
@@ -79,18 +166,42 @@
       seen[x.cv.id] = true;
       out.push(x.cv);
     });
+    if (out.length >= 2) return out;
+    profile.ids.forEach(function (id) {
+      if (out.length >= limit) return;
+      const cv = window.CULTIVARS.find(function (c) { return c.id === id; });
+      if (cv && !seen[cv.id]) { seen[cv.id] = true; out.push(cv); }
+    });
     return out.length ? out : window.CULTIVARS.slice(0, Math.min(limit, 4));
+  }
+
+  function buildCultivarPlan(cultivars, flowerRooms, densAdj) {
+    const plan = [];
+    densAdj = densAdj || 0;
+    for (let i = 0; i < flowerRooms; i++) {
+      const cv = cultivars[i % cultivars.length];
+      plan.push({
+        id: cv.id,
+        dens: round1(clampNum((cv.dens || 5.5) + densAdj, 2.5, 7.5))
+      });
+    }
+    return plan;
   }
 
   function estimateMarketDemandKg(c) {
     if (!c) return null;
-    let kg = null;
-    if (c.patientsN) kg = c.patientsN * 0.28;
-    if (c.marketMEur) {
-      const fromMarket = c.marketMEur * 180;
-      kg = kg ? (kg + fromMarket) / 2 : fromMarket;
+    const parts = [];
+    if (c.patientsN != null && c.patientsN > 0) {
+      parts.push(c.patientsN * FAC.kgPerPatientY);
     }
-    return kg ? Math.round(kg) : null;
+    if (c.marketMEur != null && c.marketMEur > 0) {
+      parts.push((c.marketMEur * 1e6) / FAC.wholesaleEurKg);
+    }
+    if (!parts.length) {
+      const t = marketWidthScore(c);
+      return Math.round(4000 + t * 150000);
+    }
+    return Math.round(parts.reduce(function (a, b) { return a + b; }, 0) / parts.length);
   }
 
   function clampNum(v, lo, hi) {
@@ -154,62 +265,134 @@
     return "Geni\u015fleme faz\u0131 \u2014 lider pazar hacmi";
   }
 
-  function estimateKgPerRoom(params) {
-    return params.roomM2 * 0.85 * params.plantsPerM2 * (params.yieldG / 1000) * params.harvestsPerRoom;
+  function skillFactor(t) {
+    if (t < 0.22) return 0.72;
+    if (t < 0.58) return 1.0;
+    return 1.12;
   }
 
   function computeFacilityParams(c) {
+    const country = selectedCountry || "";
+    const profile = countryProfile(country);
     const t = marketWidthScore(c);
     const demandKg = estimateMarketDemandKg(c);
-    const targetSharePct = lerpNum(0.15, 1.2, t);
+    const targetSharePct = lerpNum(0.08, 0.85, t);
+    const targetKg = demandKg ? demandKg * (targetSharePct / 100) : null;
     const prices = (c && c.prices) || {};
     const wantsExtract = countryWantsExtract(c);
 
+    const geneticsN = clampNum(profile.genetics || lerpInt(3, 5, t), 2, 6);
+    const cultivars = matchCultivars(country, geneticsN);
+    const mix = mixStatsFromCultivars(cultivars);
+    const sf = skillFactor(t);
+
+    let roomM2 = Math.round(lerpNum(FAC.roomM2Min, FAC.roomM2Max, t) / 5) * 5;
+    roomM2 = clampNum(roomM2, FAC.roomM2Min, FAC.roomM2Max);
+
+    let plantsPerM2 = mix
+      ? round1(clampNum(mix.dens + (profile.densAdj || 0), 3.5, 7.0))
+      : round1(lerpNum(4.8, 5.5, 1 - t));
+
+    let yieldG = mix
+      ? Math.round(clampNum(mix.yieldG * sf, 55, 185))
+      : (t < 0.22 ? 65 : t < 0.58 ? 105 : 145);
+
+    let flowerDays = mix ? mix.flowerDays : (t >= 0.55 ? 49 : 56);
+    let vegDays = mix ? mix.vegDays : lerpInt(18, 24, t);
+    let preVegDays = mix ? mix.preVegDays : 14;
+    let rootDays = mix ? mix.rootDays : 14;
+
+    const cycleDays = flowerDays + vegDays + preVegDays + rootDays + 7;
+    let harvestsPerRoom = round1(clampNum(365 / cycleDays, 4, 7));
+    const maxFd = maxFlowerDaysForHarvests(harvestsPerRoom);
+    if (flowerDays > maxFd) {
+      flowerDays = Math.max(35, maxFd);
+      harvestsPerRoom = round1(clampNum(365 / (flowerDays + vegDays + preVegDays + rootDays + 7), 4, 7));
+    }
+
+    function kgPerRoom(rm) {
+      return rm * FAC.usable * plantsPerM2 * (yieldG / 1000) * harvestsPerRoom;
+    }
+
+    let flowerRooms;
+    if (targetKg && targetKg > 0) {
+      flowerRooms = snapFlowerRooms(Math.ceil(targetKg / Math.max(1, kgPerRoom(roomM2))));
+      let guard = 0;
+      while (flowerRooms > 12 && roomM2 < FAC.roomM2Max && guard < 12) {
+        roomM2 = Math.min(FAC.roomM2Max, roomM2 + 10);
+        flowerRooms = snapFlowerRooms(Math.ceil(targetKg / Math.max(1, kgPerRoom(roomM2))));
+        guard += 1;
+      }
+    } else {
+      flowerRooms = snapFlowerRooms(lerpInt(4, 12, t));
+    }
+
+    const flowerArea = flowerRooms * roomM2;
+    const plantsYear = Math.round(flowerArea * FAC.usable * plantsPerM2 * harvestsPerRoom);
+    const saleablePct = lerpInt(80, 88, t);
+    const kgDry = plantsYear * yieldG / 1000;
+    const kgSaleable = kgDry * (saleablePct / 100);
+
+    const dryTiers = t >= 0.35 ? 3 : 2;
+    const dryRoomBase = Math.max(24, Math.round(roomM2 / dryTiers));
+    let dryRooms = Math.max(1, Math.ceil(flowerRooms / (t >= 0.65 ? 2.0 : t >= 0.35 ? 2.3 : 2.8)));
+    dryRooms = clampNum(dryRooms, 1, 20);
+
+    const trimM2 = sizeTrimM2(kgSaleable, flowerRooms);
+    const packM2 = sizePackM2(kgSaleable * (1 - (wantsExtract ? profile.extractBias : 0.05)), flowerRooms);
+
+    let extractPct = 0;
+    if (t >= 0.22 && (wantsExtract || profile.extractBias >= 0.2 || t >= 0.45)) {
+      extractPct = Math.round(clampNum(
+        (profile.extractBias || 0.12) * 100 + t * 12 + (mix && mix.extractY >= 0.13 ? 5 : 0),
+        0, 35
+      ));
+      if (extractPct > 0 && extractPct < 8) extractPct = 8;
+    }
+
+    const cultivarPlan = buildCultivarPlan(cultivars, flowerRooms, profile.densAdj || 0);
+
     const params = {
-      plantsPerM2: round1(lerpNum(5, 4.5, t)),
-      harvestsPerRoom: round1(lerpNum(4, 6, t)),
-      roomM2: lerpInt(60, 80, t),
-      flowerDays: t >= 0.55 ? 49 : 56,
-      vegDays: lerpInt(18, 24, t),
-      preVegDays: 14,
-      rootDays: 14,
+      flowerRooms: flowerRooms,
+      roomM2: Math.round(roomM2),
+      flowerArea: Math.round(flowerArea),
+      plantsPerM2: plantsPerM2,
+      harvestsPerRoom: harvestsPerRoom,
+      plantsYear: plantsYear,
+      dryRooms: dryRooms,
+      dryTiers: dryTiers,
       dryDays: 14,
       dryCleanDays: t >= 0.65 ? 5 : 7,
-      dryTiers: t >= 0.4 ? 3 : 2,
+      trimM2: trimM2,
+      packM2: packM2,
+      flowerDays: flowerDays,
+      vegDays: vegDays,
+      preVegDays: preVegDays,
+      rootDays: rootDays,
       yieldSkill: t < 0.22 ? "starter" : t < 0.58 ? "mid" : "pro",
-      yieldG: t < 0.22 ? 65 : t < 0.58 ? 105 : 145,
-      genetics: lerpInt(3, 5, t),
-      saleablePct: lerpInt(80, 88, t),
-      extraction: t >= 0.28 && (wantsExtract || t >= 0.45),
-      extractPct: 0,
-      priceKgGacp: prices.gacpKg || lerpInt(2200, 4800, 1 - t),
-      priceKgGmp: prices.gmpKg || lerpInt(3200, 6200, 1 - t),
-      extractPriceKg: prices.extractKg || lerpInt(3800, 7500, t)
+      yieldG: yieldG,
+      genetics: cultivars.length,
+      saleablePct: saleablePct,
+      extraction: extractPct > 0,
+      extractPct: extractPct,
+      priceKgGacp: prices.gacpKg || lerpInt(2200, 5200, 1 - t),
+      priceKgGmp: prices.gmpKg || lerpInt(3200, 6500, 1 - t),
+      extractPriceKg: prices.extractKg || lerpInt(3800, 8200, t)
     };
-    params.extractPct = params.extraction ? lerpInt(10, 28, t) : 0;
-
-    let flowerRooms = lerpInt(3, 12, t);
-    if (demandKg && demandKg > 0) {
-      const targetKg = demandKg * (targetSharePct / 100);
-      const kgPerRoom = estimateKgPerRoom(params);
-      if (kgPerRoom > 0) flowerRooms = clampNum(Math.ceil(targetKg / kgPerRoom), 1, 30);
-    }
-    params.flowerRooms = flowerRooms;
-    params.flowerArea = flowerRooms * params.roomM2;
-    params.plantsYear = Math.round(params.flowerArea * 0.85 * params.plantsPerM2 * params.harvestsPerRoom);
-    params.dryRooms = clampNum(Math.ceil(flowerRooms / (t > 0.55 ? 2.2 : 2.8)), 1, 20);
-
-    const kgEst = params.plantsYear * params.yieldG / 1000 * (params.saleablePct / 100);
-    params.trimM2 = clampNum(Math.round(lerpNum(20, 36, t) + flowerRooms * 2 + kgEst / 800), 18, 240);
-    params.packM2 = clampNum(Math.round(lerpNum(18, 55, t) + flowerRooms * 4 + kgEst / 600), 12, 200);
 
     return {
       params: params,
+      cultivarPlan: cultivarPlan,
+      cultivars: cultivars,
+      mix: mix,
       score: t,
       demandKg: demandKg,
       targetSharePct: targetSharePct,
+      targetKg: targetKg,
+      kgSaleable: Math.round(kgSaleable),
+      dryRoomBase: dryRoomBase,
       label: facilityTierLabel(t),
-      country: selectedCountry
+      country: country
     };
   }
 
@@ -394,7 +577,8 @@
     const p = c.prices || {};
     const facPack = computeFacilityParams(c);
     const fac = facPack || { label: (c.facility && c.facility.label) || "", params: {} };
-    const strains = matchCultivars(selectedCountry, 4);
+    const strains = (facPack && facPack.cultivars) || matchCultivars(selectedCountry, 4);
+    const pp = facPack.params || {};
     const strainHtml = strains.length
       ? '<div class="market-strains"><small>Pazar genetiği (otomatik öneri)</small><div class="market-strain-list">' +
         strains.map(function (cv) {
@@ -426,8 +610,10 @@
         '<p class="hint market-facility-meta">Skor %' + fmt(facPack.score * 100, 0) +
           " · hedef pay ~%" + fmt(facPack.targetSharePct, 2) +
           (facPack.demandKg ? " · talep ~" + fmt(facPack.demandKg, 0) + " kg/yıl" : "") +
-          " · " + facPack.params.flowerRooms + " oda · " + fmt(facPack.params.plantsYear, 0) + " bitki/yıl · " +
-          facPack.params.dryRooms + " kurutma · ekstrakt %" + facPack.params.extractPct + "</p>" +
+          " · " + pp.flowerRooms + "×" + pp.roomM2 + " m² oda" +
+          " · " + fmt(pp.plantsYear, 0) + " bitki/yıl · ~" + fmt(facPack.kgSaleable || 0, 0) + " kg satılabilir" +
+          " · " + pp.dryRooms + " kurutma/" + pp.dryTiers + " kat · trim/paket " + pp.trimM2 + "/" + pp.packM2 + " m²" +
+          " · ekstrakt %" + pp.extractPct + " · genetik " + (strains.map(function (s) { return s.name.split(" ")[0]; }).join(", ")) + "</p>" +
         '<button type="button" id="marketApplyPreset" class="secondary">Tüm tesis parametrelerini uygula</button>' +
       "</div>" +
       strainHtml +

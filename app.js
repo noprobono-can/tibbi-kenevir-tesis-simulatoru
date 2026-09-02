@@ -1096,7 +1096,19 @@ function applyFacilityParams(p, opts) {
   if (p.yieldSkill) setYieldSkill(p.yieldSkill, true);
   else if (p.yieldG != null && el("yieldG")) el("yieldG").value = String(p.yieldG);
 
-  if (opts.cultivarIds && opts.cultivarIds.length) {
+  if (opts.cultivarPlan && opts.cultivarPlan.length) {
+    ensureRoomBoard(Math.max(1, +p.flowerRooms || flowerRoomCount()));
+    opts.cultivarPlan.forEach(function (row, i) {
+      if (!roomBoard[i]) return;
+      roomBoard[i].cultivarId = row.id;
+      if (row.dens != null) roomBoard[i].dens = row.dens;
+    });
+    if (el("genetics")) {
+      const uniq = {};
+      opts.cultivarPlan.forEach(function (r) { uniq[r.id] = true; });
+      el("genetics").value = String(Object.keys(uniq).length);
+    }
+  } else if (opts.cultivarIds && opts.cultivarIds.length) {
     fillRoomBoardEven(opts.cultivarIds, Math.max(1, +p.flowerRooms || flowerRoomCount()));
     if (el("genetics")) el("genetics").value = String(Math.min(opts.cultivarIds.length, p.genetics || opts.cultivarIds.length));
   } else if (p.genetics) {
@@ -1106,6 +1118,9 @@ function applyFacilityParams(p, opts) {
   cycleOverride = false;
   densityOverride = false;
   applyMixToSliders();
+  ["flowerDays", "vegDays", "preVegDays", "rootDays", "yieldG", "plantsPerM2", "harvestsPerRoom"].forEach(function (k) {
+    if (p[k] != null && el(k)) el(k).value = String(p[k]);
+  });
   if (opts.presetKey) highlightPreset(opts.presetKey);
   else document.querySelectorAll(".presets button").forEach(function (b) { b.classList.remove("active"); });
   syncLayout("roomM2");
@@ -1127,10 +1142,10 @@ function applyMarketFacility(renderAfter) {
   }
   const pack = window.TKTS_market.computeFacilityParams(c);
   if (!pack || !pack.params) return null;
-  const cultivars = window.TKTS_market.matchCultivars(window.TKTS_market.getSelected(), pack.params.genetics);
   window.marketAutoMode = true;
   applyFacilityParams(pack.params, {
-    cultivarIds: cultivars.map(function (cv) { return cv.id; }),
+    cultivarPlan: pack.cultivarPlan,
+    cultivarIds: (pack.cultivars || []).map(function (cv) { return cv.id; }),
     meta: pack,
     render: renderAfter
   });
