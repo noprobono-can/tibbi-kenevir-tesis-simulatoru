@@ -1,13 +1,17 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 44;
-  const feedUrl = "data/market-feed.json";
+  const CACHE_VERSION = 45;
+  const FEED_URLS = [
+    "data/market-feed.json",
+    "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
+  ];
 
   let feed = null;
   let selectedCountry = null;
-  let autoSync = true;
   let refreshTimer = null;
-  let lastSyncAt = null;
+  let lastFeedUpdated = null;
+  let syncingDom = false;
+  let panelDirty = true;
 
   function fmt(n, d) {
     return Number(n).toLocaleString("tr-TR", { maximumFractionDigits: d == null ? 0 : d, minimumFractionDigits: d == null ? 0 : d });
@@ -28,7 +32,6 @@
   function storeCountry(name) {
     try {
       if (name) localStorage.setItem(STORAGE_KEY, name);
-      else localStorage.removeItem(STORAGE_KEY);
     } catch (e) {}
   }
 
@@ -37,15 +40,7 @@
   }
 
   function countryNames() {
-    if (!feed || !feed.countries) return [];
-    return Object.keys(feed.countries);
-  }
-
-  function parsePriceRef(ref) {
-    if (!ref) return null;
-    const m = String(ref).match(/([\d.,]+)\s*€?\s*\/?\s*1?\s*g/i);
-    if (!m) return null;
-    return Math.round(parseFloat(m[1].replace(",", ".")) * 1000);
+    return feed && feed.countries ? Object.keys(feed.countries) : [];
   }
 
   function normStr(s) {
@@ -58,7 +53,6 @@
     const c = getCountry(countryName);
     const hints = [];
     (feed && feed.strains || []).forEach(function (st) {
-      if (st.country && st.country !== countryName && st.country !== "Almanya" && countryName !== "Almanya") return;
       hints.push(normStr(st.strain));
     });
     if (c && c.prices && c.prices.benchmarks) {
@@ -72,13 +66,9 @@
       hints.forEach(function (h) {
         if (!h) return;
         if (n.indexOf(h) >= 0 || h.indexOf(n.split(" ")[0]) >= 0) score += 3;
-        n.split(" ").forEach(function (w) {
-          if (w.length > 3 && h.indexOf(w) >= 0) score += 1;
-        });
       });
       if (cv.origin && cv.origin.indexOf("AB") >= 0 && countryName !== "Türkiye") score += 1;
       if (countryName === "Almanya" && (cv.note || "").toLowerCase().indexOf("eczane") >= 0) score += 2;
-      if (countryName === "Hollanda" && cv.name.indexOf("Herer") >= 0) score += 2;
       return { cv: cv, score: score };
     }).filter(function (x) { return x.score > 0; });
     scored.sort(function (a, b) { return b.score - a.score; });
@@ -89,18 +79,13 @@
       seen[x.cv.id] = true;
       out.push(x.cv);
     });
-    if (!out.length) {
-      return window.CULTIVARS.slice(0, Math.min(limit, 4));
-    }
-    return out;
+    return out.length ? out : window.CULTIVARS.slice(0, Math.min(limit, 4));
   }
 
   function estimateMarketDemandKg(c) {
     if (!c) return null;
     let kg = null;
-    if (c.patientsN) {
-      kg = c.patientsN * 0.28;
-    }
+    if (c.patientsN) kg = c.patientsN * 0.28;
     if (c.marketMEur) {
       const fromMarket = c.marketMEur * 180;
       kg = kg ? (kg + fromMarket) / 2 : fromMarket;
@@ -129,47 +114,106 @@
       cum += Math.max(0, ebitda);
       years.push({ y: y, kg: vol, revenue: rev, ebitda: ebitda, price: flowerP });
     }
-    return {
-      demandKg: demandKg,
-      soldKg: soldKg,
-      sharePct: sharePct,
-      growthPct: growth,
-      years: years,
-      cumulativeEbitda: cum
-    };
+    return { demandKg: demandKg, soldKg: soldKg, sharePct: sharePct, growthPct: growth, years: years, cumulativeEbitda: cum };
   }
 
-  function applyMarketPrices(silent) {
+  function getLivePrices() {
     const c = getCountry();
-    if (!c || !c.prices) return false;
+    return c && c.prices ? c.prices : null;
+  }
+
+  function syncDomPrices(prices) {
+    if (!prices || syncingDom) return;
+    syncingDom = true;
     const gacp = document.getElementById("priceKgGacp");
     const gmp = document.getElementById("priceKgGmp");
     const ext = document.getElementById("extractPriceKg");
-    if (gacp && c.prices.gacpKg) gacp.value = String(c.prices.gacpKg);
-    if (gmp && c.prices.gmpKg) gmp.value = String(c.prices.gmpKg);
-    if (ext && c.prices.extractKg) ext.value = String(c.prices.extractKg);
-    lastSyncAt = Date.now();
-    updateSyncChip();
-    if (!silent && typeof window.render === "function") window.render();
-    return true;
+    if (gacp && prices.gacpKg) gacp.value = String(prices.gacpKg);
+    if (gmp && prices.gmpKg) gmp.value = String(prices.gmpKg);
+    if (ext && prices.extractKg) ext.value = String(prices.extractKg);
+    syncingDom = false;
   }
 
-  function renderMarketPanel() {
+  function patchState(s) {
+    const prices = getLivePrices();
+    if (!prices || !s) return s;
+    s.priceKgGacp = prices.gacpKg;
+    s.priceKgGmp = prices.gmpKg;
+    s.extractPriceKg = prices.extractKg;
+    s.marketCountry = selectedCountry;
+    s.marketFeedUpdated = lastFeedUpdated;
+    syncDomPrices(prices);
+    return s;
+  }
+
+  function updateSyncChip(status) {
+    const chip = document.getElementById("marketSyncChip");
+    if (!chip) return;
+    if (status === "loading") {
+      chip.textContent = "Cannastream: yükleniyor…";
+      chip.classList.remove("on", "warn");
+      return;
+    }
+    if (status === "error") {
+      chip.textContent = "Cannastream: bağlantı yok";
+      chip.classList.add("warn");
+      chip.classList.remove("on");
+      return;
+    }
+    chip.textContent = feed && feed.updated
+      ? "Cannastream · " + feed.updated
+      : "Cannastream · canlı";
+    chip.classList.add("on");
+    chip.classList.remove("warn");
+  }
+
+  function fillCountrySelects() {
+    const names = countryNames();
+    const stored = loadStoredCountry();
+    const value = (stored && names.indexOf(stored) >= 0) ? stored : (names.indexOf("Almanya") >= 0 ? "Almanya" : names[0] || "");
+    selectedCountry = value;
+    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = names.map(function (n) {
+        return '<option value="' + n.replace(/"/g, "&quot;") + '">' + n + "</option>";
+      }).join("");
+      sel.value = value;
+    });
+  }
+
+  function onCountryChange(fromId) {
+    const src = document.getElementById(fromId || "marketCountry");
+    if (!src) return;
+    selectedCountry = src.value;
+    storeCountry(selectedCountry);
+    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
+      const sel = document.getElementById(id);
+      if (sel && sel !== src) sel.value = selectedCountry;
+    });
+    panelDirty = true;
+    syncDomPrices(getLivePrices());
+    renderMarketPanel(false);
+    if (typeof window.render === "function") window.render();
+  }
+
+  function renderMarketPanel(triggerRender) {
     const box = document.getElementById("marketContext");
-    const sales = document.getElementById("marketSales");
     const side = document.getElementById("marketSideNote");
     const c = getCountry();
     if (!box) return;
     if (!c) {
-      box.innerHTML = '<p class="hint">Pazar verisi yüklenemedi.</p>';
-      if (sales) sales.innerHTML = "";
+      box.innerHTML = '<p class="hint">Cannastream verisi henüz yüklenmedi.</p>';
       return;
     }
+    if (!panelDirty && box.childElementCount > 1) return;
+    panelDirty = false;
+
     const p = c.prices || {};
     const fac = c.facility || {};
     const strains = matchCultivars(selectedCountry, 4);
     const strainHtml = strains.length
-      ? '<div class="market-strains"><small>Pazar genetiği önerisi</small><div class="market-strain-list">' +
+      ? '<div class="market-strains"><small>Pazar genetiği (otomatik öneri)</small><div class="market-strain-list">' +
         strains.map(function (cv) {
           return '<button type="button" class="market-strain" data-id="' + cv.id + '">' + cv.name.split(" ")[0] + "<small>" + cv.thc + "</small></button>";
         }).join("") + "</div></div>"
@@ -188,50 +232,39 @@
       "</div>" +
       '<p class="market-notes">' + (c.notes || "") + "</p>" +
       '<div class="market-prices">' +
-        '<div><span>GACP (canlı)</span><strong>' + eur(p.gacpKg || 0) + "/kg</strong></div>" +
-        '<div><span>EU-GMP (canlı)</span><strong>' + eur(p.gmpKg || 0) + "/kg</strong></div>" +
-        '<div><span>Ekstrakt (canlı)</span><strong>' + eur(p.extractKg || 0) + "/kg</strong></div>" +
+        '<div><span>GACP (arka plan)</span><strong>' + eur(p.gacpKg || 0) + "/kg</strong></div>" +
+        '<div><span>EU-GMP (arka plan)</span><strong>' + eur(p.gmpKg || 0) + "/kg</strong></div>" +
+        '<div><span>Ekstrakt (arka plan)</span><strong>' + eur(p.extractKg || 0) + "/kg</strong></div>" +
       "</div>" +
       '<p class="hint market-basis">' + (p.basis || "") + (p.retailBand ? " · " + p.retailBand : "") + "</p>" +
-      (fac.label ? '<div class="market-facility"><span>Tesis önerisi</span><strong>' + fac.label + '</strong><button type="button" id="marketApplyPreset" class="secondary" data-preset="' + (fac.preset || "dengeli") + '">Senaryoyu uygula</button></div>' : "") +
+      (fac.label ? '<div class="market-facility"><span>Otomatik tesis önerisi</span><strong>' + fac.label + '</strong><button type="button" id="marketApplyPreset" class="secondary" data-preset="' + (fac.preset || "dengeli") + '">Senaryoyu uygula</button></div>' : "") +
       strainHtml +
       (c.officialSource && c.officialSource.url
         ? '<p class="hint"><a href="' + c.officialSource.url + '" target="_blank" rel="noopener">' + (c.officialSource.label || "Resmi kaynak") + " ↗</a></p>"
         : "");
 
-    if (side) {
-      side.textContent = (c.import_export || "") + (c.key_players ? " · " + c.key_players : "");
-    }
-
+    if (side) side.textContent = (c.import_export || "") + (c.key_players ? " · " + c.key_players : "");
     const updated = document.getElementById("marketUpdated");
-    if (updated && feed) {
-      updated.textContent = "Cannastream · " + (feed.updated || "—") + (autoSync ? " · canlı senkron" : "");
-    }
+    if (updated && feed) updated.textContent = "Otomatik senkron · " + (feed.updated || "—") + " · yenileme " + (feed.refreshMinutes || 15) + " dk";
 
     bindPanelActions();
-    if (typeof window.render === "function") window.render();
+    if (triggerRender && typeof window.render === "function") window.render();
   }
 
   function renderSalesPanel(projection) {
     const sales = document.getElementById("marketSales");
     if (!sales || !projection) return;
-    const c = getCountry();
-    if (!c) { sales.innerHTML = ""; return; }
-
     const shareLine = projection.sharePct != null
       ? "<tr><td>Pazar payı (çiçek kg)</td><td class=\"num\">" + pct(projection.sharePct) + " · talep ~" + fmt(projection.demandKg, 0) + " kg/yıl</td></tr>"
-      : "<tr><td>Pazar talebi</td><td class=\"num\">Veri yetersiz — hasta/pazar KPI eksik</td></tr>";
-
+      : "<tr><td>Pazar talebi</td><td class=\"num\">Veri yetersiz</td></tr>";
     const yearRows = projection.years.map(function (y) {
       return "<tr><td>Yıl " + y.y + " · " + fmt(y.kg, 0) + " kg · " + eur(y.price) + "/kg</td><td class=\"num\">" + eur(y.revenue) + " · EBITDA " + eur(y.ebitda) + "</td></tr>";
     }).join("");
-
     sales.innerHTML =
-      "<h3>Canlı satış simülasyonu · " + selectedCountry + "</h3>" +
-      "<table><tr><th>Kalem</th><th>Değer</th></tr>" +
-      shareLine +
+      "<h3>Arka plan satış simülasyonu · " + selectedCountry + "</h3>" +
+      "<table><tr><th>Kalem</th><th>Değer</th></tr>" + shareLine +
       "<tr><td>Tesis satılabilir çiçek</td><td class=\"num\">" + fmt(projection.soldKg, 0) + " kg/yıl</td></tr>" +
-      "<tr><td>Pazar büyüme varsayımı</td><td class=\"num\">" + pct(projection.growthPct) + "/yıl (Cannastream KPI)</td></tr>" +
+      "<tr><td>Pazar büyüme</td><td class=\"num\">" + pct(projection.growthPct) + "/yıl</td></tr>" +
       yearRows +
       "<tr><td><strong>5 yıl kümülatif EBITDA</strong></td><td class=\"num\"><strong>" + eur(projection.cumulativeEbitda) + "</strong></td></tr></table>";
   }
@@ -246,26 +279,24 @@
       projection: projection,
       prices: c.prices,
       facility: c.facility,
-      updated: feed ? feed.updated : null
+      updated: feed ? feed.updated : null,
+      auto: true
     };
-
     const alerts = [];
     if (projection.sharePct != null) {
       if (projection.sharePct < 0.05) {
-        alerts.push({ t: "warn", m: selectedCountry + " pazarında üretim payınız ~%" + fmt(projection.sharePct, 2) + " — kapasite pazar için çok küçük veya hedef pazar geniş." });
+        alerts.push({ t: "warn", m: selectedCountry + " pazarında üretim payınız ~%" + fmt(projection.sharePct, 2) + " — kapasite pazar için küçük kalıyor." });
       } else if (projection.sharePct > 8) {
-        alerts.push({ t: "warn", m: selectedCountry + " pazarında ~%" + fmt(projection.sharePct, 1) + " pay — agresif pazar payı; tedarik rekabeti ve regülasyon baskısı artar." });
+        alerts.push({ t: "warn", m: selectedCountry + " pazarında ~%" + fmt(projection.sharePct, 1) + " pay — agresif hedef." });
       } else {
-        alerts.push({ t: "ok", m: "Hedef pazar " + selectedCountry + ": ~%" + fmt(projection.sharePct, 2) + " çiçek payı · talep ~" + fmt(projection.demandKg, 0) + " kg/yıl (Cannastream KPI)." });
+        alerts.push({ t: "ok", m: "Cannastream hedef pazar " + selectedCountry + ": ~%" + fmt(projection.sharePct, 2) + " pay · talep ~" + fmt(projection.demandKg, 0) + " kg/yıl." });
       }
     }
     if (c.outlook === "KAPALI PAZAR" || c.outlook === "YÜKSEK RİSK") {
-      alerts.push({ t: "bad", m: c.outlook + ": " + selectedCountry + " için ihracat/satış modeli yüksek regülasyon riski taşır." });
-    } else if (c.outlook === "MEVZUAT NETLEŞİYOR") {
-      alerts.push({ t: "warn", m: selectedCountry + ": mevzuat netleşiyor — fiyat ve lisans varsayımlarını Cannastream regülasyon akışıyla güncel tutun." });
+      alerts.push({ t: "bad", m: c.outlook + ": " + selectedCountry + " ihracat/satış modeli yüksek regülasyon riski." });
     }
-    if (autoSync && c.prices) {
-      alerts.push({ t: "ok", m: "Cannastream canlı fiyat: GACP " + eur(c.prices.gacpKg) + "/kg · GMP " + eur(c.prices.gmpKg) + "/kg · ekstrakt " + eur(c.prices.extractKg) + "/kg." });
+    if (c.prices) {
+      alerts.push({ t: "ok", m: "Arka plan fiyat (Cannastream): GACP " + eur(c.prices.gacpKg) + "/kg · GMP " + eur(c.prices.gmpKg) + "/kg." });
     }
     m.marketAlerts = alerts;
     renderSalesPanel(projection);
@@ -273,37 +304,7 @@
 
   function mergeMarketAlerts(m) {
     if (!m || !m.marketAlerts || !m.alerts) return;
-    m.marketAlerts.forEach(function (a) {
-      m.alerts.unshift(a);
-    });
-  }
-
-  function updateSyncChip() {
-    const chip = document.getElementById("marketSyncChip");
-    if (!chip) return;
-    chip.textContent = autoSync ? "Canlı fiyat: açık" : "Canlı fiyat: kapalı";
-    chip.classList.toggle("on", autoSync);
-  }
-
-  function setSelectOptions() {
-    const sel = document.getElementById("marketCountry");
-    if (!sel || !feed) return;
-    const names = countryNames();
-    const stored = loadStoredCountry();
-    sel.innerHTML = names.map(function (n) {
-      return '<option value="' + n.replace(/"/g, "&quot;") + '">' + n + "</option>";
-    }).join("");
-    if (stored && names.indexOf(stored) >= 0) sel.value = stored;
-    else if (names.indexOf("Almanya") >= 0) sel.value = "Almanya";
-    selectedCountry = sel.value;
-  }
-
-  function onCountryChange() {
-    const sel = document.getElementById("marketCountry");
-    if (sel) selectedCountry = sel.value;
-    storeCountry(selectedCountry);
-    if (autoSync) applyMarketPrices(true);
-    renderMarketPanel();
+    m.marketAlerts.forEach(function (a) { m.alerts.unshift(a); });
   }
 
   function bindPanelActions() {
@@ -311,9 +312,7 @@
     if (presetBtn && !presetBtn._bound) {
       presetBtn._bound = true;
       presetBtn.addEventListener("click", function () {
-        const key = presetBtn.getAttribute("data-preset") || "dengeli";
-        if (typeof window.applyPreset === "function") window.applyPreset(key);
-        if (autoSync) applyMarketPrices(true);
+        if (typeof window.applyPreset === "function") window.applyPreset(presetBtn.getAttribute("data-preset") || "dengeli");
       });
     }
     document.querySelectorAll(".market-strain").forEach(function (btn) {
@@ -330,31 +329,12 @@
   }
 
   function bindMarketUi() {
-    const sel = document.getElementById("marketCountry");
-    const syncBtn = document.getElementById("marketAutoSync");
-    const refreshBtn = document.getElementById("marketRefreshBtn");
-
-    if (sel && !sel._bound) {
+    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
+      const sel = document.getElementById(id);
+      if (!sel || sel._bound) return;
       sel._bound = true;
-      sel.addEventListener("change", onCountryChange);
-    }
-    if syncBtn && !syncBtn._bound) {
-      syncBtn._bound = true;
-      syncBtn.addEventListener("click", function () {
-        autoSync = !autoSync;
-        try { localStorage.setItem("tkts-market-autosync", autoSync ? "1" : "0"); } catch (e) {}
-        syncBtn.textContent = autoSync ? "Canlı senkron: açık" : "Canlı senkron: kapalı";
-        syncBtn.classList.toggle("on", autoSync);
-        updateSyncChip();
-        if (autoSync) applyMarketPrices(false);
-      });
-    }
-    if (refreshBtn && !refreshBtn._bound) {
-      refreshBtn._bound = true;
-      refreshBtn.addEventListener("click", function () {
-        loadFeed(true);
-      });
-    }
+      sel.addEventListener("change", function () { onCountryChange(id); });
+    });
   }
 
   function scheduleRefresh() {
@@ -363,56 +343,97 @@
     refreshTimer = setInterval(function () { loadFeed(true); }, mins * 60 * 1000);
   }
 
+  function fetchFeedJson() {
+    let chain = Promise.reject(new Error("no url"));
+    FEED_URLS.forEach(function (url) {
+      chain = chain.catch(function () {
+        return fetch(url + "?v=" + CACHE_VERSION + "&t=" + Date.now()).then(function (r) {
+          if (!r.ok) throw new Error("feed");
+          return r.json();
+        });
+      });
+    });
+    return chain;
+  }
+
+  function applyFeed(data, isRefresh) {
+    const prev = lastFeedUpdated;
+    feed = data;
+    lastFeedUpdated = data.updated || null;
+    fillCountrySelects();
+    syncDomPrices(getLivePrices());
+    panelDirty = true;
+    renderMarketPanel(false);
+    bindMarketUi();
+    scheduleRefresh();
+    updateSyncChip("ok");
+    if (isRefresh && prev !== lastFeedUpdated && typeof window.render === "function") {
+      window.render();
+    }
+    document.dispatchEvent(new CustomEvent("tkts-market-ready", { detail: { updated: lastFeedUpdated, refresh: !!isRefresh } }));
+  }
+
   function loadFeed(isRefresh) {
-    return fetch(feedUrl + "?v=" + CACHE_VERSION + "&t=" + Date.now())
-      .then(function (r) {
-        if (!r.ok) throw new Error("feed");
-        return r.json();
-      })
+    if (!isRefresh) updateSyncChip("loading");
+    return fetchFeedJson()
       .then(function (data) {
-        feed = data;
-        if (!selectedCountry) setSelectOptions();
-        if (autoSync) applyMarketPrices(true);
-        renderMarketPanel();
-        bindMarketUi();
-        scheduleRefresh();
-        if (isRefresh && typeof window.render === "function") window.render();
+        applyFeed(data, isRefresh);
+        return data;
       })
       .catch(function () {
+        updateSyncChip("error");
         const box = document.getElementById("marketContext");
-        if (box) {
-          box.innerHTML = '<p class="hint">Cannastream verisi yüklenemedi. Yerel <code>data/market-feed.json</code> dosyasını kontrol edin veya export script çalıştırın.</p>';
+        if (box && !feed) {
+          box.innerHTML = '<p class="hint">Cannastream verisi yüklenemedi. GitHub Actions senkronu veya yerel export bekleniyor.</p>';
         }
-        bindMarketUi();
+        throw new Error("feed load failed");
       });
   }
 
-  function initMarketFeed() {
-    try {
-      autoSync = localStorage.getItem("tkts-market-autosync") !== "0";
-    } catch (e) {}
-    const syncBtn = document.getElementById("marketAutoSync");
-    if (syncBtn) {
-      syncBtn.textContent = autoSync ? "Canlı senkron: açık" : "Canlı senkron: kapalı";
-      syncBtn.classList.toggle("on", autoSync);
-    }
-    bindMarketUi();
-    updateSyncChip();
-    loadFeed(false).then(function () {
-      if (autoSync) applyMarketPrices(false);
+  const ready = fetchFeedJson()
+    .then(function (data) {
+      feed = data;
+      lastFeedUpdated = data.updated || null;
+      return data;
+    })
+    .catch(function () {
+      return null;
+    });
+
+  function initDom() {
+    ready.then(function () {
+      if (feed) {
+        fillCountrySelects();
+        syncDomPrices(getLivePrices());
+        renderMarketPanel(false);
+        bindMarketUi();
+        scheduleRefresh();
+        updateSyncChip("ok");
+      } else {
+        loadFeed(false);
+      }
+      document.dispatchEvent(new CustomEvent("tkts-market-ready", { detail: { updated: lastFeedUpdated } }));
     });
   }
 
   window.TKTS_market = {
+    ready: ready,
     getFeed: function () { return feed; },
     getCountry: getCountry,
     getSelected: function () { return selectedCountry; },
-    applyPrices: applyMarketPrices,
+    getLivePrices: getLivePrices,
+    patchState: patchState,
     enrichResult: enrichResult,
     mergeMarketAlerts: mergeMarketAlerts,
     refresh: function () { return loadFeed(true); },
     matchCultivars: matchCultivars
   };
 
-  window.addEventListener("DOMContentLoaded", initMarketFeed);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDom);
+  } else {
+    initDom();
+  }
+
+  setInterval(function () { loadFeed(true); }, 15 * 60 * 1000);
 })();

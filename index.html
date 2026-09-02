@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=44" />
+  <link rel="stylesheet" href="styles.css?v=45" />
   <script>
     (function () {
       try {
@@ -74,9 +74,13 @@
       <div class="header-meta">
         <span id="gateUserChip" class="chip chip-user" hidden></span>
         <button type="button" id="gateLogout" class="chip chip-btn" hidden>Çıkış</button>
+        <label class="header-market">
+          <span class="sr-only">Hedef pazar</span>
+          <select id="marketCountryHeader" class="market-select-header" aria-label="Hedef pazar"></select>
+        </label>
         <span class="chip">Indoor</span>
         <span class="chip">GACP</span>
-        <span class="chip chip-cs" id="marketSyncChip">Canlı fiyat: açık</span>
+        <span class="chip chip-cs on" id="marketSyncChip">Cannastream: yükleniyor…</span>
       </div>
     </div>
   </header>
@@ -166,18 +170,14 @@
       </section>
 
       <section class="panel" data-panel="pazar" hidden>
-        <h2>Hedef pazar · Cannastream</h2>
-        <p class="hint">Ülke KPI, canlı fiyat, tesis senaryosu ve satış simülasyonu Cannastream verisinden gelir. Kaydırıcıları değiştirdikçe pazar payı ve 5 yıllık hasılat anlık güncellenir.</p>
+        <h2>Hedef pazar · otomatik</h2>
+        <p class="hint">Cannastream verisi arka planda çalışır: fiyatlar, pazar payı ve satış projeksiyonu her simülasyonda güncellenir. GitHub Actions 6 saatte bir feed'i senkronlar.</p>
         <div class="control">
           <header><span>İhracat / hedef ülke</span></header>
           <select id="marketCountry" class="market-select"></select>
         </div>
-        <div class="market-actions">
-          <button type="button" id="marketAutoSync" class="secondary on">Canlı senkron: açık</button>
-          <button type="button" id="marketRefreshBtn" class="secondary">Veriyi yenile</button>
-        </div>
         <p class="hint" id="marketSideNote"></p>
-        <p class="hint market-sync"><span id="marketUpdated">Cannastream</span></p>
+        <p class="hint market-sync"><span id="marketUpdated">Otomatik senkron</span></p>
       </section>
 
     </aside>
@@ -249,10 +249,10 @@
   </div>
   </div>
 
-  <script src="gate-config.js?v=44"></script>
-  <script src="gate.js?v=44"></script>
-  <script src="app.js?v=44"></script>
-  <script src="cannastream-engine.js?v=44"></script>
-  <script src="pdf-export.js?v=44"></script>
+  <script src="gate-config.js?v=45"></script>
+  <script src="gate.js?v=45"></script>
+  <script src="cannastream-engine.js?v=45"></script>
+  <script src="app.js?v=45"></script>
+  <script src="pdf-export.js?v=45"></script>
 </body>
 </html>

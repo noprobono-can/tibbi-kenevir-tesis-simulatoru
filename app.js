@@ -1018,6 +1018,10 @@ function readState() {
     extraction: +el("extractPct").value > 0,
     usable: 0.85
   };
+  if (window.TKTS_market && window.TKTS_market.patchState) {
+    return window.TKTS_market.patchState(s);
+  }
+  return s;
 }
 
 function highlightPreset(key) {
@@ -2754,5 +2758,13 @@ window.addEventListener("DOMContentLoaded", function () {
   el("playBtn").addEventListener("click", play);
   el("exportBtn").addEventListener("click", exportJson);
   if (el("conceptBtn")) el("conceptBtn").addEventListener("click", downloadConceptPng);
-  applyPreset("dengeli");
+  function bootSimulator() {
+    applyPreset("dengeli");
+  }
+  if (window.TKTS_market && window.TKTS_market.ready) {
+    window.TKTS_market.ready.then(bootSimulator).catch(bootSimulator);
+  } else {
+    document.addEventListener("tkts-market-ready", bootSimulator, { once: true });
+    setTimeout(bootSimulator, 1200);
+  }
 });

@@ -271,6 +271,8 @@ def build_feed(root: Path) -> dict:
         "sourceUrl": "https://github.com/noprobono-can/cannastream-app",
         "streamlitUrl": "https://cannastream-app-v3.streamlit.app/",
         "refreshMinutes": 15,
+        "autoSync": True,
+        "autoSync": true,
         "countries": countries,
         "livePrices": live_prices[:120],
         "strains": db.get("strains") or [],
