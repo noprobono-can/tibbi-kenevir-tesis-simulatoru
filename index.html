@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=42" />
+  <link rel="stylesheet" href="styles.css?v=44" />
   <script>
     (function () {
       try {
@@ -76,7 +76,7 @@
         <button type="button" id="gateLogout" class="chip chip-btn" hidden>Çıkış</button>
         <span class="chip">Indoor</span>
         <span class="chip">GACP</span>
-        <span class="chip">GMP</span>
+        <span class="chip chip-cs" id="marketSyncChip">Canlı fiyat: açık</span>
       </div>
     </div>
   </header>
@@ -88,6 +88,7 @@
       <div class="side-tabs" role="tablist">
         <button type="button" class="on" data-tab="tesis">Tesis</button>
         <button type="button" data-tab="proses">Proses</button>
+        <button type="button" data-tab="pazar">Pazar</button>
       </div>
 
       <section class="panel" data-panel="tesis">
@@ -164,9 +165,35 @@
         <p class="hint">İlk 2 yıl GACP çiçek satışı, sonraki yıllar EU-GMP (daha yüksek €/kg). Hasılat = satılan kuru çiçek × ilgili yıl fiyatı + distilat × ekstrakt fiyatı. Geri ödeme bu rampa ile hesaplanır. Besleme 0 ise scCO2 hat yoktur.</p>
       </section>
 
+      <section class="panel" data-panel="pazar" hidden>
+        <h2>Hedef pazar · Cannastream</h2>
+        <p class="hint">Ülke KPI, canlı fiyat, tesis senaryosu ve satış simülasyonu Cannastream verisinden gelir. Kaydırıcıları değiştirdikçe pazar payı ve 5 yıllık hasılat anlık güncellenir.</p>
+        <div class="control">
+          <header><span>İhracat / hedef ülke</span></header>
+          <select id="marketCountry" class="market-select"></select>
+        </div>
+        <div class="market-actions">
+          <button type="button" id="marketAutoSync" class="secondary on">Canlı senkron: açık</button>
+          <button type="button" id="marketRefreshBtn" class="secondary">Veriyi yenile</button>
+        </div>
+        <p class="hint" id="marketSideNote"></p>
+        <p class="hint market-sync"><span id="marketUpdated">Cannastream</span></p>
+      </section>
+
     </aside>
 
     <main>
+      <section class="panel market-panel" id="marketPanel">
+        <div class="market-panel-head">
+          <h2>Pazar bağlamı · canlı</h2>
+          <span class="chip chip-cs">Cannastream</span>
+        </div>
+        <div id="marketContext" class="market-context">
+          <p class="hint">Cannastream verisi yükleniyor…</p>
+        </div>
+        <div id="marketSales" class="market-sales"></div>
+      </section>
+
       <div class="kpis" id="kpis"></div>
 
       <section class="panel" style="margin-bottom:14px">
@@ -222,9 +249,10 @@
   </div>
   </div>
 
-  <script src="gate-config.js?v=42"></script>
-  <script src="gate.js?v=42"></script>
-  <script src="app.js?v=42"></script>
-  <script src="pdf-export.js?v=42"></script>
+  <script src="gate-config.js?v=44"></script>
+  <script src="gate.js?v=44"></script>
+  <script src="app.js?v=44"></script>
+  <script src="cannastream-engine.js?v=44"></script>
+  <script src="pdf-export.js?v=44"></script>
 </body>
 </html>

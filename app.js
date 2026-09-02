@@ -1756,9 +1756,16 @@ function renderKpis(m, s) {
     ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj Y3+ " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014") + " (rampa)", m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
     ["Kadro", kpiMain(String(m.staffBase), "FTE"), "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + ((m.staff && m.staff.roles) ? m.staff.roles.length : 0) + " g\u00f6rev hatt\u0131", ""]
   ];
+  if (m.market && m.market.projection && m.market.projection.sharePct != null) {
+    items.splice(4, 0, ["Pazar pay\u0131", kpiMain(pct(m.market.projection.sharePct), ""), (m.market.country || "") + " \u00b7 talep ~" + fmt(m.market.projection.demandKg, 0) + " kg", m.market.projection.sharePct > 8 ? "warn" : m.market.projection.sharePct < 0.05 ? "warn" : "good"]);
+  }
   el("kpis").innerHTML = items.map(function (row) {
     return "<article class=\"kpi " + row[3] + "\"><div class=\"label\">" + row[0] + "</div><div class=\"value\">" + row[1] + "</div><div class=\"sub\">" + row[2] + "</div></article>";
   }).join("");
+}
+
+function pct(n) {
+  return "%" + fmt(n, 1);
 }
 
 
@@ -2638,6 +2645,12 @@ function render() {
     s = readState();
     m = simulate(s);
   }
+  if (window.TKTS_market && window.TKTS_market.enrichResult) {
+    window.TKTS_market.enrichResult(s, m);
+  }
+  if (window.TKTS_market && window.TKTS_market.mergeMarketAlerts) {
+    window.TKTS_market.mergeMarketAlerts(m);
+  }
   lastM = m;
   lastS = s;
   const py = el("plantsYear");
@@ -2683,12 +2696,32 @@ function play() {
 }
 
 function exportJson() {
-  const blob = new Blob([JSON.stringify({ state: readState(), result: lastM }, null, 2)], { type: "application/json" });
+  const payload = { state: readState(), result: lastM };
+  if (window.TKTS_market && window.TKTS_market.getSelected) {
+    payload.market = {
+      country: window.TKTS_market.getSelected(),
+      feed: window.TKTS_market.getFeed() ? window.TKTS_market.getFeed().updated : null,
+      source: "cannastream-app",
+      projection: lastM && lastM.market ? lastM.market.projection : null
+    };
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "tesis-senaryo.json";
   a.click();
 }
+window.exportJson = exportJson;
+window.render = render;
+window.applyPreset = applyPreset;
+window.ensureRoomBoard = ensureRoomBoard;
+window.flowerRoomCount = flowerRoomCount;
+window.PRICE_RAMP = PRICE_RAMP;
+window.CULTIVARS = CULTIVARS;
+Object.defineProperty(window, "roomBoard", {
+  get: function () { return roomBoard; },
+  set: function (v) { roomBoard = v; }
+});
 
 window.addEventListener("DOMContentLoaded", function () {
   applyView(readStoredView(), false);
