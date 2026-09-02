@@ -824,6 +824,9 @@ function bindSideTabs() {
       document.querySelectorAll("[data-panel]").forEach(function (p) {
         p.hidden = p.getAttribute("data-panel") !== tab;
       });
+      if (tab === "pazar" && window.TKTS_market && window.TKTS_market.onTabOpen) {
+        window.TKTS_market.onTabOpen();
+      }
     });
   });
 }

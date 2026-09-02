@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 45;
+  const CACHE_VERSION = 46;
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
@@ -167,10 +167,17 @@
     chip.classList.remove("warn");
   }
 
-  function fillCountrySelects() {
+  function fillCountrySelects(preserve) {
     const names = countryNames();
+    if (!names.length) return;
     const stored = loadStoredCountry();
-    const value = (stored && names.indexOf(stored) >= 0) ? stored : (names.indexOf("Almanya") >= 0 ? "Almanya" : names[0] || "");
+    const sidebar = document.getElementById("marketCountry");
+    const cur = preserve ? (selectedCountry || (sidebar && sidebar.value) || "") : "";
+    const value = (cur && names.indexOf(cur) >= 0)
+      ? cur
+      : (stored && names.indexOf(stored) >= 0)
+        ? stored
+        : (names.indexOf("Almanya") >= 0 ? "Almanya" : names[0]);
     selectedCountry = value;
     ["marketCountry", "marketCountryHeader"].forEach(function (id) {
       const sel = document.getElementById(id);
@@ -179,6 +186,7 @@
         return '<option value="' + n.replace(/"/g, "&quot;") + '">' + n + "</option>";
       }).join("");
       sel.value = value;
+      sel.disabled = false;
     });
   }
 
@@ -329,12 +337,26 @@
   }
 
   function bindMarketUi() {
-    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
-      const sel = document.getElementById(id);
-      if (!sel || sel._bound) return;
-      sel._bound = true;
-      sel.addEventListener("change", function () { onCountryChange(id); });
+    if (document.documentElement.dataset.marketUiBound === "1") return;
+    document.documentElement.dataset.marketUiBound = "1";
+    document.addEventListener("change", function (e) {
+      const t = e.target;
+      if (!t || !t.id) return;
+      if (t.id === "marketCountry" || t.id === "marketCountryHeader") {
+        onCountryChange(t.id);
+      }
     });
+  }
+
+  function onTabOpen() {
+    if (!feed) {
+      loadFeed(false);
+      return;
+    }
+    fillCountrySelects(true);
+    panelDirty = true;
+    renderMarketPanel(false);
+    if (typeof window.render === "function") window.render();
   }
 
   function scheduleRefresh() {
@@ -360,7 +382,7 @@
     const prev = lastFeedUpdated;
     feed = data;
     lastFeedUpdated = data.updated || null;
-    fillCountrySelects();
+    fillCountrySelects(!!isRefresh || !!selectedCountry);
     syncDomPrices(getLivePrices());
     panelDirty = true;
     renderMarketPanel(false);
@@ -401,12 +423,12 @@
     });
 
   function initDom() {
+    bindMarketUi();
     ready.then(function () {
       if (feed) {
-        fillCountrySelects();
+        fillCountrySelects(false);
         syncDomPrices(getLivePrices());
         renderMarketPanel(false);
-        bindMarketUi();
         scheduleRefresh();
         updateSyncChip("ok");
       } else {
@@ -426,7 +448,8 @@
     enrichResult: enrichResult,
     mergeMarketAlerts: mergeMarketAlerts,
     refresh: function () { return loadFeed(true); },
-    matchCultivars: matchCultivars
+    matchCultivars: matchCultivars,
+    onTabOpen: onTabOpen
   };
 
   if (document.readyState === "loading") {
