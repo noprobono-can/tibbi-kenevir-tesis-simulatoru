@@ -22,7 +22,9 @@ const PRESETS = {
 };
 
 const el = (id) => document.getElementById(id);
-const fmt = (n, d = 0) => Number(n).toLocaleString("tr-TR", { maximumFractionDigits: d, minimumFractionDigits: d });
+const ta = (k, p) => (window.TKTS_i18n && window.TKTS_i18n.alert(k, p)) || k;
+const ti = (k, p) => (window.TKTS_i18n && window.TKTS_i18n.t(k, p)) || k;
+const fmt = (n, d = 0) => Number(n).toLocaleString((window.TKTS_i18n && window.TKTS_i18n.localeTag()) || "tr-TR", { maximumFractionDigits: d, minimumFractionDigits: d });
 const eur = (n) => "\u20AC" + fmt(n, 0);
 const m2 = (n) => fmt(n, 0) + " m\u00B2";
 const round1 = (n) => Math.round(n * 10) / 10;
@@ -126,71 +128,71 @@ function buildStaffPlan(s, ox, ex, trimSp, packSp, plantsPerRoom) {
 
   const roles = [
     {
-      role: "\u00dcretim m\u00fcd\u00fcr\u00fc",
+      role: ti("staff.prodMgr"),
       fte: 1,
-      zone: "GACP",
-      tasks: "Genetik se\u00e7imi, IPM/besleme stratejisi, vardiya plan\u0131, seed-to-sale, hasat kalitesi"
+      zone: ti("staff.zoneGacp"),
+      tasks: ti("staff.prodMgrTasks")
     },
     {
-      role: "Yeti\u015ftirici teknisyen",
+      role: ti("staff.grower"),
       fte: growTech,
-      zone: "GACP",
-      tasks: "Oda turu, budama/defoliasyon, sulama kontrol\u00fc, scouting, transplant, kay\u0131t"
+      zone: ti("staff.zoneGacp"),
+      tasks: ti("staff.growerTasks")
     },
     {
-      role: "IPM / iklim teknisyeni",
+      role: ti("staff.ipm"),
       fte: rooms >= 4 ? 1 : 0,
-      zone: "GACP",
-      tasks: "Zararl\u0131 izleme, tuzak/biopreparat, sens\u00f6r kalibrasyonu, HVAC set-point kontrol\u00fc"
+      zone: ti("staff.zoneGacp"),
+      tasks: ti("staff.ipmTasks")
     },
     {
-      role: "Hasat ekibi (tepe g\u00fcn)",
+      role: ti("staff.harvest"),
       fte: harvestExtra,
-      zone: "GACP\u2192GMP",
-      tasks: "Kesim, ta\u015f\u0131ma, asma, oda CIP; yaln\u0131zca hasat g\u00fcn\u00fc ekstra",
+      zone: ti("staff.zoneBoth"),
+      tasks: ti("staff.harvestTasks"),
       peak: true
     },
     {
-      role: "Kurutma operat\u00f6r\u00fc",
+      role: ti("staff.dryOp"),
       fte: dryOps,
-      zone: "GMP",
-      tasks: "Asma/alma, T/RH kayd\u0131, parti transferi, kurutma odas\u0131 temizli\u011fi"
+      zone: ti("staff.zoneGmp"),
+      tasks: ti("staff.dryTasks")
     },
     {
-      role: "Trim operat\u00f6r\u00fc",
+      role: ti("staff.trimOp"),
       fte: Math.max(1, trimOps),
-      zone: "GMP",
-      tasks: "Kuru trim, kalite ay\u0131klama, istasyon sanitasyonu, kasa stok"
+      zone: ti("staff.zoneGmp"),
+      tasks: ti("staff.trimTasks")
     },
     {
-      role: "Paket / etiket",
+      role: ti("staff.packOp"),
       fte: Math.max(1, packOps),
-      zone: "GMP",
-      tasks: "Tart\u0131m, etiket, birincil ambalaj, lot kayd\u0131, kasa \u00e7\u0131k\u0131\u015f"
+      zone: ti("staff.zoneGmp"),
+      tasks: ti("staff.packTasks")
     },
     {
-      role: "QA / dok\u00fcmantasyon",
+      role: ti("staff.qa"),
       fte: qa,
-      zone: "GMP",
-      tasks: "G\u00f6rsel QC, numune, batch record, sapma/CAPA, serbest b\u0131rakma"
+      zone: ti("staff.zoneGmp"),
+      tasks: ti("staff.qaTasks")
     },
     {
-      role: "Ekstraksiyon operat\u00f6r\u00fc",
+      role: ti("staff.extractOp"),
       fte: hasExtract ? Math.max(1, extractOps) : 0,
-      zone: "GMP",
-      tasks: "scCO\u2082 hat \u00e7al\u0131\u015ft\u0131rma, seperat\u00f6r, distilasyon, CIP, proses kayd\u0131"
+      zone: ti("staff.zoneGmp"),
+      tasks: ti("staff.extractTasks")
     },
     {
-      role: "Tesis / sanitasyon",
+      role: ti("staff.facility"),
       fte: facility,
-      zone: "Ortak",
-      tasks: "Hava kilit, zemin/duvar CIP, at\u0131k, PPE stok, bak\u0131m koordinasyonu"
+      zone: ti("staff.zoneShared"),
+      tasks: ti("staff.facilityTasks")
     },
     {
-      role: "Ofis / QMS",
+      role: ti("staff.office"),
       fte: admin,
-      zone: "\u0130dare",
-      tasks: "SOP, e\u011fitim kayd\u0131, tedarik\u00e7i, izin/izlenebilirlik, raporlama"
+      zone: ti("staff.zoneAdmin"),
+      tasks: ti("staff.officeTasks")
     }
   ].filter(function (r) { return r.fte > 0; });
 
@@ -205,7 +207,7 @@ function buildStaffPlan(s, ox, ex, trimSp, packSp, plantsPerRoom) {
     baseFte: baseFte,
     peakDayFte: baseFte + peakExtra,
     peakExtra: peakExtra,
-    note: "Kanopi kural\u0131 ~1 yeti\u015ftirici / " + STAFF_RULES.canopyM2PerGrower + " m\u00B2 \u00e7i\u00e7ek (sekt\u00f6r 74\u2013111 m\u00B2). Trim " + GMP_FINISH.trimKgDay + " kg/vardiya/istasyon makine destekli varsay\u0131m."
+    note: ti("staff.note", { canopy: STAFF_RULES.canopyM2PerGrower, trim: GMP_FINISH.trimKgDay })
   };
 }
 
@@ -372,9 +374,8 @@ function skillGrams() {
 }
 
 function skillLabel(key) {
-  if (key === "custom") return "\u00d6zel";
-  const sk = YIELD_SKILL[key] || YIELD_SKILL.mid;
-  return sk.label;
+  if (key === "custom") return ti("preset.custom");
+  return ti("skill." + key) || ((YIELD_SKILL[key] || YIELD_SKILL.mid).label);
 }
 
 function cultivarYieldRel(g) {
@@ -1688,36 +1689,37 @@ function simulate(s) {
     const tight = (mixEarly.length && !cycleOverride)
       ? mixEarly.filter(function (c) { return c.flowerDays + turnaround > cycleFlower + 0.5; }).map(function (c) { return c.name; }).join(", ")
       : "";
-    alerts.push({ t: "bad", m: harvestsInt + " hasat/oda/y\u0131l i\u00e7in \u00e7i\u00e7eklenme en fazla " + maxFlowerDays(harvestsInt) + " g\u00fcn olabilir" + (tight ? (" \u2014 s\u0131k\u0131\u015fan: " + tight) : "") + "." });
+    alerts.push({ t: "bad", m: ta("harvestBad", { harvests: harvestsInt, max: maxFlowerDays(harvestsInt), tight: tight }) });
   } else {
-    alerts.push({ t: "ok", m: "Her oda y\u0131lda " + harvestsInt + " hasat (\u00e7evrim " + fmt(cycleFlower, 1) + " g\u00fcn). Y\u0131ll\u0131k bitki = hasattaki bitki \u00d7 takvim hasad\u0131." });
+    alerts.push({ t: "ok", m: ta("harvestOk", { harvests: harvestsInt, cycle: fmt(cycleFlower, 1) }) });
   }
   if (cal.harvestWant && cal.harvestsByRoom && cal.harvestsByRoom.some(function (n) { return n < cal.harvestWant; })) {
-    alerts.push({ t: "warn", m: "Takvimde hasat haftalar\u0131 \u00e7ak\u0131\u015ft\u0131\u011f\u0131 i\u00e7in baz\u0131 odalarda " + cal.harvestWant + " yerine daha az hasat say\u0131ld\u0131. Y\u0131ll\u0131k bitki ger\u00e7ek hasat adedine g\u00f6re." });
+    alerts.push({ t: "warn", m: ta("harvestConflict", { want: cal.harvestWant }) });
   }
   if (roomM2 > 300.5) {
-    alerts.push({ t: "bad", m: "Oda alan\u0131 \u00fcst s\u0131n\u0131r\u0131 300 m\u00B2." });
+    alerts.push({ t: "bad", m: ta("roomMax") });
   }
-  alerts.push({ t: "ok", m: "Kurutma kural\u0131: her \u00e7i\u00e7ek odas\u0131 hasad\u0131 kendi kurutma odas\u0131na gider. Oda " + (s.dryDays || 14) + " g\u00fcn kurur, sonra " + (s.dryCleanDays || 7) + " g\u00fcn temizlenir; bu s\u00fcrede ba\u015fka hasat giremez." });
+  alerts.push({ t: "ok", m: ta("dryRule", { dry: s.dryDays || 14, clean: s.dryCleanDays || 7 }) });
   if (cal.unassigned > 0) {
-    alerts.push({ t: "bad", m: "Kurutma yetersiz: " + s.dryRooms + " oda var, " + cal.unassigned + " hasat s\u0131rada bekliyor. " + s.flowerRooms + " \u00e7i\u00e7ek odas\u0131 i\u00e7in " + drySuggest + " kurutma odas\u0131 gerekir." });
+    alerts.push({ t: "bad", m: ta("dryBad", { rooms: s.dryRooms, wait: cal.unassigned, flower: s.flowerRooms, need: drySuggest }) });
   } else if (s.dryRooms > drySuggest + 1) {
-    alerts.push({ t: "warn", m: "Kurutma odas\u0131 (" + s.dryRooms + ") ihtiyac\u0131n (" + drySuggest + ") \u00fczerinde \u2014 GMP maliyeti artar." });
+    alerts.push({ t: "warn", m: ta("dryWarn", { rooms: s.dryRooms, need: drySuggest }) });
   } else {
-    alerts.push({ t: "ok", m: "Kurutma: " + s.dryRooms + " oda yeterli (ihtiya\u00e7 " + drySuggest + ", tepe " + cal.peakDry + ")." });
+    alerts.push({ t: "ok", m: ta("dryOk", { rooms: s.dryRooms, need: drySuggest, peak: cal.peakDry }) });
   }
   alerts.push({
     t: "ok",
-    m: "GACP \u00e7i\u00e7ek \u00f6ncesi: veg+pre-veg ~%" + Math.round(100 * (preVeg + veg) / Math.max(1, s.flowerArea)) +
-      " \u00e7i\u00e7ek kanopisi (hedef %20\u201330); ana\u00e7+banka+\u00e7elik " +
-      Math.round(motherProd + motherBank + cuttings) + " m\u00B2 (yo\u011fun \u00e7elik / ana\u00e7 ~%2,5 kanopi)."
+    m: ta("gacpVeg", {
+      pct: Math.round(100 * (preVeg + veg) / Math.max(1, s.flowerArea)),
+      m2: Math.round(motherProd + motherBank + cuttings)
+    })
   });
   if (density > 10) {
-    alerts.push({ t: "warn", m: "Yo\u011funluk " + fmt(density, 1) + " bitki/m\u00B2 \u2014 ticari bench genelde ~7\u201311 /m\u00B2 (0,65\u20131 /ft\u00B2); SOG daha y\u00fcksek. Bitki ba\u015f\u0131 verim d\u00fc\u015fer; kanopi hastal\u0131k ve tekd\u00fczelik riski artar (Frontiers/Horticulturae)." });
+    alerts.push({ t: "warn", m: ta("densityHigh", { d: fmt(density, 1) }) });
   }
-  alerts.push({ t: "ok", m: "\u00dcretim seviyesi " + skillLabel(s.yieldSkill) + " \u2014 " + fmt(yieldRef, 0) + " g/bitki (5,5 /m\u00B2). Genetik katalog \u00b1%18 sapar. Yo\u011funluk art\u0131nca bitki ba\u015f\u0131 d\u00fc\u015fer, m\u00B2 doyarak artar (\u015fimdi ort. " + fmt(yieldUse, 0) + " g/bitki \u00b7 " + fmt(gM2Avg, 0) + " g/m\u00B2)." });
+  alerts.push({ t: "ok", m: ta("yieldLevel", { skill: skillLabel(s.yieldSkill), ref: fmt(yieldRef, 0), use: fmt(yieldUse, 0), gm2: fmt(gM2Avg, 0) }) });
   if (densityOverride && stats && Math.abs(stats.dens - density) > 1) {
-    alerts.push({ t: "warn", m: "Se\u00e7ilen genetik ortalama " + fmt(stats.dens, 1) + " bitki/m\u00B2 \u00f6nerir; kayd\u0131r\u0131c\u0131 " + fmt(density, 1) + " (manuel yo\u011funluk)." });
+    alerts.push({ t: "warn", m: ta("geneticsDensity", { gen: fmt(stats.dens, 1), cur: fmt(density, 1) }) });
   }
   if (!densityOverride && roomModels.length) {
     const seenR = {};
@@ -1730,65 +1732,69 @@ function simulate(s) {
     Object.keys(seenR).forEach(function (id) {
       const x = seenR[id];
       const nm = x.r.g ? x.r.g.name.split(" ")[0] : "Oda";
-      bits.push(nm + " " + x.n + " oda \u00b7 " + fmt(x.r.dens, 1) + "/m\u00B2 \u00b7 " + x.r.plants + " hasatta \u00d7 " + x.r.harvests + " hasat");
+      bits.push(nm + " " + x.n + " " + ti("unit.rooms") + " · " + fmt(x.r.dens, 1) + "/m² · " + x.r.plants + " × " + x.r.harvests + " " + ti("unit.harvest"));
     });
-    alerts.push({ t: "ok", m: "Oda modeli genetik bitki/m\u00B2 ile: " + bits.join(" \u00b7 ") + ". Y\u0131ll\u0131k bitki " + fmt(plantsYear) + " (hasattaki bitki \u00d7 y\u0131ll\u0131k hasat)." });
+    alerts.push({ t: "ok", m: ta("roomModel", { bits: bits.join(" · "), plants: fmt(plantsYear) }) });
   }
   if (cal.gmpIdleWeeks > 8) {
-    alerts.push({ t: "warn", m: "GMP kurutma " + cal.gmpIdleWeeks + " hafta bo\u015f kal\u0131yor." });
+    alerts.push({ t: "warn", m: ta("gmpIdle", { w: cal.gmpIdleWeeks }) });
   }
   if (!layout.hangOk) {
-    alerts.push({ t: "bad", m: "Kurutma taban\u0131 yetersiz: " + layout.dryRoomM2 + " m\u00B2 \u00d7 " + layout.tiers + " kat = " + layout.hangEq + " m\u00B2 as\u0131; bir \u00e7i\u00e7ek hasad\u0131 " + layout.hangNeed + " m\u00B2 ister." });
+    alerts.push({ t: "bad", m: ta("hangBad", { base: layout.dryRoomM2, tiers: layout.tiers, eq: layout.hangEq, need: layout.hangNeed }) });
   } else {
-    alerts.push({ t: "ok", m: "Kurutma boyutu: \u00e7i\u00e7ek odas\u0131 " + Math.round(s.roomM2) + " m\u00B2 \u2192 " + layout.tiers + " katta taban " + layout.dryRoomM2 + " m\u00B2 (\u2265 oda/" + layout.tiers + "). As\u0131 e\u015fde\u011feri " + layout.hangEq + " m\u00B2." });
+    alerts.push({ t: "ok", m: ta("hangOk", { room: Math.round(s.roomM2), tiers: layout.tiers, base: layout.dryRoomM2, eq: layout.hangEq }) });
   }
-  alerts.push({ t: "ok", m: "Kurutma \u00e7\u0131k\u0131\u015f\u0131 trim \u2192 paket kuyru\u011funa gider (FIFO, 5 g\u00fcn/hafta). Trim " + trimSp.stations + " istasyon \u00d7 " + trimSp.kgDay + " kg/vardiya, kasa " + trimSp.vaultKg + " kg. Paket " + packSp.stations + " istasyon \u00d7 " + packSp.kgDay + " kg/vardiya, kasa " + packSp.vaultKg + " kg. Ekstrakt pay\u0131 paketlemeye girmez." });
+  alerts.push({ t: "ok", m: ta("trimFlow", { ts: trimSp.stations, tkg: trimSp.kgDay, tv: trimSp.vaultKg, ps: packSp.stations, pkg: packSp.kgDay, pv: packSp.vaultKg }) });
   if (post.tooBig) {
-    alerts.push({ t: "bad", m: "Bir \u00e7i\u00e7ek hasad\u0131 " + fmt(post.maxBatchKg, 0) + " kg; trim kasas\u0131 yaln\u0131z " + trimSp.vaultKg + " kg. Bu kadar \u00fcr\u00fcn k\u00fc\u00e7\u00fck trim odas\u0131na s\u0131\u011fmaz. Trim en az " + post.trimNeed + " m\u00B2 olmal\u0131." });
+    alerts.push({ t: "bad", m: ta("batchBig", { kg: fmt(post.maxBatchKg, 0), vault: trimSp.vaultKg, need: post.trimNeed }) });
   } else if (post.avgFail || post.packAvgFail || post.diverging) {
-    alerts.push({ t: "bad", m: "Y\u0131ll\u0131k " + fmt(post.annualKg, 0) + " kg kuru \u00e7i\u00e7ek bu hattan ge\u00e7emez (trim " + fmt(trimSp.kgDay * 5 / 7, 1) + " / paket " + fmt(packSp.kgDay * 5 / 7, 1) + " kg/takvim g\u00fcn\u00fc). \u00d6nerilen trim " + post.trimNeed + " m\u00B2, paket " + post.packNeed + " m\u00B2." });
+    alerts.push({ t: "bad", m: ta("throughputBad", { kg: fmt(post.annualKg, 0), trim: fmt(trimSp.kgDay * 5 / 7, 1), pack: fmt(packSp.kgDay * 5 / 7, 1), trimM2: post.trimNeed, packM2: post.packNeed }) });
   } else if (post.maxHold > 3) {
-    alerts.push({ t: "bad", m: "Kurutma bitti ama trim/paket kasas\u0131 dolu \u2014 \u00fcr\u00fcn kuru odada tepe " + post.maxHold + " g\u00fcn bekler. Temizlik gecikir, sonraki hasat kilitlenir. Trim " + layout.trimM2 + " / paket " + layout.packM2 + " m\u00B2 yetersiz; \u00f6nerilen " + post.trimNeed + " / " + post.packNeed + " m\u00B2." });
+    alerts.push({ t: "bad", m: ta("vaultHold", { days: post.maxHold, trim: layout.trimM2, pack: layout.packM2, trimNeed: post.trimNeed, packNeed: post.packNeed }) });
   } else if (layout.trimM2 < post.trimNeed - 1 || layout.packM2 < post.packNeed - 1) {
-    alerts.push({ t: "warn", m: "Trim " + layout.trimM2 + " m\u00B2 / paket " + layout.packM2 + " m\u00B2 tepe y\u00fcke dar (kuyruk " + fmt(post.peakTrimQ, 0) + " / " + fmt(post.peakPackQ, 0) + " kg). Rahat ak\u0131\u015f: trim " + post.trimNeed + " m\u00B2, paket " + post.packNeed + " m\u00B2." });
+    alerts.push({ t: "warn", m: ta("trimTight", { trim: layout.trimM2, pack: layout.packM2, tq: fmt(post.peakTrimQ, 0), pq: fmt(post.peakPackQ, 0), trimNeed: post.trimNeed, packNeed: post.packNeed }) });
   } else {
-    alerts.push({ t: "ok", m: "Trim/paket yeterli: tepe kuyruk " + fmt(post.peakTrimQ, 0) + " kg trim / " + fmt(post.peakPackQ, 0) + " kg paket. Kurutma \u00e7\u0131k\u0131\u015f\u0131 bekletmeden al\u0131n\u0131yor." });
+    alerts.push({ t: "ok", m: ta("trimOk", { tq: fmt(post.peakTrimQ, 0), pq: fmt(post.peakPackQ, 0) }) });
   }
-  alerts.push({ t: "ok", m: "Yerle\u015fim: veg / pre-veg / \u00e7elik alan\u0131 = \u00e7i\u00e7ek m\u00B2 \u00d7 (a\u015fama s\u00fcresi / \u00e7i\u00e7ek s\u00fcresi) / yo\u011funluk katsay\u0131s\u0131. Ana\u00e7 genetik say\u0131s\u0131yla b\u00fcy\u00fcr." });
+  alerts.push({ t: "ok", m: ta("layoutRule") });
   if (s.alloc && s.alloc.rows && s.alloc.rows.length) {
-    const dist = s.alloc.rows.map(function (r) { return r.c.name + " " + r.rooms + " oda"; }).join(", ");
+    const dist = s.alloc.rows.map(function (r) { return r.c.name + " " + r.rooms + " " + ti("unit.room"); }).join(", ");
     if (!s.alloc.match) {
-      if (s.alloc.trim) alerts.push({ t: "warn", m: "Oda da\u011f\u0131l\u0131m\u0131 " + s.alloc.assigned + ", tesis " + s.flowerRooms + " oda. Fazlas\u0131 sim\u00fclasyonda k\u0131rp\u0131ld\u0131 (" + dist + ")." });
-      else if (s.alloc.fill) alerts.push({ t: "warn", m: "Oda da\u011f\u0131l\u0131m\u0131 " + s.alloc.assigned + " / " + s.flowerRooms + ". Bo\u015f odalar " + s.alloc.rows[0].c.name + " ile dolduruldu (" + dist + ")." });
+      if (s.alloc.trim) alerts.push({ t: "warn", m: ta("allocTrim", { assigned: s.alloc.assigned, total: s.flowerRooms, dist: dist }) });
+      else if (s.alloc.fill) alerts.push({ t: "warn", m: ta("allocFill", { assigned: s.alloc.assigned, total: s.flowerRooms, name: s.alloc.rows[0].c.name, dist: dist }) });
     } else {
-      alerts.push({ t: "ok", m: "Oda da\u011f\u0131l\u0131m\u0131: " + dist + " (" + s.flowerRooms + "/" + s.flowerRooms + ")." });
+      alerts.push({ t: "ok", m: ta("allocOk", { dist: dist, total: s.flowerRooms }) });
     }
   } else if (s.alloc && s.alloc.empty) {
-    alerts.push({ t: "warn", m: "Oda say\u0131s\u0131 girilmedi \u2014 se\u00e7ilen genetiklere e\u015fit da\u011f\u0131t\u0131ld\u0131." });
+    alerts.push({ t: "warn", m: ta("allocEmpty") });
   }
   if (mix.length) {
     const kgBits = mix.map(function (c) {
       const kg = kgById[c.id];
       return c.name + (kg != null ? (" " + fmt(kg, 0) + " kg") : "");
     }).join(", ");
-    alerts.push({ t: "ok", m: "Genetik (oda a\u011f\u0131rl\u0131kl\u0131): " + kgBits + " \u00b7 ort. \u00e7i\u00e7ek " + flowerDaysUse + " g\u00fcn / yo\u011funluk ayarl\u0131 " + fmt(yieldUse, 0) + " g/bitki / ham ya\u011f %" + Math.round(((stats && stats.extractY) || 0.12) * 100) + "." });
+    alerts.push({ t: "ok", m: ta("geneticsMix", { bits: kgBits, flower: flowerDaysUse, yield: fmt(yieldUse, 0), oil: Math.round(((stats && stats.extractY) || 0.12) * 100) }) });
   }
   if (extractFeed > 0) {
-    alerts.push({ t: ex.overCap ? "warn" : "ok", m: "Ekstraksiyon scCO\u2082 (TR indikatif, KDV hari\u00e7): " + fmt(extractFeed, 0) + " kg kuru \u00e7i\u00e7ek/y\u0131l (~" + fmt(ex.kgDay, 1) + " / " + fmt(ex.ratedKgDay, 0) + " kg/g\u00fcn). 1. ad\u0131m Caladrius 450 X 2\u00d730 L + 2\u00d710 L seperat\u00f6r + 5 L terpen tutucu (max 450 bar / 80 \u00b0C; seperat\u00f6r 150 bar / 40 \u00b0C). 2\u20133. ad\u0131m Isolute X dist+kristal " + fmt(ex.isoluteKgDay, 0) + " kg ya\u011f/g\u00fcn. Ham ya\u011f " + fmt(ex.crudeKg, 0) + " kg \u2192 sat\u0131lan distilat " + fmt(ex.productKg, 0) + " kg. Ekipman " + eur(ex.capexEq) + " \u00b7 CO\u2082 geri kazan\u0131m %95\u201398 \u00b7 C1D2 yok \u00b7 8 sa / 1 vardiya." });
-    if (ex.overCap) alerts.push({ t: "bad", m: "Besleme Caladrius/Isolute anma kapasitesini a\u015f\u0131yor \u2014 ek hat veya ikinci vardiya gerekir." });
+    alerts.push({ t: ex.overCap ? "warn" : "ok", m: ta("extractLine", { feed: fmt(extractFeed, 0), day: fmt(ex.kgDay, 1), rated: fmt(ex.ratedKgDay, 0), crude: fmt(ex.crudeKg, 0), product: fmt(ex.productKg, 0), capex: eur(ex.capexEq) }) });
+    if (ex.overCap) alerts.push({ t: "bad", m: ta("extractOver") });
   }
   alerts.push({
     t: "ok",
-    m: "Sat\u0131\u015f rampas\u0131: y\u0131l 1\u2013" + PRICE_RAMP.gacpYears + " GACP \u00e7i\u00e7ek " + eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) +
-      "/kg (" + eur(flowerRevenueGacp) + ") \u00b7 y\u0131l " + (PRICE_RAMP.gacpYears + 1) + "+ EU-GMP " +
-      eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + "/kg (" + eur(flowerRevenueGmp) + ")" +
-      (extractFeed > 0 ? (" + distilat " + fmt(extractSoldKg, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + "/kg") : "") +
-      ". Geri \u00f6deme bu rampa ile."
+    m: ta("salesRamp", {
+      gacpY: PRICE_RAMP.gacpYears,
+      gacpP: eur(s.priceKgGacp != null ? s.priceKgGacp : 2500),
+      gacpR: eur(flowerRevenueGacp),
+      gmpY: PRICE_RAMP.gacpYears + 1,
+      gmpP: eur(s.priceKgGmp != null ? s.priceKgGmp : 3500),
+      gmpR: eur(flowerRevenueGmp),
+      ex: extractFeed > 0 ? (fmt(extractSoldKg, 0) + " kg × " + eur(s.extractPriceKg || 0) + "/kg") : ""
+    })
   });
-  alerts.push({ t: "ok", m: "OPEX v3: yeti\u015ftirme elektrik ~2,2 kWh/g @ 0,10 \u20AC/kWh (LED+HVAC), G&A/sigorta/g\u00fcvenlik, d\u0131\u015f COA/hasat, lisans, Cannactive girdiler, scCO\u2082 i\u015fletme (1,4 kWh/kg biyok\u00fctle, bak\u0131m %3,5). Distilat geri kazan\u0131m %72." });
+  alerts.push({ t: "ok", m: ta("opexV3") });
   alerts.push({
     t: "ok",
-    m: "Kadro modeli: " + staffBase + " FTE taban + hasat g\u00fcn\u00fc +" + staff.peakExtra + " = " + harvestCrew + " ki\u015fi. " + staff.note
+    m: ta("staffModel", { base: staffBase, peak: staff.peakExtra, total: harvestCrew, note: staff.note })
   });
 
   return {
@@ -1818,18 +1824,21 @@ function kpiMain(num, unit, euro) {
 
 function renderKpis(m, s) {
   const soldEx = m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0;
+  const paybackTxt = Number.isFinite(m.payback) ? fmt(m.payback, 1) + " " + ti("unit.year") : "\u2014";
+  const countryName = (m.market && m.market.country && window.TKTS_i18n)
+    ? window.TKTS_i18n.countryDisplay(m.market.country) : (m.market && m.market.country) || "";
   const items = [
-    ["Y\u0131ll\u0131k bitki", kpiMain(fmt(m.plantsYear), ""), fmt(m.plantsInFlower, 0) + " hasatta \u00b7 " + fmt(m.harvestsYear, 0) + " hasat/y\u0131l", ""],
-    ["Oda alan\u0131", kpiMain(fmt(s.roomM2, 0), "m\u00B2"), "\u00fcst s\u0131n\u0131r 300 m\u00B2 \u00b7 toplam " + m2(s.flowerArea), s.roomM2 > 300.5 ? "warn" : ""],
-    ["Kurutma", kpiMain(String(s.dryRooms), ""), "ihtiya\u00e7 " + m.drySuggest + " \u00b7 trim kuyruk " + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + " kg \u00b7 trim/paket " + ((m.postDry && m.postDry.trimNeed) || 0) + "/" + ((m.postDry && m.postDry.packNeed) || 0) + " m\u00B2",
+    [ti("kpi.plantsYear"), kpiMain(fmt(m.plantsYear), ""), ti("kpi.inFlower", { n: fmt(m.plantsInFlower, 0), h: fmt(m.harvestsYear, 0) }), ""],
+    [ti("kpi.roomArea"), kpiMain(fmt(s.roomM2, 0), "m\u00B2"), ti("kpi.roomCap", { area: m2(s.flowerArea) }), s.roomM2 > 300.5 ? "warn" : ""],
+    [ti("kpi.drying"), kpiMain(String(s.dryRooms), ""), ti("kpi.drySub", { need: m.drySuggest, q: fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0), trim: (m.postDry && m.postDry.trimNeed) || 0, pack: (m.postDry && m.postDry.packNeed) || 0 }),
       (m.cal.unassigned || (m.postDry && (m.postDry.tooBig || m.postDry.avgFail || m.postDry.diverging || (m.postDry.maxHold > 3)))) ? "warn" : ""],
-    ["Kuru \u00e7i\u00e7ek", kpiMain(fmt(m.kgYear, 0), "kg"), fmt(m.gM2Avg || 0, 0) + " g/m\u00B2 \u00b7 sat\u0131lan " + fmt(m.kgFlowerSold, 0) + " kg \u00b7 distilat " + fmt(soldEx, 0) + " kg", ""],
-    ["Has\u0131lat", kpiMain(fmt(m.revenue), "", true), "Y3+ EU-GMP \u00b7 Y1\u20132 GACP " + eur(m.revenueGacp || 0), ""],
-    ["CAPEX", kpiMain(fmt(m.capex), "", true), "marj Y3+ " + eur(m.ebitda) + " \u00b7 geri \u00f6deme " + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014") + " (rampa)", m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
-    ["Kadro", kpiMain(String(m.staffBase), "FTE"), "hasat g\u00fcn\u00fc " + m.harvestCrew + " \u00b7 " + ((m.staff && m.staff.roles) ? m.staff.roles.length : 0) + " g\u00f6rev hatt\u0131", ""]
+    [ti("kpi.dryFlower"), kpiMain(fmt(m.kgYear, 0), "kg"), ti("kpi.dryFlowerSub", { gm2: fmt(m.gM2Avg || 0, 0), sold: fmt(m.kgFlowerSold, 0), ex: fmt(soldEx, 0) }), ""],
+    [ti("kpi.revenue"), kpiMain(fmt(m.revenue), "", true), ti("kpi.revenueSub", { gacp: eur(m.revenueGacp || 0) }), ""],
+    [ti("kpi.capex"), kpiMain(fmt(m.capex), "", true), ti("kpi.capexSub", { ebitda: eur(m.ebitda), payback: paybackTxt }), m.payback < 5 ? "good" : m.payback < 8 ? "warn" : ""],
+    [ti("kpi.staff"), kpiMain(String(m.staffBase), "FTE"), ti("kpi.staffSub", { crew: m.harvestCrew, roles: ((m.staff && m.staff.roles) ? m.staff.roles.length : 0) }), ""]
   ];
   if (m.market && m.market.projection && m.market.projection.sharePct != null) {
-    items.splice(4, 0, ["Pazar pay\u0131", kpiMain(pct(m.market.projection.sharePct), ""), (m.market.country || "") + " \u00b7 talep ~" + fmt(m.market.projection.demandKg, 0) + " kg", m.market.projection.sharePct > 8 ? "warn" : m.market.projection.sharePct < 0.05 ? "warn" : "good"]);
+    items.splice(4, 0, [ti("kpi.share"), kpiMain(pct(m.market.projection.sharePct), ""), ti("kpi.shareSub", { country: countryName, kg: fmt(m.market.projection.demandKg, 0) }), m.market.projection.sharePct > 8 ? "warn" : m.market.projection.sharePct < 0.05 ? "warn" : "good"]);
   }
   el("kpis").innerHTML = items.map(function (row) {
     return "<article class=\"kpi " + row[3] + "\"><div class=\"label\">" + row[0] + "</div><div class=\"value\">" + row[1] + "</div><div class=\"sub\">" + row[2] + "</div></article>";
@@ -1860,11 +1869,7 @@ function mSize(area, aspect) {
 function activePresetLabel() {
   const b = document.querySelector(".presets button.active");
   const key = b && b.getAttribute("data-key");
-  const names = {
-    pilot: "Pilot", dengeli: "Dengeli", yuksek: "Y\u00fcksek kapasite",
-    faz2: "Geni\u015fleme", custom: "\u00d6zel"
-  };
-  return names[key] || "\u00d6zel";
+  return ti("preset." + (key || "custom"));
 }
 
 function buildConceptSvg(m, s, currentWeek) {
@@ -2496,6 +2501,7 @@ function renderPlan(m, s, currentWeek) {
 }
 
 function renderCalendar(m) {
+  const u = function (k) { return ti("unit." + k); };
   const cell = function (w, cls, title) {
     const now = w === week ? " now" : "";
     const on = w === week ? " outline:1px solid #d4c49a;" : "";
@@ -2505,95 +2511,96 @@ function renderCalendar(m) {
   const rows = m.cal.rooms.map(function (row, i) {
     const g = m.cal.roomCultivars && m.cal.roomCultivars[i];
     const short = g ? (" \u00b7 " + g.name.split(" ")[0]) : "";
-    return "<div class=\"week-row\"><b>\u00c7i\u00e7ek " + (i + 1) + short + "</b>" + row.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " " + c + (g ? (" " + g.name) : "")); }).join("") + "</div>";
+    return "<div class=\"week-row\"><b>" + ti("cal.flower") + " " + (i + 1) + short + "</b>" + row.map(function (c, w) { return cell(w, c, "H" + (w + 1) + " " + c + (g ? (" " + g.name) : "")); }).join("") + "</div>";
   }).join("");
   const dry = m.cal.dryRows.map(function (row, i) {
-    return "<div class=\"week-row\"><b>Kurutma " + (i + 1) + "</b>" + row.map(function (c, w) {
+    return "<div class=\"week-row\"><b>" + ti("cal.dry") + " " + (i + 1) + "</b>" + row.map(function (c, w) {
       const batch = m.cal.dryOcc[i][w] || "";
-      const who = batch ? (" \u00c7i\u00e7ek " + String(batch).replace("C", "")) : " bo\u015f";
-      return cell(w, c, "H" + (w + 1) + who + (c === "clean" ? " temizlik" : ""));
+      const who = batch ? (" " + ti("cal.flower") + " " + String(batch).replace("C", "")) : " " + u("empty");
+      return cell(w, c, "H" + (w + 1) + who + (c === "clean" ? " " + u("clean") : ""));
     }).join("") + "</div>";
   }).join("");
   const trimRow = (m.cal.trimWeeks || Array(52).fill("idle")).map(function (c, w) {
     const who = flowerTagLabel(m.cal.trimOcc && m.cal.trimOcc[w]);
     const kg = (m.cal.trimKgW && m.cal.trimKgW[w]) || 0;
     const extra = who ? (" " + who + (kg ? (" " + fmt(kg, 0) + " kg") : "")) : "";
-    return cell(w, c, "H" + (w + 1) + extra + (c === "trim" ? " trim" : c === "hold" ? " kuru bekler" : " bo\u015f"));
+    return cell(w, c, "H" + (w + 1) + extra + (c === "trim" ? " trim" : c === "hold" ? " " + u("hold") : " " + u("empty")));
   }).join("");
   const packRow = (m.cal.packWeeks || Array(52).fill("idle")).map(function (c, w) {
     const who = flowerTagLabel(m.cal.packOcc && m.cal.packOcc[w]);
     const kg = (m.cal.packKgW && m.cal.packKgW[w]) || 0;
     const extra = who ? (" " + who + (kg ? (" " + fmt(kg, 0) + " kg") : "")) : "";
-    return cell(w, c, "H" + (w + 1) + extra + (c === "pack" ? " paket" : " bo\u015f"));
+    return cell(w, c, "H" + (w + 1) + extra + (c === "pack" ? " " + u("pack") : " " + u("empty")));
   }).join("");
   el("calendar").innerHTML = "<div class=\"cal-grid\">" + head + rows + dry +
-    "<div class=\"week-row\"><b>Trim</b>" + trimRow + "</div>" +
-    "<div class=\"week-row\"><b>Paket</b>" + packRow + "</div></div>";
+    "<div class=\"week-row\"><b>" + ti("cal.trim") + "</b>" + trimRow + "</div>" +
+    "<div class=\"week-row\"><b>" + ti("cal.pack") + "</b>" + packRow + "</div></div>";
 }
 
 function renderTables(m, s) {
+  const exKg = m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0;
   el("econ").innerHTML =
-    "<table><tr><th>Kalem</th><th></th></tr>" +
-    "<tr><td>Indoor GACP</td><td class=\"num\">" + eur(m.gacpCapex) + "</td></tr>" +
-    "<tr><td>GMP</td><td class=\"num\">" + eur(m.gmpCapex) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon ekipman (Caladrius 450 X + Isolute X, KDV hari\u00e7)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon GMP oda (scCO2)</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
-    "<tr><td>Stabilite</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
-    "<tr><td>Ofis</td><td class=\"num\">" + eur(m.officeCapex) + "</td></tr>" +
-    "<tr><td><strong>Toplam CAPEX</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
-    "<tr><td>Substrate (pot+coco+perlit)</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
-    "<tr><td>Su + g\u00fcbre + asit + otomasyon</td><td class=\"num\">" + eur(m.opex.waterFert) + "</td></tr>" +
-    "<tr><td>\u0130\u015f\u00e7ilik</td><td class=\"num\">" + eur(m.opex.labor) + "</td></tr>" +
-    "<tr><td>Malzeme (IPM, dripper, kurutma)</td><td class=\"num\">" + eur(m.opex.materials) + "</td></tr>" +
-    "<tr><td>Elektrik (ayd\u0131nlatma+HVAC)</td><td class=\"num\">" + eur(m.opex.energy || 0) + "</td></tr>" +
-    "<tr><td>G&A / sigorta / COA / lisans</td><td class=\"num\">" + eur(m.opex.ga || 0) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon i\u015fletme</td><td class=\"num\">" + eur(m.opex.extract || 0) + "</td></tr>" +
-    "<tr><td><strong>Toplam OPEX</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
-    "<tr><td>OPEX / g sat\u0131labilir</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
-    "<tr><td>\u00c7i\u00e7ek GACP y\u0131l 1\u20132 (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) + ")</td><td class=\"num\">" + eur(m.flowerRevenueGacp || 0) + "</td></tr>" +
-    "<tr><td>\u00c7i\u00e7ek EU-GMP y\u0131l 3+ (" + fmt(m.kgFlowerSold, 0) + " kg \u00d7 " + eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) + ")</td><td class=\"num\">" + eur(m.flowerRevenueGmp || 0) + "</td></tr>" +
-    "<tr><td>Ekstrakt sat\u0131\u015f\u0131 (" + fmt(m.extract ? (m.extract.productKg != null ? m.extract.productKg : m.extract.crudeKg) : 0, 0) + " kg \u00d7 " + eur(s.extractPriceKg || 0) + ")</td><td class=\"num\">" + eur(m.extractRevenue || 0) + "</td></tr>" +
-    "<tr><td>Has\u0131lat / marj y\u0131l 1\u20132 (GACP)</td><td class=\"num\">" + eur(m.revenueGacp || 0) + " / " + eur(m.ebitdaGacp || 0) + "</td></tr>" +
-    "<tr><td>Has\u0131lat / marj y\u0131l 3+ (EU-GMP)</td><td class=\"num\">" + eur(m.revenueGmp || 0) + " / " + eur(m.ebitdaGmp || 0) + "</td></tr>" +
-    "<tr><td><strong>Toplam has\u0131lat (olgun Y3+)</strong></td><td class=\"num\"><strong>" + eur(m.revenue) + "</strong></td></tr>" +
-    "<tr><td>Marj olgun (has\u0131lat \u2212 OPEX)</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr>" +
-    "<tr><td>Geri \u00f6deme (GACP\u2192GMP rampa)</td><td class=\"num\">" + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " y\u0131l" : "\u2014") + "</td></tr></table>";
+    "<table><tr><th>" + ti("table.item") + "</th><th></th></tr>" +
+    "<tr><td>" + ti("table.indoorGacp") + "</td><td class=\"num\">" + eur(m.gacpCapex) + "</td></tr>" +
+    "<tr><td>" + ti("table.gmp") + "</td><td class=\"num\">" + eur(m.gmpCapex) + "</td></tr>" +
+    "<tr><td>" + ti("table.extractEq") + "</td><td class=\"num\">" + eur(m.extract ? m.extract.capexEq : 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.extractRoom") + "</td><td class=\"num\">" + eur(m.extract ? m.extract.capexRoom : 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.stability") + "</td><td class=\"num\">" + eur(m.stability) + "</td></tr>" +
+    "<tr><td>" + ti("table.office") + "</td><td class=\"num\">" + eur(m.officeCapex) + "</td></tr>" +
+    "<tr><td><strong>" + ti("table.totalCapex") + "</strong></td><td class=\"num\"><strong>" + eur(m.capex) + "</strong></td></tr>" +
+    "<tr><td>" + ti("table.substrate") + "</td><td class=\"num\">" + eur(m.opex.substrate) + "</td></tr>" +
+    "<tr><td>" + ti("table.waterFert") + "</td><td class=\"num\">" + eur(m.opex.waterFert) + "</td></tr>" +
+    "<tr><td>" + ti("table.labor") + "</td><td class=\"num\">" + eur(m.opex.labor) + "</td></tr>" +
+    "<tr><td>" + ti("table.materials") + "</td><td class=\"num\">" + eur(m.opex.materials) + "</td></tr>" +
+    "<tr><td>" + ti("table.energy") + "</td><td class=\"num\">" + eur(m.opex.energy || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.ga") + "</td><td class=\"num\">" + eur(m.opex.ga || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.extractOps") + "</td><td class=\"num\">" + eur(m.opex.extract || 0) + "</td></tr>" +
+    "<tr><td><strong>" + ti("table.totalOpex") + "</strong></td><td class=\"num\"><strong>" + eur(m.opexYear) + "</strong></td></tr>" +
+    "<tr><td>" + ti("table.opexPerG") + "</td><td class=\"num\">" + fmt(m.opexPerG, 2) + " \u20AC</td></tr>" +
+    "<tr><td>" + ti("table.flowerGacp", { kg: fmt(m.kgFlowerSold, 0), price: eur(s.priceKgGacp != null ? s.priceKgGacp : 2500) }) + "</td><td class=\"num\">" + eur(m.flowerRevenueGacp || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.flowerGmp", { kg: fmt(m.kgFlowerSold, 0), price: eur(s.priceKgGmp != null ? s.priceKgGmp : 3500) }) + "</td><td class=\"num\">" + eur(m.flowerRevenueGmp || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.extractSales", { kg: fmt(exKg, 0), price: eur(s.extractPriceKg || 0) }) + "</td><td class=\"num\">" + eur(m.extractRevenue || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.revGacp") + "</td><td class=\"num\">" + eur(m.revenueGacp || 0) + " / " + eur(m.ebitdaGacp || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.revGmp") + "</td><td class=\"num\">" + eur(m.revenueGmp || 0) + " / " + eur(m.ebitdaGmp || 0) + "</td></tr>" +
+    "<tr><td><strong>" + ti("table.totalRev") + "</strong></td><td class=\"num\"><strong>" + eur(m.revenue) + "</strong></td></tr>" +
+    "<tr><td>" + ti("table.ebitda") + "</td><td class=\"num\">" + eur(m.ebitda) + "</td></tr>" +
+    "<tr><td>" + ti("table.payback") + "</td><td class=\"num\">" + (Number.isFinite(m.payback) ? fmt(m.payback, 1) + " " + ti("unit.year") : "\u2014") + "</td></tr></table>";
 
   el("ops").innerHTML =
-    "<table><tr><th>Operasyon</th><th></th></tr>" +
-    "<tr><td>Oda alan\u0131</td><td class=\"num\">" + m2(m.roomM2) + "</td></tr>" +
-    "<tr><td>Bitki / m\u00B2 (oda modeli)</td><td class=\"num\">" + fmt(m.density, 1) + "</td></tr>" +
-    "<tr><td>\u00dcretim seviyesi</td><td class=\"num\">" + skillLabel(s.yieldSkill) + " \u00b7 " + s.yieldG + " g</td></tr>" +
-    "<tr><td>Bitki ba\u015f\u0131 verim (yo\u011funluk ayarl\u0131)</td><td class=\"num\">" + fmt(m.yieldUse, 0) + " g</td></tr>" +
-    "<tr><td>Verim / m\u00B2 (kullan\u0131labilir)</td><td class=\"num\">" + fmt(m.gM2Avg || 0, 0) + " g</td></tr>" +
-    "<tr><td>Bitki / hasat (\u00e7i\u00e7ekte)</td><td class=\"num\">" + fmt(m.plantsInFlower) + "</td></tr>" +
-    "<tr><td>Hasat / oda / y\u0131l (takvim)</td><td class=\"num\">" + fmt(m.cyclesPerRoom, 1) + "</td></tr>" +
-    "<tr><td>Tesis hasad\u0131 / y\u0131l</td><td class=\"num\">" + fmt(m.harvestsYear, 0) + "</td></tr>" +
-    "<tr><td>Y\u0131ll\u0131k bitki (hasat bitkisi \u00d7 hasat)</td><td class=\"num\">" + fmt(m.plantsYear) + "</td></tr>" +
-    "<tr><td>Veg (algoritma)</td><td class=\"num\">" + m2(m.layout ? m.layout.vegM2 : m.veg) + "</td></tr>" +
-    "<tr><td>Pre-veg (algoritma)</td><td class=\"num\">" + m2(m.layout ? m.layout.preVegM2 : m.preVeg) + "</td></tr>" +
-    "<tr><td>\u00c7elik / k\u00f6klendirme</td><td class=\"num\">" + m2(m.layout ? m.layout.cuttingsM2 : 0) + "</td></tr>" +
-    "<tr><td>Kurutma odas\u0131</td><td class=\"num\">" + s.dryRooms + " \u00b7 ihtiya\u00e7 " + m.drySuggest + "</td></tr>" +
-    "<tr><td>Kurutma taban / kat</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + "</td></tr>" +
-    "<tr><td>Trim alan\u0131</td><td class=\"num\">" + (m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.stations) || 0) + " ist. \u00b7 " + ((m.trimSpec && m.trimSpec.kgDay) || 0) + " kg/g \u00b7 kasa " + ((m.trimSpec && m.trimSpec.vaultKg) || 0) + " kg \u00b7 ihtiya\u00e7 " + ((m.postDry && m.postDry.trimNeed) || 0) + "</td></tr>" +
-    "<tr><td>Paket alan\u0131</td><td class=\"num\">" + (m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.stations) || 0) + " ist. \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g \u00b7 kasa " + ((m.packSpec && m.packSpec.vaultKg) || 0) + " kg \u00b7 ihtiya\u00e7 " + ((m.postDry && m.postDry.packNeed) || 0) + "</td></tr>" +
-    "<tr><td>Trim kuyruk / bekleme</td><td class=\"num\">" + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + " kg tepe \u00b7 " + ((m.postDry && m.postDry.maxHold) || 0) + " g\u00fcn kuru odada</td></tr>" +
-    "<tr><td>\u00c7evrim s\u00fcresi</td><td class=\"num\">" + fmt(m.cycleDays) + " g\u00fcn</td></tr>" +
-    "<tr><td>Kadro (FTE / hasat g\u00fcn\u00fc)</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
-    "<tr><td>\u0130\u015f\u00e7ilik saat / y\u0131l</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
-    "<tr><td>Clone / hafta (bufferli)</td><td class=\"num\">" + fmt(m.opex.clonesWeek, 0) + "</td></tr>" +
-    "<tr><td>Ekstraksiyon hatt\u0131</td><td class=\"num\">" + (m.extract && m.extract.m2 ? (m.extract.nCal + "\u00d7 Caladrius \u00b7 " + fmt(m.extract.kgDay, 1) + " / " + fmt(m.extract.ratedKgDay, 0) + " kg/g") : "yok") + "</td></tr>" +
-    "<tr><td>Indoor kapal\u0131 alan</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
+    "<table><tr><th>" + ti("table.operation") + "</th><th></th></tr>" +
+    "<tr><td>" + ti("table.roomArea") + "</td><td class=\"num\">" + m2(m.roomM2) + "</td></tr>" +
+    "<tr><td>" + ti("table.density") + "</td><td class=\"num\">" + fmt(m.density, 1) + "</td></tr>" +
+    "<tr><td>" + ti("table.yieldLevel") + "</td><td class=\"num\">" + skillLabel(s.yieldSkill) + " \u00b7 " + s.yieldG + " g</td></tr>" +
+    "<tr><td>" + ti("table.yieldPlant") + "</td><td class=\"num\">" + fmt(m.yieldUse, 0) + " g</td></tr>" +
+    "<tr><td>" + ti("table.yieldM2") + "</td><td class=\"num\">" + fmt(m.gM2Avg || 0, 0) + " g</td></tr>" +
+    "<tr><td>" + ti("table.plantsHarvest") + "</td><td class=\"num\">" + fmt(m.plantsInFlower) + "</td></tr>" +
+    "<tr><td>" + ti("table.harvestRoom") + "</td><td class=\"num\">" + fmt(m.cyclesPerRoom, 1) + "</td></tr>" +
+    "<tr><td>" + ti("table.harvestFacility") + "</td><td class=\"num\">" + fmt(m.harvestsYear, 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.plantsYear") + "</td><td class=\"num\">" + fmt(m.plantsYear) + "</td></tr>" +
+    "<tr><td>" + ti("table.vegAlgo") + "</td><td class=\"num\">" + m2(m.layout ? m.layout.vegM2 : m.veg) + "</td></tr>" +
+    "<tr><td>" + ti("table.preVegAlgo") + "</td><td class=\"num\">" + m2(m.layout ? m.layout.preVegM2 : m.preVeg) + "</td></tr>" +
+    "<tr><td>" + ti("table.cuttings") + "</td><td class=\"num\">" + m2(m.layout ? m.layout.cuttingsM2 : 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.dryRoom") + "</td><td class=\"num\">" + s.dryRooms + ti("table.dryNeed") + m.drySuggest + "</td></tr>" +
+    "<tr><td>" + ti("table.dryTier") + "</td><td class=\"num\">" + (m.layout ? m.layout.dryRoomM2 : 0) + " m\u00B2 \u00d7 " + (s.dryTiers || 3) + "</td></tr>" +
+    "<tr><td>" + ti("table.trimArea") + "</td><td class=\"num\">" + (m.layout ? m.layout.trimM2 : 0) + " m\u00B2 \u00b7 " + ((m.trimSpec && m.trimSpec.stations) || 0) + ti("table.stations") + ((m.trimSpec && m.trimSpec.kgDay) || 0) + ti("table.kgDay") + ((m.trimSpec && m.trimSpec.vaultKg) || 0) + ti("table.kgVault") + ((m.postDry && m.postDry.trimNeed) || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.packArea") + "</td><td class=\"num\">" + (m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.stations) || 0) + ti("table.stations") + ((m.packSpec && m.packSpec.kgDay) || 0) + ti("table.kgDay") + ((m.packSpec && m.packSpec.vaultKg) || 0) + ti("table.kgVault") + ((m.postDry && m.postDry.packNeed) || 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.trimQueue") + "</td><td class=\"num\">" + fmt((m.postDry && m.postDry.peakTrimQ) || 0, 0) + ti("table.trimPeak") + ((m.postDry && m.postDry.maxHold) || 0) + ti("table.trimHold") + "</td></tr>" +
+    "<tr><td>" + ti("table.cycle") + "</td><td class=\"num\">" + fmt(m.cycleDays) + " " + ti("unit.days") + "</td></tr>" +
+    "<tr><td>" + ti("table.fte") + "</td><td class=\"num\">" + m.staffBase + " / " + m.harvestCrew + "</td></tr>" +
+    "<tr><td>" + ti("table.laborH") + "</td><td class=\"num\">" + fmt(m.opex.laborH, 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.clones") + "</td><td class=\"num\">" + fmt(m.opex.clonesWeek, 0) + "</td></tr>" +
+    "<tr><td>" + ti("table.extractLine") + "</td><td class=\"num\">" + (m.extract && m.extract.m2 ? (m.extract.nCal + "\u00d7 Caladrius \u00b7 " + fmt(m.extract.kgDay, 1) + " / " + fmt(m.extract.ratedKgDay, 0) + " kg/g") : ti("table.none")) + "</td></tr>" +
+    "<tr><td>" + ti("table.indoorTotal") + "</td><td class=\"num\">" + m2(m.totalBuilt) + "</td></tr></table>";
 
   const staffRows = ((m.staff && m.staff.roles) || []).map(function (r) {
-    return "<tr><td><strong>" + r.role + "</strong> <span class=\"muted\">" + r.zone + "</span><div class=\"hint\" style=\"margin:4px 0 0\">" + r.tasks + (r.peak ? " \u00b7 tepe g\u00fcn" : "") + "</div></td><td class=\"num\">" + r.fte + (r.peak ? " *" : "") + "</td></tr>";
+    return "<tr><td><strong>" + r.role + "</strong> <span class=\"muted\">" + r.zone + "</span><div class=\"hint\" style=\"margin:4px 0 0\">" + r.tasks + (r.peak ? ti("staff.peakDay") : "") + "</div></td><td class=\"num\">" + r.fte + (r.peak ? " *" : "") + "</td></tr>";
   }).join("");
   el("ops").innerHTML +=
-    "<table style=\"margin-top:14px\"><tr><th>G\u00f6rev / personel</th><th>FTE</th></tr>" +
+    "<table style=\"margin-top:14px\"><tr><th>" + ti("staff.rolesHead") + "</th><th>FTE</th></tr>" +
     staffRows +
-    "<tr><td><strong>Taban kadro</strong></td><td class=\"num\"><strong>" + m.staffBase + "</strong></td></tr>" +
-    "<tr><td><strong>Hasat g\u00fcn\u00fc toplam</strong></td><td class=\"num\"><strong>" + m.harvestCrew + "</strong></td></tr></table>" +
-    "<p class=\"hint\">" + ((m.staff && m.staff.note) || "") + " * tepe g\u00fcn ekstra.</p>";
+    "<tr><td><strong>" + ti("staff.baseStaff") + "</strong></td><td class=\"num\"><strong>" + m.staffBase + "</strong></td></tr>" +
+    "<tr><td><strong>" + ti("staff.harvestTotal") + "</strong></td><td class=\"num\"><strong>" + m.harvestCrew + "</strong></td></tr></table>" +
+    "<p class=\"hint\">" + ((m.staff && m.staff.note) || "") + " " + ti("staff.peakNote") + "</p>";
 
   el("alerts").innerHTML = m.alerts.map(function (a) { return "<div class=\"alert " + a.t + "\">" + a.m + "</div>"; }).join("");
   renderProcessFlow(m, s, week);
@@ -2618,15 +2625,15 @@ function renderProcessFlow(m, s, currentWeek) {
     ? (pWho + " \u00b7 " + fmt(pKg, 0) + " kg")
     : ((m.layout ? m.layout.packM2 : 0) + " m\u00B2 \u00b7 " + ((m.packSpec && m.packSpec.kgDay) || 0) + " kg/g");
   const nodes = [
-    { name: "Ana\u00e7", sub: (m.motherProd + m.motherBank) + " m\u00B2", cls: "" },
-    { name: "\u00c7elik", sub: s.rootDays + " g\u00fcn", cls: "" },
-    { name: "Pre-veg", sub: s.preVegDays + " g\u00fcn", cls: "" },
-    { name: "Veg", sub: s.vegDays + " g\u00fcn", cls: "" },
-    { name: "\u00c7i\u00e7ek", sub: s.flowerDays + " g\u00fcn \u00b7 " + s.flowerRooms + " oda", cls: "" },
-    { name: "Hasat", sub: fmt(m.cyclesPerRoom, 0) + " / oda / y\u0131l", cls: "" },
-    { name: "Kurutma", sub: s.dryDays + " g\u00fcn \u00b7 temizlik " + s.dryCleanDays + " g\u00fcn \u00b7 " + s.dryRooms + " oda \u00d7 " + (s.dryTiers || 3) + " kat", cls: dryOn ? " live-dry" : "" },
-    { name: "Trim", sub: trimSub + (tw === "hold" ? " \u00b7 bekler" : ""), cls: tw === "hold" ? " live-hold" : (tw === "trim" ? " live-trim" : "") },
-    { name: "Paket", sub: packSub, cls: pw === "pack" ? " live-pack" : "" }
+    { name: ti("flow.mother"), sub: (m.motherProd + m.motherBank) + " m\u00B2", cls: "" },
+    { name: ti("flow.cutting"), sub: s.rootDays + " " + ti("unit.days"), cls: "" },
+    { name: ti("flow.preVeg"), sub: s.preVegDays + " " + ti("unit.days"), cls: "" },
+    { name: ti("flow.veg"), sub: s.vegDays + " " + ti("unit.days"), cls: "" },
+    { name: ti("flow.flower"), sub: s.flowerDays + " " + ti("unit.days") + " \u00b7 " + s.flowerRooms + " " + ti("unit.rooms"), cls: "" },
+    { name: ti("flow.harvest"), sub: fmt(m.cyclesPerRoom, 0) + " / " + ti("unit.room") + " / " + ti("unit.year"), cls: "" },
+    { name: ti("flow.dry"), sub: s.dryDays + " " + ti("unit.days") + " \u00b7 " + ti("unit.clean") + " " + s.dryCleanDays + " \u00b7 " + s.dryRooms + " \u00d7 " + (s.dryTiers || 3) + " " + ti("unit.tiers"), cls: dryOn ? " live-dry" : "" },
+    { name: ti("flow.trim"), sub: trimSub + (tw === "hold" ? " \u00b7 " + ti("flow.wait") : ""), cls: tw === "hold" ? " live-hold" : (tw === "trim" ? " live-trim" : "") },
+    { name: ti("flow.pack"), sub: packSub, cls: pw === "pack" ? " live-pack" : "" }
   ];
   host.innerHTML = nodes.map(function (n, i) {
     return (i ? "<span class=\"arrow\">\u2192</span>" : "") + "<div class=\"node" + n.cls + "\"><strong>" + n.name + "</strong><span>" + n.sub + "</span></div>";
@@ -2642,12 +2649,12 @@ function renderLabels(s, m) {
     roomM2: m2(s.roomM2),
     dryRooms: String(s.dryRooms),
     flowerRooms: String(s.flowerRooms),
-    flowerDays: s.flowerDays + " g\u00fcn",
-    vegDays: s.vegDays + " g\u00fcn",
-    preVegDays: s.preVegDays + " g\u00fcn",
-    rootDays: s.rootDays + " g\u00fcn",
-    dryDays: s.dryDays + " g\u00fcn",
-    dryCleanDays: s.dryCleanDays + " g\u00fcn",
+    flowerDays: s.flowerDays + " " + ti("unit.days"),
+    vegDays: s.vegDays + " " + ti("unit.days"),
+    preVegDays: s.preVegDays + " " + ti("unit.days"),
+    rootDays: s.rootDays + " " + ti("unit.days"),
+    dryDays: s.dryDays + " " + ti("unit.days"),
+    dryCleanDays: s.dryCleanDays + " " + ti("unit.days"),
     yieldG: (m && m.yieldUse != null ? fmt(m.yieldUse, 0) : String(s.yieldG)) + " g",
     yieldSkill: skillLabel(s.yieldSkill) + " \u00b7 " + s.yieldG + " g",
     genetics: String(s.genetics),
@@ -2656,7 +2663,7 @@ function renderLabels(s, m) {
     extractPriceKg: eur(s.extractPriceKg || 0) + "/kg",
     saleablePct: "%" + fmt(s.saleablePct * 100, 0),
     extractPct: "%" + fmt((s.extractPct || 0) * 100, 0),
-    dryTiers: String(s.dryTiers || 3) + " kat",
+    dryTiers: String(s.dryTiers || 3) + " " + ti("unit.tiers"),
     trimM2: m2(s.trimM2 != null ? s.trimM2 : (m && m.layout ? m.layout.trimM2 : 24)),
     packM2: m2(s.packM2 != null ? s.packM2 : (m && m.layout ? m.layout.packM2 : 18))
   };
@@ -2737,12 +2744,14 @@ function render() {
   renderRoomCards(m, s);
   renderCalendar(m);
   renderTables(m, s);
-  el("weekLabel").textContent = "Hafta " + (week + 1);
+  el("weekLabel").textContent = ti("dom.week") + " " + (week + 1);
+  const pb = el("playBtn");
+  if (pb) pb.textContent = playing ? ti("dom.btn.stop") : ti("dom.btn.play");
 }
 
 function play() {
   playing = !playing;
-  el("playBtn").textContent = playing ? "Durdur" : "Y\u0131l\u0131 oynat";
+  el("playBtn").textContent = playing ? ti("dom.btn.stop") : ti("dom.btn.play");
   if (timer) clearInterval(timer);
   if (playing) {
     playPulseAt = Date.now();
@@ -2759,7 +2768,7 @@ function play() {
         renderPlan(lastM, lastS || readState(), week);
         renderCalendar(lastM);
         renderProcessFlow(lastM, lastS, week);
-        el("weekLabel").textContent = "Hafta " + (week + 1);
+        el("weekLabel").textContent = ti("dom.week") + " " + (week + 1);
       }
     }, 220);
   } else {
@@ -2780,7 +2789,7 @@ function exportJson() {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "tesis-senaryo.json";
+  a.download = (window.TKTS_i18n && window.TKTS_i18n.getLocale() === "en") ? "facility-scenario.json" : "tesis-senaryo.json";
   a.click();
 }
 window.exportJson = exportJson;
@@ -2840,4 +2849,8 @@ window.addEventListener("DOMContentLoaded", function () {
     document.addEventListener("tkts-market-ready", bootSimulator, { once: true });
     setTimeout(bootSimulator, 1200);
   }
+  window.addEventListener("tkts-locale-change", function () {
+    if (typeof render === "function") render();
+    if (window.TKTS_market && window.TKTS_market.refreshPanel) window.TKTS_market.refreshPanel();
+  });
 });

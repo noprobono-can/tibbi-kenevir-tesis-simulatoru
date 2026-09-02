@@ -712,6 +712,37 @@ svg.plan .room[data-i] { cursor: pointer; }
   color: #16120a;
   font-weight: 600;
 }
+.lang-switch {
+  display: flex;
+  gap: 0;
+  padding: 3px;
+  margin-left: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.lang-switch button {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-weight: 600;
+}
+.lang-switch button.on {
+  background: var(--gold-2);
+  color: #16120a;
+}
+.view-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .phone-shell, .phone-frame { min-width: 0; }
 
 html.view-phone .header-meta { display: none; }

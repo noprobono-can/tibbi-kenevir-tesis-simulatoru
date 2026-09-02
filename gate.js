@@ -36,11 +36,15 @@
     updateSessionUi(true);
   }
 
+  function gt(key) {
+    return (window.TKTS_i18n && window.TKTS_i18n.t("gate." + key)) || key;
+  }
+
   function updateSessionUi(on) {
     var chip = el("gateUserChip");
     var logout = el("gateLogout");
     if (chip) {
-      chip.textContent = on ? "Davetli oturum" : "";
+      chip.textContent = on ? gt("session") : "";
       chip.hidden = !on;
     }
     if (logout) logout.hidden = !on;
@@ -90,7 +94,7 @@
     hideMsg();
     var list = codes();
     if (!list.length) {
-      showMsg("gate-config.js i\u00e7inde accessCodes tan\u0131mlay\u0131n.", "warn");
+      showMsg(gt("noCodes"), "warn");
       return;
     }
     var pass = el("gatePass");
@@ -101,7 +105,7 @@
       return;
     }
     if (pass) pass.value = "";
-    showMsg("Eri\u015fim kodu hatal\u0131.", "err");
+    showMsg(gt("badCode"), "err");
   }
 
   function bind() {
@@ -111,7 +115,7 @@
 
     if (!codes().length) {
       lock();
-      showMsg("gate-config.js i\u00e7inde accessCodes tan\u0131mlay\u0131n.", "warn");
+      showMsg(gt("noCodes"), "warn");
       return;
     }
 

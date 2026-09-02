@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Tam indoor GACP üretim ve GMP işleme tesis simülatörü — Cannastream pazar verisi ile." />
+  <meta name="theme-color" content="#070b09" />
+  <link rel="alternate" hreflang="tr" href="index.html?lang=tr" />
+  <link rel="alternate" hreflang="en" href="index.html?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="index.html" />
   <title>Tıbbi Kenevir Simülatörü</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=51" />
+  <link rel="stylesheet" href="styles.css?v=52" />
+  <script src="i18n.js?v=52"></script>
   <script>
     (function () {
       try {
@@ -40,22 +46,26 @@
           <path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="currentColor" stroke-width="1.2"/>
         </svg>
       </div>
-      <h1 id="gateTitle">Tıbbi kenevir simülatörü</h1>
-      <p id="gateLead" class="gate-lead">Simülatöre girmek için size verilen erişim kodunu yazın.</p>
-      <label class="gate-field">Erişim kodu
+      <h1 id="gateTitle" data-i18n="gate.title">Tıbbi kenevir simülatörü</h1>
+      <p id="gateLead" class="gate-lead" data-i18n="gate.lead">Simülatöre girmek için size verilen erişim kodunu yazın.</p>
+      <label class="gate-field"><span data-i18n="gate.label">Erişim kodu</span>
         <input id="gatePass" name="access" type="password" autocomplete="current-password" required />
       </label>
       <p id="gateMsg" class="gate-msg" hidden></p>
-      <button id="gateSubmit" type="submit">Giriş yap</button>
+      <button id="gateSubmit" type="submit" data-i18n="gate.submit">Giriş yap</button>
     </form>
   </div>
 
   <header class="app-header">
     <div class="view-bar">
-      <span class="view-bar-label">G&ouml;r&uuml;n&uuml;m</span>
-      <div class="view-switch" role="tablist" aria-label="Gorunum">
-        <button type="button" data-view="desktop" class="on">Masa&uuml;st&uuml;</button>
-        <button type="button" data-view="phone">Telefon</button>
+      <span class="view-bar-label" data-i18n="view.label">Görünüm</span>
+      <div class="view-switch" role="tablist" aria-label="View">
+        <button type="button" data-view="desktop" class="on" data-i18n="view.desktop">Masaüstü</button>
+        <button type="button" data-view="phone" data-i18n="view.phone">Telefon</button>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="tr" class="on">TR</button>
+        <button type="button" data-lang="en">EN</button>
       </div>
     </div>
     <div class="header-row">
@@ -67,16 +77,16 @@
           </svg>
         </div>
         <div>
-          <h1>Tıbbi kenevir simülatörü</h1>
-          <p>Tam indoor GACP üretim ve GMP işleme</p>
+          <h1 data-i18n="brand.title">Tıbbi kenevir simülatörü</h1>
+          <p data-i18n="brand.sub">Tam indoor GACP üretim ve GMP işleme</p>
         </div>
       </div>
       <div class="header-meta">
         <span id="gateUserChip" class="chip chip-user" hidden></span>
-        <button type="button" id="gateLogout" class="chip chip-btn" hidden>Çıkış</button>
+        <button type="button" id="gateLogout" class="chip chip-btn" hidden data-i18n="header.logout">Çıkış</button>
         <label class="header-market">
-          <span class="sr-only">Hedef pazar</span>
-          <select id="marketCountryHeader" class="market-select-header" aria-label="Hedef pazar"></select>
+          <span class="sr-only" data-i18n="header.market">Hedef pazar</span>
+          <select id="marketCountryHeader" class="market-select-header" aria-label="Target market"></select>
         </label>
         <span class="chip">Indoor</span>
         <span class="chip">GACP</span>
@@ -90,94 +100,94 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="side-tabs" role="tablist">
-        <button type="button" class="on" data-tab="tesis">Tesis</button>
-        <button type="button" data-tab="proses">Proses</button>
-        <button type="button" data-tab="pazar">Pazar</button>
+        <button type="button" class="on" data-tab="tesis" data-i18n="tab.tesis">Tesis</button>
+        <button type="button" data-tab="proses" data-i18n="tab.proses">Proses</button>
+        <button type="button" data-tab="pazar" data-i18n="tab.pazar">Pazar</button>
       </div>
 
       <section class="panel" data-panel="tesis">
-        <h2>Senaryolar</h2>
+        <h2 data-i18n="panel.scenarios">Senaryolar</h2>
         <div class="presets">
-          <button data-key="pilot" type="button">Pilot<small>3 oda · 4 hasat/yıl · 3.060 bitki</small></button>
-          <button data-key="dengeli" type="button" class="active">Dengeli<small>4 oda · 5 hasat/yıl · 5.360 bitki</small></button>
-          <button data-key="yuksek" type="button">Yüksek kapasite<small>8 oda · 6 hasat/yıl · 16.320 bitki</small></button>
-          <button data-key="faz2" type="button">Genişleme<small>12 oda · 6 hasat/yıl · 19.300 bitki</small></button>
-          <button data-key="custom" type="button">Özel<small>Kaydırıcılarla kendin ayarla</small></button>
+          <button data-key="pilot" type="button"><span data-i18n="preset.pilot">Pilot</span><small data-i18n="preset.pilotSub">3 oda · 4 hasat/yıl · 3.060 bitki</small></button>
+          <button data-key="dengeli" type="button" class="active"><span data-i18n="preset.dengeli">Dengeli</span><small data-i18n="preset.dengeliSub">4 oda · 5 hasat/yıl · 5.360 bitki</small></button>
+          <button data-key="yuksek" type="button"><span data-i18n="preset.yuksek">Yüksek kapasite</span><small data-i18n="preset.yuksekSub">8 oda · 6 hasat/yıl · 16.320 bitki</small></button>
+          <button data-key="faz2" type="button"><span data-i18n="preset.faz2">Genişleme</span><small data-i18n="preset.faz2Sub">12 oda · 6 hasat/yıl · 19.300 bitki</small></button>
+          <button data-key="custom" type="button"><span data-i18n="preset.custom">Özel</span><small data-i18n="preset.customSub">Kaydırıcılarla kendin ayarla</small></button>
         </div>
       </section>
 
       <section class="panel" data-panel="tesis">
-        <h2>Kapasite</h2>
-        <div class="control"><header><span>Yıllık bitki (türev)</span><span id="v-plantsYear">5.360</span></header>
+        <h2 data-i18n="panel.capacity">Kapasite</h2>
+        <div class="control"><header><span data-i18n="ctrl.plantsYear">Yıllık bitki (türev)</span><span id="v-plantsYear">5.360</span></header>
           <input id="plantsYear" type="range" min="400" max="100000" step="1" value="5360" /></div>
-        <div class="control"><header><span>Ortalama bitki / m²</span><span id="v-plantsPerM2">4,5</span></header>
+        <div class="control"><header><span data-i18n="ctrl.plantsPerM2">Ortalama bitki / m²</span><span id="v-plantsPerM2">4,5</span></header>
           <input id="plantsPerM2" type="range" min="2" max="12" step="0.1" value="4.5" /></div>
-        <div class="control"><header><span>Hasat / oda / yıl</span><span id="v-harvestsPerRoom">5,0</span></header>
+        <div class="control"><header><span data-i18n="ctrl.harvestsPerRoom">Hasat / oda / yıl</span><span id="v-harvestsPerRoom">5,0</span></header>
           <input id="harvestsPerRoom" type="range" min="4" max="7" step="0.1" value="5" /></div>
-        <div class="control"><header><span>Çiçek odası</span><span id="v-flowerRooms">4</span></header>
+        <div class="control"><header><span data-i18n="ctrl.flowerRooms">Çiçek odası</span><span id="v-flowerRooms">4</span></header>
           <input id="flowerRooms" type="range" min="1" max="30" step="1" value="4" /></div>
-        <div class="control"><header><span>Oda alanı</span><span id="v-roomM2">70 m²</span></header>
+        <div class="control"><header><span data-i18n="ctrl.roomM2">Oda alanı</span><span id="v-roomM2">70 m²</span></header>
           <input id="roomM2" type="range" min="50" max="300" step="5" value="70" /></div>
-        <div class="control"><header><span>Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
+        <div class="control"><header><span data-i18n="ctrl.flowerArea">Çiçek alanı</span><span id="v-flowerArea">280 m²</span></header>
           <input id="flowerArea" type="range" min="50" max="9000" step="10" value="280" /></div>
-        <div class="control"><header><span>Kurutma odası</span><span id="v-dryRooms">2</span></header>
+        <div class="control"><header><span data-i18n="ctrl.dryRooms">Kurutma odası</span><span id="v-dryRooms">2</span></header>
           <input id="dryRooms" type="range" min="1" max="20" step="1" value="2" /></div>
-        <div class="control"><header><span>Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
+        <div class="control"><header><span data-i18n="ctrl.dryTiers">Kurutma katı</span><span id="v-dryTiers">3 kat</span></header>
           <input id="dryTiers" type="range" min="1" max="3" step="1" value="3" /></div>
-        <div class="control"><header><span>Trim alanı</span><span id="v-trimM2">24 m²</span></header>
+        <div class="control"><header><span data-i18n="ctrl.trimM2">Trim alanı</span><span id="v-trimM2">24 m²</span></header>
           <input id="trimM2" type="range" min="18" max="240" step="6" value="24" /></div>
-        <div class="control"><header><span>Paket alanı</span><span id="v-packM2">30 m²</span></header>
+        <div class="control"><header><span data-i18n="ctrl.packM2">Paket alanı</span><span id="v-packM2">30 m²</span></header>
           <input id="packM2" type="range" min="12" max="200" step="5" value="30" /></div>
-        <p class="hint">Yıllık bitki = her odanın hasattaki bitkisi × o odanın yıldaki hasat sayısı. Bitki/m² oda kartında ayrıdır. Bu kaydırıcılar tesis ortalamasını tüm odalara yazar. Kurutma katı ası katmanıdır; veg alanları çiçek m&#178; × genetik süre oranından gelir. Trim ve paket, kurutmadan çıkan partiyi FIFO kuyruk ve oda kasasıyla işler; küçük oda tepe hasadı alamaz.</p>
+        <p class="hint" data-i18n="hint.capacity">Yıllık bitki = her odanın hasattaki bitkisi × o odanın yıldaki hasat sayısı.</p>
         <p class="hint" id="capacityHint"></p>
       </section>
 
       <section class="panel" data-panel="proses" hidden>
-        <h2>Üretim parametreleri</h2>
-        <div class="control"><header><span>Çiçeklenme</span><span id="v-flowerDays">56 gün</span></header>
+        <h2 data-i18n="panel.process">Üretim parametreleri</h2>
+        <div class="control"><header><span data-i18n="ctrl.flowerDays">Çiçeklenme</span><span id="v-flowerDays">56 gün</span></header>
           <input id="flowerDays" type="range" min="35" max="84" step="1" value="56" /></div>
-        <div class="control"><header><span>Vejetatif süre</span><span id="v-vegDays">24 gün</span></header>
+        <div class="control"><header><span data-i18n="ctrl.vegDays">Vejetatif süre</span><span id="v-vegDays">24 gün</span></header>
           <input id="vegDays" type="range" min="10" max="35" step="1" value="24" /></div>
-        <div class="control"><header><span>Pre-veg</span><span id="v-preVegDays">14 gün</span></header>
+        <div class="control"><header><span data-i18n="ctrl.preVegDays">Pre-veg</span><span id="v-preVegDays">14 gün</span></header>
           <input id="preVegDays" type="range" min="7" max="21" step="1" value="14" /></div>
-        <div class="control"><header><span>Köklendirme</span><span id="v-rootDays">14 gün</span></header>
+        <div class="control"><header><span data-i18n="ctrl.rootDays">Köklendirme</span><span id="v-rootDays">14 gün</span></header>
           <input id="rootDays" type="range" min="7" max="21" step="1" value="14" /></div>
-        <div class="control"><header><span>Kurutma süresi</span><span id="v-dryDays">14 gün</span></header>
+        <div class="control"><header><span data-i18n="ctrl.dryDays">Kurutma süresi</span><span id="v-dryDays">14 gün</span></header>
           <input id="dryDays" type="range" min="7" max="21" step="7" value="14" /></div>
-        <div class="control"><header><span>Kurutma temizlik</span><span id="v-dryCleanDays">7 gün</span></header>
+        <div class="control"><header><span data-i18n="ctrl.dryCleanDays">Kurutma temizlik</span><span id="v-dryCleanDays">7 gün</span></header>
           <input id="dryCleanDays" type="range" min="1" max="7" step="1" value="7" /></div>
-        <div class="control"><header><span>Üretim seviyesi</span><span id="v-yieldSkill">Orta · 105 g</span></header>
+        <div class="control"><header><span data-i18n="ctrl.yieldSkill">Üretim seviyesi</span><span id="v-yieldSkill">Orta · 105 g</span></header>
           <div class="yield-skill" role="group">
-            <button type="button" data-skill="starter">Başlangıç<small>65 g/bitki</small></button>
-            <button type="button" data-skill="mid" class="active">Orta<small>105 g/bitki</small></button>
-            <button type="button" data-skill="pro">Profesyonel<small>145 g/bitki</small></button>
+            <button type="button" data-skill="starter"><span data-i18n="skill.starter">Başlangıç</span><small data-i18n="skill.starterSub">65 g/bitki</small></button>
+            <button type="button" data-skill="mid" class="active"><span data-i18n="skill.mid">Orta</span><small data-i18n="skill.midSub">105 g/bitki</small></button>
+            <button type="button" data-skill="pro"><span data-i18n="skill.pro">Profesyonel</span><small data-i18n="skill.proSub">145 g/bitki</small></button>
           </div></div>
-        <div class="control"><header><span>Özel g/bitki</span><span id="v-yieldG">105 g</span></header>
+        <div class="control"><header><span data-i18n="ctrl.yieldG">Özel g/bitki</span><span id="v-yieldG">105 g</span></header>
           <input id="yieldG" type="range" min="50" max="180" step="5" value="105" /></div>
         <input id="genetics" type="hidden" value="4" />
-        <div class="control"><header><span>Çiçek GACP fiyatı (yıl 1–2)</span><span id="v-priceKgGacp">€2.500/kg</span></header>
+        <div class="control"><header><span data-i18n="ctrl.priceGacp">Çiçek GACP fiyatı (yıl 1–2)</span><span id="v-priceKgGacp">€2.500/kg</span></header>
           <input id="priceKgGacp" type="range" min="500" max="8000" step="50" value="2500" /></div>
-        <div class="control"><header><span>Çiçek EU-GMP fiyatı (yıl 3+)</span><span id="v-priceKgGmp">€3.500/kg</span></header>
+        <div class="control"><header><span data-i18n="ctrl.priceGmp">Çiçek EU-GMP fiyatı (yıl 3+)</span><span id="v-priceKgGmp">€3.500/kg</span></header>
           <input id="priceKgGmp" type="range" min="500" max="8000" step="50" value="3500" /></div>
-        <div class="control"><header><span>Ekstrakt satış fiyatı (kg başına)</span><span id="v-extractPriceKg">€4.200/kg</span></header>
+        <div class="control"><header><span data-i18n="ctrl.extractPrice">Ekstrakt satış fiyatı (kg başına)</span><span id="v-extractPriceKg">€4.200/kg</span></header>
           <input id="extractPriceKg" type="range" min="500" max="20000" step="50" value="4200" /></div>
 
-        <div class="control"><header><span>Satılabilir oran</span><span id="v-saleablePct">%85</span></header>
+        <div class="control"><header><span data-i18n="ctrl.saleablePct">Satılabilir oran</span><span id="v-saleablePct">%85</span></header>
           <input id="saleablePct" type="range" min="80" max="88" step="1" value="85" /></div>
-        <div class="control"><header><span>Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
+        <div class="control"><header><span data-i18n="ctrl.extractPct">Ekstraksiyon besleme</span><span id="v-extractPct">%20</span></header>
           <input id="extractPct" type="range" min="0" max="100" step="5" value="20" /></div>
-        <p class="hint">İlk 2 yıl GACP çiçek satışı, sonraki yıllar EU-GMP (daha yüksek €/kg). Hasılat = satılan kuru çiçek × ilgili yıl fiyatı + distilat × ekstrakt fiyatı. Geri ödeme bu rampa ile hesaplanır. Besleme 0 ise scCO2 hat yoktur.</p>
+        <p class="hint" data-i18n="hint.process">İlk 2 yıl GACP çiçek satışı, sonraki yıllar EU-GMP.</p>
       </section>
 
       <section class="panel" data-panel="pazar" hidden>
-        <h2>Hedef pazar · otomatik</h2>
-        <p class="hint">Cannastream verisi arka planda çalışır: ülke seçildiğinde pazar genişliğine göre tüm tesis parametreleri (kapasite, proses, fiyat, genetik) otomatik güncellenir.</p>
+        <h2 data-i18n="panel.marketAuto">Hedef pazar · otomatik</h2>
+        <p class="hint" data-i18n="hint.market">Cannastream verisi arka planda çalışır.</p>
         <div class="control">
-          <header><span>İhracat / hedef ülke</span></header>
+          <header><span data-i18n="ctrl.marketCountry">İhracat / hedef ülke</span></header>
           <select id="marketCountry" class="market-select"></select>
         </div>
         <p class="hint" id="marketSideNote"></p>
-        <p class="hint market-sync"><span id="marketUpdated">Otomatik senkron</span></p>
+        <p class="hint market-sync"><span id="marketUpdated" data-i18n="market.sync">Otomatik senkron</span></p>
       </section>
 
     </aside>
@@ -185,11 +195,11 @@
     <main>
       <section class="panel market-panel" id="marketPanel">
         <div class="market-panel-head">
-          <h2>Pazar bağlamı · canlı</h2>
+          <h2 data-i18n="panel.marketLive">Pazar bağlamı · canlı</h2>
           <span class="chip chip-cs">Cannastream</span>
         </div>
         <div id="marketContext" class="market-context">
-          <p class="hint">Cannastream verisi yükleniyor…</p>
+          <p class="hint" data-i18n="market.loading">Cannastream verisi yükleniyor…</p>
         </div>
         <div id="marketSales" class="market-sales"></div>
       </section>
@@ -199,61 +209,61 @@
       <section class="panel" style="margin-bottom:14px">
         <div class="toolbar">
           <button type="button" id="playBtn">Yılı oynat</button>
-          <button type="button" id="pdfBtn">Senaryo özeti (PDF)</button>
-          <button type="button" class="secondary" id="exportBtn">JSON</button>
-          <button type="button" class="secondary" id="conceptBtn">Konsept dizaynı indir</button>
+          <button type="button" id="pdfBtn" data-i18n="btn.pdf">Senaryo özeti (PDF)</button>
+          <button type="button" class="secondary" id="exportBtn" data-i18n="btn.json">JSON</button>
+          <button type="button" class="secondary" id="conceptBtn" data-i18n="btn.concept">Konsept dizaynı indir</button>
           <span class="week-label" id="weekLabel">Hafta 1</span>
         </div>
-        <h2>Tesis yerleşimi</h2>
-        <p class="hint">Sol GACP üretim, orta GMP işleme, sağ idare ve diğer alanlar. Odaya tıklayın; genetik ve bitki/m² karttan değişir. Konsept kat planı PNG olarak iner. Senaryo özeti PDF, ekrandaki tüm kapasite, oda, ekonomi, uyarı ve takvim detayını indirir. Yılı oynat: kurutmadan çıkan parti trimde camgöbeği, pakette yeşil yanar; kasa dolunca turuncu bekler.</p>
+        <h2 data-i18n="panel.layout">Tesis yerleşimi</h2>
+        <p class="hint" data-i18n="hint.layout">Sol GACP üretim, orta GMP işleme, sağ idare.</p>
         <div class="plan-wrap" id="plan"></div>
         <div class="legend">
-          <span><i class="swatch" style="background:#d4783a"></i>Çiçek indoor</span>
-          <span><i class="swatch" style="background:#6f9e62"></i>Anaç / veg</span>
-          <span><i class="swatch" style="background:#5b8aa8"></i>GMP kurutma</span>
-          <span><i class="swatch" style="background:#8aaeb8"></i>Kurutma temizlik</span>
-          <span><i class="swatch" style="background:#3ea8c4"></i>Trim (kurutmadan)</span>
-          <span><i class="swatch" style="background:#3d9a72"></i>Paket (trimden)</span>
-          <span><i class="swatch" style="background:#c17a48"></i>Kuru bekleme</span>
-          <span><i class="swatch" style="background:#8b6bb0"></i>Karantina / R&amp;D</span>
-          <span><i class="swatch" style="background:#c9b56a"></i>Ofis</span>
+          <span><i class="swatch" style="background:#d4783a"></i><span data-i18n="legend.flower">Çiçek indoor</span></span>
+          <span><i class="swatch" style="background:#6f9e62"></i><span data-i18n="legend.mother">Anaç / veg</span></span>
+          <span><i class="swatch" style="background:#5b8aa8"></i><span data-i18n="legend.dry">GMP kurutma</span></span>
+          <span><i class="swatch" style="background:#8aaeb8"></i><span data-i18n="legend.clean">Kurutma temizlik</span></span>
+          <span><i class="swatch" style="background:#3ea8c4"></i><span data-i18n="legend.trim">Trim (kurutmadan)</span></span>
+          <span><i class="swatch" style="background:#3d9a72"></i><span data-i18n="legend.pack">Paket (trimden)</span></span>
+          <span><i class="swatch" style="background:#c17a48"></i><span data-i18n="legend.hold">Kuru bekleme</span></span>
+          <span><i class="swatch" style="background:#8b6bb0"></i><span data-i18n="legend.quarantine">Karantina / R&amp;D</span></span>
+          <span><i class="swatch" style="background:#c9b56a"></i><span data-i18n="legend.office">Ofis</span></span>
         </div>
       </section>
 
       <section class="panel" style="margin-bottom:14px">
         <div class="room-head">
-          <h2>Çiçek odaları</h2>
-          <button type="button" class="secondary" id="resetDensBtn">Genetik bitki/m²</button>
+          <h2 data-i18n="panel.rooms">Çiçek odaları</h2>
+          <button type="button" class="secondary" id="resetDensBtn" data-i18n="btn.resetDens">Genetik bitki/m²</button>
         </div>
         <p class="hint" id="geneticsMix"></p>
         <div class="room-cards" id="roomCards"></div>
       </section>
 
       <section class="panel" style="margin-bottom:14px">
-        <h2>52 haftalık parti takvimi</h2>
+        <h2 data-i18n="panel.calendar">52 haftalık parti takvimi</h2>
         <div class="calendar" id="calendar"></div>
       </section>
 
       <section class="panel" style="margin-bottom:14px">
-        <h2>Proses akışı</h2>
+        <h2 data-i18n="panel.flow">Proses akışı</h2>
         <div class="flow" id="flow"></div>
       </section>
 
       <div class="grid-3">
-        <section class="panel"><h2>Uyarılar</h2><div class="alerts" id="alerts"></div></section>
-        <section class="panel"><h2>Ekonomi (OPEX v3)</h2><div id="econ"></div></section>
-        <section class="panel"><h2>Operasyon</h2><div id="ops"></div></section>
+        <section class="panel"><h2 data-i18n="panel.alerts">Uyarılar</h2><div class="alerts" id="alerts"></div></section>
+        <section class="panel"><h2 data-i18n="panel.econ">Ekonomi (OPEX v3)</h2><div id="econ"></div></section>
+        <section class="panel"><h2 data-i18n="panel.ops">Operasyon</h2><div id="ops"></div></section>
       </div>
     </main>
   </div>
   </div>
   </div>
 
-  <script src="gate-config.js?v=51"></script>
-  <script src="gate.js?v=51"></script>
-  <script src="dark-select.js?v=51"></script>
-  <script src="cannastream-engine.js?v=51"></script>
-  <script src="app.js?v=51"></script>
-  <script src="pdf-export.js?v=51"></script>
+  <script src="gate-config.js?v=52"></script>
+  <script src="gate.js?v=52"></script>
+  <script src="dark-select.js?v=52"></script>
+  <script src="cannastream-engine.js?v=52"></script>
+  <script src="app.js?v=52"></script>
+  <script src="pdf-export.js?v=52"></script>
 </body>
 </html>
