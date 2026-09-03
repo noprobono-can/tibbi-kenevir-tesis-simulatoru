@@ -50,6 +50,23 @@
     return cur;
   }
 
+  // Resolve paths that mix nested objects with flat dotted keys
+  // e.g. pack.dom["brand.title"] via "dom.brand.title"
+  function resolve(obj, path) {
+    var direct = deepGet(obj, path);
+    if (direct != null) return direct;
+    var raw = String(path || "");
+    var parts = raw.split(".");
+    if (parts.length < 2) return undefined;
+    for (var cut = 1; cut < parts.length; cut++) {
+      var section = deepGet(obj, parts.slice(0, cut).join("."));
+      if (section == null || typeof section !== "object") continue;
+      var rest = parts.slice(cut).join(".");
+      if (Object.prototype.hasOwnProperty.call(section, rest)) return section[rest];
+    }
+    return undefined;
+  }
+
   function interpolate(str, params) {
     if (!params) return str;
     return String(str).replace(/\{(\w+)\}/g, function (_, k) {
@@ -661,14 +678,14 @@
   function pack() { return PACK[locale] || PACK.tr; }
 
   function t(key, params) {
-    var val = deepGet(pack(), key);
+    var val = resolve(pack(), key);
     if (typeof val === "function") return val(params || {});
     if (val == null) return key;
-    return interpolate(val, params);
+    return interpolate(String(val), params);
   }
 
   function alert(key, params) {
-    var fn = deepGet(pack(), "alerts." + key);
+    var fn = resolve(pack(), "alerts." + key);
     if (typeof fn === "function") return fn(params || {});
     return key;
   }
@@ -681,11 +698,11 @@
 
   function localeTag() { return locale === "en" ? "en-US" : "tr-TR"; }
 
-  function facilityTierLabel(t) {
-    if (t <= 0.2) return t("market.tier0");
-    if (t <= 0.4) return t("market.tier1");
-    if (t <= 0.6) return t("market.tier2");
-    if (t <= 0.8) return t("market.tier3");
+  function facilityTierLabel(score) {
+    if (score <= 0.2) return t("market.tier0");
+    if (score <= 0.4) return t("market.tier1");
+    if (score <= 0.6) return t("market.tier2");
+    if (score <= 0.8) return t("market.tier3");
     return t("market.tier4");
   }
 
@@ -693,15 +710,17 @@
     document.querySelectorAll("[data-i18n]").forEach(function (node) {
       var key = node.getAttribute("data-i18n");
       if (!key) return;
-      var val = t("dom." + key) || t(key);
-      if (val == null || val === key) return;
+      var val = t("dom." + key);
+      if (val == null || val === "dom." + key) val = t(key);
+      if (val == null || val === key || val === "dom." + key) return;
       if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") node.placeholder = val;
       else node.textContent = val;
     });
     document.querySelectorAll("[data-i18n-html]").forEach(function (node) {
       var key = node.getAttribute("data-i18n-html");
-      var val = t("dom." + key) || t(key);
-      if (val != null) node.innerHTML = val;
+      var val = t("dom." + key);
+      if (val == null || val === "dom." + key) val = t(key);
+      if (val != null && val !== key && val !== "dom." + key) node.innerHTML = val;
     });
     document.title = t("meta.title");
     var desc = document.querySelector('meta[name="description"]');

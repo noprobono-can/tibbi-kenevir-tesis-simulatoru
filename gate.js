@@ -127,6 +127,10 @@
     }
   }
 
+  window.addEventListener("tkts-locale-change", function () {
+    updateSessionUi(storedOk());
+  });
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bind);
   } else {
