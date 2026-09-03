@@ -719,14 +719,16 @@ function bindRoomCards() {
   const box = el("roomCards");
   if (!box || box.dataset.ready) return;
   box.dataset.ready = "1";
-  box.addEventListener("input", function (ev) {
-    const t = ev.target;
+
+  function applyRoomField(t) {
+    if (!t || !t.getAttribute) return;
     const i = +t.getAttribute("data-room");
     if (isNaN(i) || i < 0) return;
     ensureRoomBoard(flowerRoomCount());
     if (!roomBoard[i]) return;
     selectedRoom = i;
     customMode = true;
+    window.marketAutoMode = false;
     highlightPreset("custom");
     if (t.classList.contains("room-cultivar")) {
       roomBoard[i].cultivarId = t.value;
@@ -738,13 +740,32 @@ function bindRoomCards() {
     } else if (t.classList.contains("room-dens")) {
       roomBoard[i].dens = Math.max(2, Math.min(12, +t.value || 5));
       densityOverride = false;
+    } else {
+      return;
     }
     week = 0;
+    if (playing) {
+      playing = false;
+      if (timer) clearInterval(timer);
+      timer = null;
+      syncPlayPulse();
+    }
     render();
+  }
+
+  box.addEventListener("input", function (ev) {
+    const t = ev.target;
+    if (t && t.classList && t.classList.contains("room-cultivar")) return;
+    applyRoomField(t);
+  });
+  box.addEventListener("change", function (ev) {
+    const t = ev.target;
+    if (t && t.classList && t.classList.contains("room-cultivar")) applyRoomField(t);
   });
   box.addEventListener("click", function (ev) {
     const card = ev.target.closest("[data-room]");
     if (!card || !box.contains(card)) return;
+    if (ev.target.closest(".dark-select-list") || ev.target.closest(".dark-select-btn")) return;
     selectedRoom = +card.getAttribute("data-room");
     box.querySelectorAll(".room-card").forEach(function (c) {
       c.classList.toggle("on", +c.getAttribute("data-room") === selectedRoom);

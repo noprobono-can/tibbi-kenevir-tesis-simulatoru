@@ -77,6 +77,7 @@
       const item = e.target.closest(".dark-select-item");
       if (!item) return;
       select.value = item.getAttribute("data-value");
+      select.dispatchEvent(new Event("input", { bubbles: true }));
       select.dispatchEvent(new Event("change", { bubbles: true }));
       syncFromSelect();
       close();
