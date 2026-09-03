@@ -1,13 +1,14 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 58;
+  const CACHE_VERSION = 59;
+  const GENERAL_KEY = "Genel";
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
   ];
 
   let feed = null;
-  let selectedCountry = null;
+  let selectedCountry = GENERAL_KEY;
   let refreshTimer = null;
   let lastFeedUpdated = null;
   let syncingDom = false;
@@ -46,11 +47,42 @@
   }
 
   function getCountry(name) {
-    return feed && feed.countries ? feed.countries[name || selectedCountry] : null;
+    const key = name || selectedCountry;
+    if (!key || key === GENERAL_KEY) return null;
+    return feed && feed.countries ? feed.countries[key] : null;
+  }
+
+  function isGeneralMode() {
+    return !selectedCountry || selectedCountry === GENERAL_KEY;
+  }
+
+  function hasUsableMarket(c) {
+    if (!c) return false;
+    const p = c.prices || {};
+    return !!(Number(p.gacpKg) > 0 && Number(p.gmpKg) > 0);
+  }
+
+  function clearSalesPanel() {
+    const sales = document.getElementById("marketSales");
+    if (sales) sales.innerHTML = "";
+  }
+
+  function clearMarketSurfaces(opts) {
+    opts = opts || {};
+    clearSalesPanel();
+    const side = document.getElementById("marketSideNote");
+    if (side) side.textContent = opts.sideText || "";
+    const updated = document.getElementById("marketUpdated");
+    if (updated && opts.syncText) updated.textContent = opts.syncText;
+    if (opts.resetPrices) {
+      pricesLocked = false;
+      syncDomPrices({ gacpKg: 2500, gmpKg: 3500, extractKg: 4200 }, true);
+    }
   }
 
   function countryNames() {
-    return feed && feed.countries ? Object.keys(feed.countries) : [];
+    const names = feed && feed.countries ? Object.keys(feed.countries) : [];
+    return [GENERAL_KEY].concat(names.filter(function (n) { return n !== GENERAL_KEY; }));
   }
 
   function normStr(s) {
@@ -410,6 +442,10 @@
   }
 
   function applyCountryFacilityFromMarket() {
+    if (isGeneralMode() || !hasUsableMarket(getCountry())) {
+      window.marketAutoMode = false;
+      return null;
+    }
     if (typeof window.applyMarketFacility === "function") {
       window.marketAutoMode = true;
       unlockPrices();
@@ -443,6 +479,7 @@
   }
 
   function getLivePrices() {
+    if (isGeneralMode()) return null;
     const c = getCountry();
     return c && c.prices ? c.prices : null;
   }
@@ -501,39 +538,48 @@
 
   function fillCountrySelects(preserve) {
     const names = countryNames();
-    if (!names.length) return;
     const stored = loadStoredCountry();
     const sidebar = document.getElementById("marketCountry");
     const cur = preserve ? (selectedCountry || (sidebar && sidebar.value) || "") : "";
-    const value = (cur && names.indexOf(cur) >= 0)
-      ? cur
-      : (stored && names.indexOf(stored) >= 0)
-        ? stored
-        : (names.indexOf("Almanya") >= 0 ? "Almanya" : names[0]);
+    let value = GENERAL_KEY;
+    if (cur && names.indexOf(cur) >= 0) value = cur;
+    else if (stored && names.indexOf(stored) >= 0) value = stored;
+    else value = GENERAL_KEY;
     selectedCountry = value;
-    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
-      const sel = document.getElementById(id);
-      if (!sel) return;
-      sel.innerHTML = names.map(function (n) {
-        const label = (window.TKTS_i18n && window.TKTS_i18n.countryDisplay) ? window.TKTS_i18n.countryDisplay(n) : n;
-        return '<option value="' + n.replace(/"/g, "&quot;") + '">' + label + "</option>";
-      }).join("");
-      sel.value = value;
-      sel.disabled = false;
-    });
-    if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll();
+    if (isGeneralMode()) window.marketAutoMode = false;
+    const sel = document.getElementById("marketCountry");
+    if (!sel) return;
+    sel.innerHTML = names.map(function (n) {
+      const label = (window.TKTS_i18n && window.TKTS_i18n.countryDisplay)
+        ? window.TKTS_i18n.countryDisplay(n)
+        : n;
+      return '<option value="' + n.replace(/"/g, "&quot;") + '">' + label + "</option>";
+    }).join("");
+    sel.value = value;
+    sel.disabled = false;
+    if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll(sel.parentNode || document);
   }
 
   function onCountryChange(fromId) {
     const src = document.getElementById(fromId || "marketCountry");
     if (!src) return;
-    selectedCountry = src.value;
+    selectedCountry = src.value || GENERAL_KEY;
     storeCountry(selectedCountry);
-    ["marketCountry", "marketCountryHeader"].forEach(function (id) {
-      const sel = document.getElementById(id);
-      if (sel && sel !== src) sel.value = selectedCountry;
-    });
     panelDirty = true;
+    clearSalesPanel();
+
+    if (isGeneralMode() || !hasUsableMarket(getCountry())) {
+      window.marketAutoMode = false;
+      clearMarketSurfaces({
+        resetPrices: true,
+        sideText: isGeneralMode() ? ti("market.generalSide") : ti("market.noDataSide"),
+        syncText: isGeneralMode() ? ti("market.generalSync") : ti("market.noDataSync")
+      });
+      renderMarketPanel(false);
+      if (typeof window.render === "function") window.render();
+      return;
+    }
+
     unlockPrices();
     syncDomPrices(getLivePrices(), true);
     renderMarketPanel(false);
@@ -588,14 +634,44 @@
   function renderMarketPanel(triggerRender) {
     const box = document.getElementById("marketContext");
     const side = document.getElementById("marketSideNote");
-    const c = getCountry();
     if (!box) return;
-    if (!c) {
-      box.innerHTML = '<p class="hint">' + ti("market.notLoaded") + "</p>";
+    panelDirty = false;
+
+    if (isGeneralMode()) {
+      clearSalesPanel();
+      box.innerHTML =
+        '<div class="market-head">' +
+          '<span class="market-badge" style="--mc:#8eb4c8">' + ti("market.generalBadge") + "</span>" +
+          '<span class="market-outlook">' + ti("market.generalOutlook") + "</span>" +
+        "</div>" +
+        '<p class="market-notes">' + ti("market.generalNotes") + "</p>" +
+        '<p class="hint">' + ti("market.generalHint") + "</p>";
+      if (side) side.textContent = ti("market.generalSide");
+      const updated = document.getElementById("marketUpdated");
+      if (updated) updated.textContent = ti("market.generalSync");
+      if (triggerRender && typeof window.render === "function") window.render();
       return;
     }
-    if (!panelDirty && box.childElementCount > 1) return;
-    panelDirty = false;
+
+    const c = getCountry();
+    if (!c || !hasUsableMarket(c)) {
+      clearSalesPanel();
+      const label = (window.TKTS_i18n && window.TKTS_i18n.countryDisplay)
+        ? window.TKTS_i18n.countryDisplay(selectedCountry)
+        : selectedCountry;
+      box.innerHTML =
+        '<div class="market-head">' +
+          '<span class="market-badge" style="--mc:#d29922">' + ti("market.noDataBadge") + "</span>" +
+          '<span class="market-outlook">' + label + "</span>" +
+        "</div>" +
+        '<p class="market-notes">' + ti("market.noDataNotes") + "</p>" +
+        '<p class="hint">' + ti("market.noDataHint") + "</p>";
+      if (side) side.textContent = ti("market.noDataSide");
+      const updated = document.getElementById("marketUpdated");
+      if (updated) updated.textContent = ti("market.noDataSync");
+      if (triggerRender && typeof window.render === "function") window.render();
+      return;
+    }
 
     const p = c.prices || {};
     const facPack = computeFacilityParams(c);
@@ -683,8 +759,20 @@
   }
 
   function enrichResult(s, m) {
+    if (!m) return;
+    if (isGeneralMode() || !hasUsableMarket(getCountry())) {
+      m.market = null;
+      m.marketAlerts = [];
+      clearSalesPanel();
+      return;
+    }
     const c = getCountry();
-    if (!c || !m) return;
+    if (!c) {
+      m.market = null;
+      m.marketAlerts = [];
+      clearSalesPanel();
+      return;
+    }
     const projection = computeSalesProjection(s, m, c);
     m.market = {
       country: selectedCountry,
@@ -750,7 +838,7 @@
     document.addEventListener("change", function (e) {
       const t = e.target;
       if (!t || !t.id) return;
-      if (t.id === "marketCountry" || t.id === "marketCountryHeader") {
+      if (t.id === "marketCountry") {
         onCountryChange(t.id);
       }
     });
@@ -803,17 +891,19 @@
     feed = data;
     lastFeedUpdated = data.updated || null;
     fillCountrySelects(!!isRefresh || !!selectedCountry);
-    if (!isRefresh) {
-      if (!pricesLocked) syncDomPrices(getLivePrices(), false);
-    } else if (window.marketAutoMode !== false && !pricesLocked) {
-      syncDomPrices(getLivePrices(), false);
+    if (!isGeneralMode()) {
+      if (!isRefresh) {
+        if (!pricesLocked) syncDomPrices(getLivePrices(), false);
+      } else if (window.marketAutoMode !== false && !pricesLocked) {
+        syncDomPrices(getLivePrices(), false);
+      }
     }
     panelDirty = true;
     renderMarketPanel(false);
     bindMarketUi();
     scheduleRefresh();
     updateSyncChip("ok");
-    if (isRefresh && window.marketAutoMode !== false && typeof window.applyMarketFacility === "function") {
+    if (isRefresh && !isGeneralMode() && window.marketAutoMode !== false && typeof window.applyMarketFacility === "function") {
       window.applyMarketFacility(false);
     }
     if (typeof window.render === "function" && (isRefresh ? prev !== lastFeedUpdated : false)) {
@@ -853,12 +943,14 @@
 
   function initDom() {
     bindMarketUi();
+    fillCountrySelects(false);
+    renderMarketPanel(false);
     updateSyncChip("loading");
     if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll();
     ready.then(function () {
       if (feed) {
-        fillCountrySelects(false);
-        if (!pricesLocked) syncDomPrices(getLivePrices(), false);
+        fillCountrySelects(true);
+        if (!isGeneralMode() && !pricesLocked) syncDomPrices(getLivePrices(), false);
         renderMarketPanel(false);
         scheduleRefresh();
         updateSyncChip("ok");
@@ -876,6 +968,8 @@
     getFeed: function () { return feed; },
     getCountry: getCountry,
     getSelected: function () { return selectedCountry; },
+    isGeneral: isGeneralMode,
+    GENERAL_KEY: GENERAL_KEY,
     getLivePrices: getLivePrices,
     patchState: patchState,
     lockPrices: lockPrices,

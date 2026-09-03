@@ -2914,7 +2914,7 @@ window.addEventListener("DOMContentLoaded", function () {
   let marketBooted = false;
   function bootSimulator() {
     applyPreset("dengeli");
-    window.marketAutoMode = true;
+    window.marketAutoMode = false;
   }
   function onMarketReady(ev) {
     const detail = (ev && ev.detail) || {};
@@ -2924,6 +2924,11 @@ window.addEventListener("DOMContentLoaded", function () {
     }
     if (marketBooted) return;
     marketBooted = true;
+    if (window.TKTS_market && window.TKTS_market.isGeneral && window.TKTS_market.isGeneral()) {
+      window.marketAutoMode = false;
+      if (typeof render === "function") render();
+      return;
+    }
     if (window.marketAutoMode === false) {
       if (typeof render === "function") render();
       return;
@@ -2931,6 +2936,7 @@ window.addEventListener("DOMContentLoaded", function () {
     if (typeof window.applyMarketFacility === "function") {
       window.setTimeout(function () {
         if (window.marketAutoMode === false) return;
+        if (window.TKTS_market && window.TKTS_market.isGeneral && window.TKTS_market.isGeneral()) return;
         window.applyMarketFacility(true);
       }, 0);
     } else if (typeof render === "function") {

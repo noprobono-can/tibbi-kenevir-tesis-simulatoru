@@ -1338,8 +1338,7 @@ html.view-phone .market-prices { grid-template-columns: 1fr; }
   border-color: var(--line);
   color: var(--muted);
 }
-.header-market { display: inline-flex; align-items: center; }
-html.view-phone .header-market { display: none; }
+.header-market { display: none; }
 
 .sr-only {
   position: absolute;
