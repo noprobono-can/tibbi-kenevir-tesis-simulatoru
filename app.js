@@ -775,7 +775,10 @@ function bindPlanClicks() {
         c.classList.toggle("on", +c.getAttribute("data-room") === selectedRoom);
       });
       const card = box.querySelector('[data-room="' + selectedRoom + '"]');
-      if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (card) {
+        ensureRoomsOpen();
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     }
   });
 }
@@ -831,6 +834,36 @@ function bindSideTabs() {
       }
     });
   });
+}
+
+function setRoomsFold(open) {
+  const panel = document.querySelector(".rooms-panel");
+  const btn = el("roomsToggle");
+  if (!panel || !btn) return;
+  panel.classList.toggle("is-collapsed", !open);
+  btn.setAttribute("aria-expanded", open ? "true" : "false");
+  try { localStorage.setItem("tkts-rooms-open", open ? "1" : "0"); } catch (e) {}
+}
+
+function bindRoomsFold() {
+  const btn = el("roomsToggle");
+  if (!btn || btn.dataset.ready) return;
+  btn.dataset.ready = "1";
+  let open = true;
+  try {
+    const stored = localStorage.getItem("tkts-rooms-open");
+    if (stored === "0") open = false;
+  } catch (e) {}
+  setRoomsFold(open);
+  btn.addEventListener("click", function () {
+    const panel = document.querySelector(".rooms-panel");
+    const next = panel ? panel.classList.contains("is-collapsed") : true;
+    setRoomsFold(next);
+  });
+}
+
+function ensureRoomsOpen() {
+  setRoomsFold(true);
 }
 
 function resetRoomDens() {
@@ -2448,7 +2481,7 @@ function renderPlan(m, s, currentWeek) {
   zoneFrame(gmpX, gmpTop, gmpW, phone ? gmpH : deskH, "rgba(91,138,168,0.08)", "rgba(91,138,168,0.45)", "GMP \u0130\u015eLEME", "#8eb4c8");
   zoneFrame(officeX, officeTop, officeW, phone ? officeH : deskH, "rgba(201,181,106,0.08)", "rgba(201,181,106,0.4)", "\u0130DARE / D\u0130\u011eER", "#d4c49a");
   const defs = "<defs>" +
-    "<marker id=\"arrF\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#d4c49a\"/></marker>" +
+    "<marker id=\"arrF\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0.5 L5,3 L0,5.5 Z\" fill=\"#d4c49a\"/></marker>" +
     blocks.map(function (b, i) {
     return "<clipPath id=\"pb" + i + "\"><rect x=\"" + b.x + "\" y=\"" + b.y + "\" width=\"" + b.w + "\" height=\"" + b.h + "\" rx=\"10\"/></clipPath>";
   }).join("") + "</defs>";
@@ -2457,12 +2490,44 @@ function renderPlan(m, s, currentWeek) {
   const packOn = pw !== "idle";
   let flowSvg = "<g class=\"flow-links\" pointer-events=\"none\">";
   function flowLink(x1, y1, x2, y2, color, on) {
-    flowSvg += "<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" stroke=\"" + color + "\" stroke-width=\"" + (on ? 2.8 : 1.2) + "\" opacity=\"" + (on ? 0.95 : 0.28) + "\" marker-end=\"url(#arrF)\"/>";
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const op = on ? 0.95 : 0.28;
+    const sw = on ? 2.4 : 1.15;
+    if (len < 18) {
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      const px = -uy;
+      const py = ux;
+      const tip = Math.min(5.5, len * 0.45);
+      const wing = 3.2;
+      const tx = mx + ux * tip;
+      const ty = my + uy * tip;
+      const lx = mx - ux * (tip * 0.55) + px * wing;
+      const ly = my - uy * (tip * 0.55) + py * wing;
+      const rx = mx - ux * (tip * 0.55) - px * wing;
+      const ry = my - uy * (tip * 0.55) - py * wing;
+      flowSvg += "<path d=\"M" + lx.toFixed(1) + "," + ly.toFixed(1) +
+        " L" + tx.toFixed(1) + "," + ty.toFixed(1) +
+        " L" + rx.toFixed(1) + "," + ry.toFixed(1) +
+        "\" fill=\"none\" stroke=\"" + color + "\" stroke-width=\"" + sw +
+        "\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"" + op + "\"/>";
+      return;
+    }
+    const tipPad = 7;
+    const sx2 = x2 - ux * tipPad;
+    const sy2 = y2 - uy * tipPad;
+    flowSvg += "<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + sx2.toFixed(1) +
+      "\" y2=\"" + sy2.toFixed(1) + "\" stroke=\"" + color + "\" stroke-width=\"" + sw +
+      "\" opacity=\"" + op + "\" marker-end=\"url(#arrF)\"/>";
   }
   const dryCx = gmpInnerX + gmpInnerW / 2;
   const trimCx = trimX + tpW[0] / 2;
-  flowLink(dryCx, afterDry + 1, trimCx, gmpLowY - 1, trimOn ? "#3ea8c4" : "#5b8aa8", dryOn || trimOn);
-  flowLink(trimX + tpW[0] + 1, gmpLowY + row2H / 2, packX - 1, gmpLowY + row2H / 2, packOn ? "#3d9a72" : "#3ea8c4", trimOn || packOn);
+  flowLink(dryCx, afterDry + 2, trimCx, gmpLowY - 2, trimOn ? "#3ea8c4" : "#5b8aa8", dryOn || trimOn);
+  flowLink(trimX + tpW[0] + 2, gmpLowY + row2H / 2, packX - 2, gmpLowY + row2H / 2, packOn ? "#3d9a72" : "#3ea8c4", trimOn || packOn);
   flowSvg += "</g>";
   const body = blocks.map(function (b, i) {
     const clip = "pb" + i;
@@ -2811,6 +2876,7 @@ window.addEventListener("DOMContentLoaded", function () {
   applyView(readStoredView(), false);
   bindViewSwitch();
   bindSideTabs();
+  bindRoomsFold();
   bindRoomCards();
   bindPlanClicks();
   if (el("resetDensBtn")) el("resetDensBtn").addEventListener("click", resetRoomDens);

@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 54;
+  const CACHE_VERSION = 57;
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
@@ -458,14 +458,9 @@
   }
 
   function patchState(s) {
-    const prices = getLivePrices();
-    if (!prices || !s) return s;
-    s.priceKgGacp = prices.gacpKg;
-    s.priceKgGmp = prices.gmpKg;
-    s.extractPriceKg = prices.extractKg;
+    if (!s) return s;
     s.marketCountry = selectedCountry;
     s.marketFeedUpdated = lastFeedUpdated;
-    syncDomPrices(prices);
     return s;
   }
 
@@ -781,7 +776,7 @@
     feed = data;
     lastFeedUpdated = data.updated || null;
     fillCountrySelects(!!isRefresh || !!selectedCountry);
-    syncDomPrices(getLivePrices());
+    if (!isRefresh || window.marketAutoMode !== false) syncDomPrices(getLivePrices());
     panelDirty = true;
     renderMarketPanel(false);
     bindMarketUi();

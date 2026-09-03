@@ -12,8 +12,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=54" />
-  <script src="i18n.js?v=54"></script>
+  <link rel="stylesheet" href="styles.css?v=57" />
+  <script src="i18n.js?v=57"></script>
   <script>
     (function () {
       try {
@@ -188,22 +188,22 @@
         </div>
         <p class="hint" id="marketSideNote"></p>
         <p class="hint market-sync"><span id="marketUpdated" data-i18n="market.sync">Otomatik senkron</span></p>
+
+        <div class="market-panel sidebar-market" id="marketPanel">
+          <div class="market-panel-head">
+            <h2 data-i18n="panel.marketLive">Pazar bağlamı · canlı</h2>
+            <span class="chip chip-cs">Cannastream</span>
+          </div>
+          <div id="marketContext" class="market-context">
+            <p class="hint" data-i18n="market.loading">Cannastream verisi yükleniyor…</p>
+          </div>
+          <div id="marketSales" class="market-sales"></div>
+        </div>
       </section>
 
     </aside>
 
     <main>
-      <section class="panel market-panel" id="marketPanel">
-        <div class="market-panel-head">
-          <h2 data-i18n="panel.marketLive">Pazar bağlamı · canlı</h2>
-          <span class="chip chip-cs">Cannastream</span>
-        </div>
-        <div id="marketContext" class="market-context">
-          <p class="hint" data-i18n="market.loading">Cannastream verisi yükleniyor…</p>
-        </div>
-        <div id="marketSales" class="market-sales"></div>
-      </section>
-
       <div class="kpis" id="kpis"></div>
 
       <section class="panel" style="margin-bottom:14px">
@@ -230,13 +230,18 @@
         </div>
       </section>
 
-      <section class="panel" style="margin-bottom:14px">
+      <section class="panel rooms-panel" style="margin-bottom:14px">
         <div class="room-head">
-          <h2 data-i18n="panel.rooms">Çiçek odaları</h2>
+          <button type="button" class="rooms-toggle" id="roomsToggle" aria-expanded="true" aria-controls="roomsBody">
+            <span class="rooms-toggle-label" data-i18n="panel.rooms">Çiçek odaları</span>
+            <span class="rooms-chevron" aria-hidden="true"></span>
+          </button>
           <button type="button" class="secondary" id="resetDensBtn" data-i18n="btn.resetDens">Genetik bitki/m²</button>
         </div>
-        <p class="hint" id="geneticsMix"></p>
-        <div class="room-cards" id="roomCards"></div>
+        <div id="roomsBody" class="rooms-body">
+          <p class="hint" id="geneticsMix"></p>
+          <div class="room-cards" id="roomCards"></div>
+        </div>
       </section>
 
       <section class="panel" style="margin-bottom:14px">
@@ -259,11 +264,11 @@
   </div>
   </div>
 
-  <script src="gate-config.js?v=54"></script>
-  <script src="gate.js?v=54"></script>
-  <script src="dark-select.js?v=54"></script>
-  <script src="cannastream-engine.js?v=54"></script>
-  <script src="app.js?v=54"></script>
-  <script src="pdf-export.js?v=54"></script>
+  <script src="gate-config.js?v=57"></script>
+  <script src="gate.js?v=57"></script>
+  <script src="dark-select.js?v=57"></script>
+  <script src="cannastream-engine.js?v=57"></script>
+  <script src="app.js?v=57"></script>
+  <script src="pdf-export.js?v=57"></script>
 </body>
 </html>
