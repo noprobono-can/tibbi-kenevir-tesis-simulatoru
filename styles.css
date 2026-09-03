@@ -1012,6 +1012,12 @@ html.unlocked .gate { display: none; }
 .chip-cs {
   border-color: rgba(63, 185, 80, 0.35);
   color: #8fd9a0;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  flex: 0 1 auto;
 }
 .chip-link {
   text-decoration: none;
@@ -1328,6 +1334,10 @@ html.view-phone .market-prices { grid-template-columns: 1fr; }
 }
 #marketSyncChip.on { border-color: rgba(63, 185, 80, 0.5); color: #8fd9a0; }
 #marketSyncChip.warn { border-color: rgba(210, 153, 34, 0.5); color: #d29922; }
+#marketSyncChip:not(.on):not(.warn) {
+  border-color: var(--line);
+  color: var(--muted);
+}
 .header-market { display: inline-flex; align-items: center; }
 html.view-phone .header-market { display: none; }
 

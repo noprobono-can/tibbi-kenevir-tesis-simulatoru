@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 57;
+  const CACHE_VERSION = 58;
   const FEED_URLS = [
     "data/market-feed.json",
     "https://raw.githubusercontent.com/noprobono-can/tibbi-kenevir-tesis-simulatoru/main/data/market-feed.json"
@@ -12,6 +12,7 @@
   let lastFeedUpdated = null;
   let syncingDom = false;
   let panelDirty = true;
+  let pricesLocked = false;
 
   function ti(key, params) {
     return (window.TKTS_i18n && window.TKTS_i18n.t(key, params)) || key;
@@ -411,7 +412,8 @@
   function applyCountryFacilityFromMarket() {
     if (typeof window.applyMarketFacility === "function") {
       window.marketAutoMode = true;
-      return window.applyMarketFacility(false);
+      unlockPrices();
+      return window.applyMarketFacility(true);
     }
     return null;
   }
@@ -445,8 +447,9 @@
     return c && c.prices ? c.prices : null;
   }
 
-  function syncDomPrices(prices) {
+  function syncDomPrices(prices, force) {
     if (!prices || syncingDom) return;
+    if (pricesLocked && !force) return;
     syncingDom = true;
     const gacp = document.getElementById("priceKgGacp");
     const gmp = document.getElementById("priceKgGmp");
@@ -457,6 +460,9 @@
     syncingDom = false;
   }
 
+  function lockPrices() { pricesLocked = true; }
+  function unlockPrices() { pricesLocked = false; }
+
   function patchState(s) {
     if (!s) return s;
     s.marketCountry = selectedCountry;
@@ -464,25 +470,33 @@
     return s;
   }
 
+  function shortFeedStamp(updated) {
+    if (!updated) return "";
+    const m = String(updated).match(/(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1].slice(5) : String(updated).slice(0, 8);
+  }
+
   function updateSyncChip(status) {
     const chip = document.getElementById("marketSyncChip");
     if (!chip) return;
+    chip.classList.remove("on", "warn");
     if (status === "loading") {
       chip.textContent = ti("market.loading");
-      chip.classList.remove("on", "warn");
+      chip.title = ti("market.loading");
       return;
     }
     if (status === "error") {
       chip.textContent = ti("market.error");
+      chip.title = ti("market.error");
       chip.classList.add("warn");
-      chip.classList.remove("on");
       return;
     }
-    chip.textContent = feed && feed.updated
-      ? "Cannastream · " + feed.updated
+    const stamp = shortFeedStamp(feed && feed.updated);
+    chip.textContent = stamp ? ti("market.liveShort", { d: stamp }) : ti("market.live");
+    chip.title = feed && feed.updated
+      ? ("Cannastream · " + feed.updated)
       : ti("market.live");
     chip.classList.add("on");
-    chip.classList.remove("warn");
   }
 
   function fillCountrySelects(preserve) {
@@ -520,7 +534,8 @@
       if (sel && sel !== src) sel.value = selectedCountry;
     });
     panelDirty = true;
-    syncDomPrices(getLivePrices());
+    unlockPrices();
+    syncDomPrices(getLivePrices(), true);
     renderMarketPanel(false);
     applyCountryFacilityFromMarket();
     if (typeof window.render === "function") window.render();
@@ -758,17 +773,29 @@
     refreshTimer = setInterval(function () { loadFeed(true); }, mins * 60 * 1000);
   }
 
-  function fetchFeedJson() {
-    let chain = Promise.reject(new Error("no url"));
-    FEED_URLS.forEach(function (url) {
-      chain = chain.catch(function () {
-        return fetch(url + "?v=" + CACHE_VERSION + "&t=" + Date.now()).then(function (r) {
-          if (!r.ok) throw new Error("feed");
-          return r.json();
-        });
-      });
+  function fetchWithTimeout(url, ms) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    let timer = null;
+    const timed = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        if (ctrl) ctrl.abort();
+        reject(new Error("timeout"));
+      }, ms);
     });
-    return chain;
+    const req = fetch(url + "?v=" + CACHE_VERSION, ctrl ? { signal: ctrl.signal, cache: "no-cache" } : { cache: "no-cache" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("feed");
+        return r.json();
+      });
+    return Promise.race([req, timed]).finally(function () {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  function fetchFeedJson() {
+    return fetchWithTimeout(FEED_URLS[0], 2500).catch(function () {
+      return fetchWithTimeout(FEED_URLS[1], 4000);
+    });
   }
 
   function applyFeed(data, isRefresh) {
@@ -776,7 +803,11 @@
     feed = data;
     lastFeedUpdated = data.updated || null;
     fillCountrySelects(!!isRefresh || !!selectedCountry);
-    if (!isRefresh || window.marketAutoMode !== false) syncDomPrices(getLivePrices());
+    if (!isRefresh) {
+      if (!pricesLocked) syncDomPrices(getLivePrices(), false);
+    } else if (window.marketAutoMode !== false && !pricesLocked) {
+      syncDomPrices(getLivePrices(), false);
+    }
     panelDirty = true;
     renderMarketPanel(false);
     bindMarketUi();
@@ -785,10 +816,12 @@
     if (isRefresh && window.marketAutoMode !== false && typeof window.applyMarketFacility === "function") {
       window.applyMarketFacility(false);
     }
-    if (isRefresh && prev !== lastFeedUpdated && typeof window.render === "function") {
+    if (typeof window.render === "function" && (isRefresh ? prev !== lastFeedUpdated : false)) {
       window.render();
     }
-    document.dispatchEvent(new CustomEvent("tkts-market-ready", { detail: { updated: lastFeedUpdated, refresh: !!isRefresh } }));
+    document.dispatchEvent(new CustomEvent("tkts-market-ready", {
+      detail: { updated: lastFeedUpdated, refresh: !!isRefresh }
+    }));
   }
 
   function loadFeed(isRefresh) {
@@ -820,18 +853,21 @@
 
   function initDom() {
     bindMarketUi();
+    updateSyncChip("loading");
     if (window.TKTS_darkSelect) window.TKTS_darkSelect.enhanceAll();
     ready.then(function () {
       if (feed) {
         fillCountrySelects(false);
-        syncDomPrices(getLivePrices());
+        if (!pricesLocked) syncDomPrices(getLivePrices(), false);
         renderMarketPanel(false);
         scheduleRefresh();
         updateSyncChip("ok");
       } else {
         loadFeed(false);
       }
-      document.dispatchEvent(new CustomEvent("tkts-market-ready", { detail: { updated: lastFeedUpdated } }));
+      document.dispatchEvent(new CustomEvent("tkts-market-ready", {
+        detail: { updated: lastFeedUpdated, refresh: false }
+      }));
     });
   }
 
@@ -842,6 +878,8 @@
     getSelected: function () { return selectedCountry; },
     getLivePrices: getLivePrices,
     patchState: patchState,
+    lockPrices: lockPrices,
+    unlockPrices: unlockPrices,
     enrichResult: enrichResult,
     mergeMarketAlerts: mergeMarketAlerts,
     refresh: function () { return loadFeed(true); },

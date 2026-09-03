@@ -1167,16 +1167,19 @@ function applyMarketFacility(renderAfter) {
   if (renderAfter === undefined) renderAfter = true;
   if (!window.TKTS_market || !window.TKTS_market.computeFacilityParams) {
     applyPreset("dengeli");
+    window.marketAutoMode = true;
     return null;
   }
   const c = window.TKTS_market.getCountry();
   if (!c) {
     applyPreset("dengeli");
+    window.marketAutoMode = true;
     return null;
   }
   const pack = window.TKTS_market.computeFacilityParams(c);
   if (!pack || !pack.params) return null;
   window.marketAutoMode = true;
+  if (window.TKTS_market.unlockPrices) window.TKTS_market.unlockPrices();
   applyFacilityParams(pack.params, {
     cultivarPlan: pack.cultivarPlan,
     cultivarIds: (pack.cultivars || []).map(function (cv) { return cv.id; }),
@@ -2892,6 +2895,9 @@ window.addEventListener("DOMContentLoaded", function () {
       customMode = true;
       window.marketAutoMode = false;
       highlightPreset("custom");
+      if (i.id === "priceKgGacp" || i.id === "priceKgGmp" || i.id === "extractPriceKg") {
+        if (window.TKTS_market && window.TKTS_market.lockPrices) window.TKTS_market.lockPrices();
+      }
       if (i.id === "dryRooms") pinDryRooms = true;
       if (i.id === "flowerDays" || i.id === "vegDays" || i.id === "preVegDays" || i.id === "rootDays" || i.id === "yieldG") cycleOverride = true;
       if (i.id === "yieldG") highlightYieldSkill("");
@@ -2905,15 +2911,39 @@ window.addEventListener("DOMContentLoaded", function () {
   el("playBtn").addEventListener("click", play);
   el("exportBtn").addEventListener("click", exportJson);
   if (el("conceptBtn")) el("conceptBtn").addEventListener("click", downloadConceptPng);
+  let marketBooted = false;
   function bootSimulator() {
-    if (window.applyMarketFacility) window.applyMarketFacility(false);
-    else applyPreset("dengeli");
+    applyPreset("dengeli");
+    window.marketAutoMode = true;
   }
+  function onMarketReady(ev) {
+    const detail = (ev && ev.detail) || {};
+    if (detail.refresh) {
+      if (typeof render === "function") render();
+      return;
+    }
+    if (marketBooted) return;
+    marketBooted = true;
+    if (window.marketAutoMode === false) {
+      if (typeof render === "function") render();
+      return;
+    }
+    if (typeof window.applyMarketFacility === "function") {
+      window.setTimeout(function () {
+        if (window.marketAutoMode === false) return;
+        window.applyMarketFacility(true);
+      }, 0);
+    } else if (typeof render === "function") {
+      render();
+    }
+  }
+  bootSimulator();
+  document.addEventListener("tkts-market-ready", onMarketReady);
   if (window.TKTS_market && window.TKTS_market.ready) {
-    window.TKTS_market.ready.then(bootSimulator).catch(bootSimulator);
-  } else {
-    document.addEventListener("tkts-market-ready", bootSimulator, { once: true });
-    setTimeout(bootSimulator, 1200);
+    window.TKTS_market.ready.then(function (data) {
+      if (!data) return;
+      onMarketReady({ detail: { refresh: false } });
+    }).catch(function () {});
   }
   window.addEventListener("tkts-locale-change", function () {
     if (typeof render === "function") render();
