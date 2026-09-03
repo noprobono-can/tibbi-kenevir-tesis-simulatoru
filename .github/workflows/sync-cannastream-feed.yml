@@ -10,7 +10,6 @@ on:
       - scripts/enrich_market_external.py
       - scripts/market_verified_overrides.py
       - scripts/apply-market-verification.py
-      - data/market-feed.json
 
 permissions:
   contents: write
@@ -33,13 +32,30 @@ jobs:
           LINKUP_API_KEY: ${{ secrets.LINKUP_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           ENRICH_MARKET_FEED: "1"
+          # Fine-grained or classic PAT with Contents: Read on noprobono-can/cannastream-app
+          CANNASTREAM_TOKEN: ${{ secrets.CANNASTREAM_TOKEN }}
         run: |
-          git clone --depth 1 https://github.com/noprobono-can/cannastream-app /tmp/cannastream-app
+          set -e
+          CLONE_URL="https://github.com/noprobono-can/cannastream-app.git"
+          if [ -n "${CANNASTREAM_TOKEN}" ]; then
+            CLONE_URL="https://x-access-token:${CANNASTREAM_TOKEN}@github.com/noprobono-can/cannastream-app.git"
+          fi
+
+          set +e
+          git clone --depth 1 "$CLONE_URL" /tmp/cannastream-app
+          CLONE_STATUS=$?
+          set -e
+
           cd scripts
-          python export-market-feed.py \
-            --cannastream /tmp/cannastream-app \
-            --out ../data/market-feed.json \
-            --enrich
+          if [ "$CLONE_STATUS" -eq 0 ]; then
+            python export-market-feed.py \
+              --cannastream /tmp/cannastream-app \
+              --out ../data/market-feed.json \
+              --enrich
+          else
+            echo "::warning::Cannastream clone failed (repo is private). Add secret CANNASTREAM_TOKEN with read access to noprobono-can/cannastream-app. Falling back to verified overrides on existing feed."
+            python apply-market-verification.py
+          fi
 
       - name: Commit and push if changed
         run: |
