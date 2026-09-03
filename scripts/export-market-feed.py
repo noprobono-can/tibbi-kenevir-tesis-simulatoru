@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from enrich_market_external import enrich_countries, load_linkup_cache, load_regulation_news
+from market_verified_overrides import VERIFIED_AT, VERIFIED_NOTE, apply_overrides_inline
 
 
 def _extract_return_expr(source: str, func_name: str) -> str:
@@ -271,8 +272,10 @@ def build_feed(root: Path, *, do_enrich: bool = False) -> dict:
     linkup_cache = load_linkup_cache(news_db)
     regulation_news = load_regulation_news(news_db)
 
+    verify_summary = apply_overrides_inline(countries, facility_hint_fn=facility_hint)
+
     payload = {
-        "version": 3,
+        "version": 4,
         "updated": date.today().isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "source": "cannastream-app",
@@ -280,7 +283,13 @@ def build_feed(root: Path, *, do_enrich: bool = False) -> dict:
         "streamlitUrl": "https://cannastream-app-v3.streamlit.app/",
         "refreshMinutes": 15,
         "autoSync": True,
-        "integrations": ["cannastream", "linkup", "firecrawl"],
+        "integrations": ["cannastream", "linkup", "firecrawl", "verified-overrides"],
+        "verification": {
+            "at": VERIFIED_AT,
+            "note": VERIFIED_NOTE,
+            "applied": verify_summary.get("applied") or [],
+            "missing": verify_summary.get("missing") or [],
+        },
         "countries": countries,
         "livePrices": live_prices[:120],
         "strains": db.get("strains") or [],

@@ -8,6 +8,8 @@ on:
     paths:
       - scripts/export-market-feed.py
       - scripts/enrich_market_external.py
+      - scripts/market_verified_overrides.py
+      - scripts/apply-market-verification.py
       - data/market-feed.json
 
 permissions:

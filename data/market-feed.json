@@ -1,7 +1,7 @@
 {
-  "version": 3,
-  "updated": "2026-09-02",
-  "generatedAt": "2026-09-02T20:15:00+00:00",
+  "version": 4,
+  "updated": "2026-09-03",
+  "generatedAt": "2026-09-03T06:16:40+00:00",
   "source": "cannastream-app",
   "sourceUrl": "https://github.com/noprobono-can/cannastream-app",
   "streamlitUrl": "https://cannastream-app-v3.streamlit.app/",
@@ -10,7 +10,8 @@
   "integrations": [
     "cannastream",
     "linkup",
-    "firecrawl"
+    "firecrawl",
+    "verified-overrides"
   ],
   "countries": {
     "Türkiye": {
@@ -76,45 +77,72 @@
             "Sağlık Bakanlığı 2026 Kamu Sağlık Hizmetleri Fiyat Tarifesi güncellendi (kenevir fiyat bandı ayrı duyurulacak)."
           ],
           "sources": [
-            {"name": "Resmî Gazete — 31.01.2026 yönetmelikler", "url": "https://www.resmigazete.gov.tr/fihrist?tarih=2026-01-31"},
-            {"name": "TMO — kenevir görevi", "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi"},
-            {"name": "Kenevir Yetiştiriciliği Yönetmeliği", "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm"}
+            {
+              "name": "Resmî Gazete — 31.01.2026 yönetmelikler",
+              "url": "https://www.resmigazete.gov.tr/fihrist?tarih=2026-01-31"
+            },
+            {
+              "name": "TMO — kenevir görevi",
+              "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi"
+            },
+            {
+              "name": "Kenevir Yetiştiriciliği Yönetmeliği",
+              "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm"
+            }
           ],
           "fetchedAt": "2026-09-02T20:15:00+00:00"
         },
         "regulation": {
           "query": "Turkey medical cannabis TMO licensing regulation GACP cultivation 2026",
           "items": [
-            {"title": "Kenevir Yetiştiriciliği ve Kontrolüne Dair Yönetmelik", "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm", "snippet": "GACP yetiştiricilik, hasat, işleme ve denetim usulleri Tarım ve Orman Bakanlığı çerçevesinde."},
-            {"title": "TMO kenevir görevi — resmi duyuru", "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi", "snippet": "TMO kontrol ve denetiminde tıbbi amaçlı kenevir üretimi."}
+            {
+              "title": "Kenevir Yetiştiriciliği ve Kontrolüne Dair Yönetmelik",
+              "url": "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm",
+              "snippet": "GACP yetiştiricilik, hasat, işleme ve denetim usulleri Tarım ve Orman Bakanlığı çerçevesinde."
+            },
+            {
+              "title": "TMO kenevir görevi — resmi duyuru",
+              "url": "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi",
+              "snippet": "TMO kontrol ve denetiminde tıbbi amaçlı kenevir üretimi."
+            }
           ],
           "fetchedAt": "2026-09-02T20:15:00+00:00"
         }
+      },
+      "verification": {
+        "status": "ok",
+        "issues": [
+          "no public patient/market size yet — correct"
+        ],
+        "sources": [
+          "https://www.resmigazete.gov.tr/eskiler/2026/01/20260131-8.htm",
+          "https://www.tmo.gov.tr/kurum-haber/692/tmoya-kenevir-gorevi"
+        ]
       }
     },
     "Almanya": {
       "status": "Tam Legal",
       "status_color": "#3fb950",
       "year": 2017,
-      "patients": "~250.000",
-      "market": "€800M",
-      "growth": "+180% 2024",
+      "patients": "~800.000",
+      "market": "€850M",
+      "growth": "+100% 2024–25",
       "authority": "BfArM",
       "products": "Çiçek, ekstrakt, magistral preparat, ruhsatlı ürünler",
       "import_export": "Avrupa'nın en büyük ithalatçısı",
       "key_players": "Cantourage, Sanity Group, Tilray, avaay",
-      "notes": "BMG/BfArM çerçevesine göre MedCanG sonrasında tıbbi cannabis BtMG kapsamından çıktı; yetiştiricilik ve ithalat yetki esaslı yürütülüyor.",
+      "notes": "MedCanG (Nisan 2024) sonrası reçete serbestisi ve telemedicine ile hasta tabanı ~250k → ~800–900k bandına çıktı. 2025 ithalat ~200 ton; eczane ~€4/g, toptan ~€2/g.",
       "outlook": "GÜÇLÜ BÜYÜME",
       "outlook_color": "#3fb950",
-      "marketMEur": 800.0,
-      "patientsN": 250000.0,
-      "growthPct": 180.0,
+      "marketMEur": 850.0,
+      "patientsN": 800000.0,
+      "growthPct": 100.0,
       "prices": {
-        "gacpKg": 4500,
-        "gmpKg": 5800,
-        "extractKg": 6500,
-        "retailBand": "€3.60–€10.50/g · €4.52/g · €4.50/g",
-        "basis": "flowzz alt band + eczane karşılaştırma",
+        "gacpKg": 2200,
+        "gmpKg": 3200,
+        "extractKg": 4800,
+        "retailBand": "Eczane ~€3.5–€5/g · toptan ~€1.8–€2.5/g",
+        "basis": "Verified Sep 2026: wholesale ~€2/g (MMJ Daily/Whitney); pharmacy ~€4/g — facility sell-in uses wholesale band",
         "benchmarks": [
           {
             "Ulke": "Almanya",
@@ -146,7 +174,8 @@
             "Kaynak Turu": "Statik benchmark",
             "Not": "İthalatçı landed tavan referansı"
           }
-        ]
+        ],
+        "verified": true
       },
       "facility": {
         "preset": "faz2",
@@ -165,46 +194,79 @@
             "2025 H1 ithalat ~80 ton; telemedicine ve eczane kanalları paralel büyüyor."
           ],
           "sources": [
-            {"name": "MMJ Daily — Germany imports Q1 2026", "url": "https://www.mmjdaily.com/article/9844648/germany-s-medical-cannabis-imports-post-first-quarterly-decline-since-early-2024/"},
-            {"name": "BfArM / Pharmazie market guide", "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market"},
-            {"name": "Mondaq — BfArM pricing", "url": "https://www.mondaq.com/germany/cannabis/1472636/dynamic-german-cannabis-market-rising-medical-use-today-%7C-recreational-use-tomorrow"}
+            {
+              "name": "MMJ Daily — Germany imports Q1 2026",
+              "url": "https://www.mmjdaily.com/article/9844648/germany-s-medical-cannabis-imports-post-first-quarterly-decline-since-early-2024/"
+            },
+            {
+              "name": "BfArM / Pharmazie market guide",
+              "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market"
+            },
+            {
+              "name": "Mondaq — BfArM pricing",
+              "url": "https://www.mondaq.com/germany/cannabis/1472636/dynamic-german-cannabis-market-rising-medical-use-today-%7C-recreational-use-tomorrow"
+            }
           ],
-          "priceHint": {"gacpKg": 1240, "gmpKg": 1600, "extractKg": 1800},
+          "priceHint": {
+            "gacpKg": 1240,
+            "gmpKg": 1600,
+            "extractKg": 1800
+          },
           "fetchedAt": "2026-09-02T20:15:00+00:00"
         },
         "regulation": {
           "query": "Germany BfArM medical cannabis cultivation import license 2026",
           "items": [
-            {"title": "MedCanG sonrası yüz yüze muayene ve posta yasağı tasarıları", "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market", "snippet": "2025 kabine tasarısı: ilk reçete için yüz yüze görüşme, telehealth tekrarları sınırlandırılıyor."},
-            {"title": "BfArM — tıbbi cannabis yetki çerçevesi", "url": "https://www.bfarm.de/DE/Bundesopiumstelle/Medizinisches-Cannabis/_node.html", "snippet": "İthalat kotası ve Bundesopiumstelle izinleri pazar arzını doğrudan sınırlıyor."}
+            {
+              "title": "MedCanG sonrası yüz yüze muayene ve posta yasağı tasarıları",
+              "url": "https://go.pharmazie.com/blog/germany-cannabis-medicines-market",
+              "snippet": "2025 kabine tasarısı: ilk reçete için yüz yüze görüşme, telehealth tekrarları sınırlandırılıyor."
+            },
+            {
+              "title": "BfArM — tıbbi cannabis yetki çerçevesi",
+              "url": "https://www.bfarm.de/DE/Bundesopiumstelle/Medizinisches-Cannabis/_node.html",
+              "snippet": "İthalat kotası ve Bundesopiumstelle izinleri pazar arzını doğrudan sınırlıyor."
+            }
           ],
           "fetchedAt": "2026-09-02T20:15:00+00:00"
         }
+      },
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "patients undercounted (~250k→~800k)",
+          "GACP used retail/landed €4.5/g instead of wholesale ~€2/g"
+        ],
+        "sources": [
+          "https://prohibitionpartners.com/2025/09/25/germany-medical-cannabis-market-overview-2025/",
+          "https://www.mmjdaily.com/article/9844648/germany-s-medical-cannabis-imports-post-first-quarterly-decline-since-early-2024/",
+          "https://groweriq.ca/2026/04/17/germany-cannabis-market-size-2026/"
+        ]
       }
     },
     "İngiltere": {
       "status": "Kısıtlı Reçeteli Erişim",
       "status_color": "#d29922",
       "year": 2018,
-      "patients": "~150.000",
-      "market": "€300M",
-      "growth": "—",
+      "patients": "~100.000",
+      "market": "€320M",
+      "growth": "+100% imports 2025",
       "authority": "Home Office · MHRA · DHSC",
       "products": "CBPM specials, ruhsatlı ilaçlar, yağ ve çiçek bazlı ürünler",
       "import_export": "İthalat (Portekiz, Kanada, Hollanda)",
       "key_players": "Curaleaf Clinic, Integro, Lyphe, Celadon",
-      "notes": "Specials ve private clinic modeli baskın; NHS erişimi sınırlı kalmaya devam ediyor.",
+      "notes": "Özel klinik/telemedicine ağırlıklı. Aktif hasta 2025 sonu ~80–100k; Prohibition Partners 2026 sonu ~140k projeksiyonu. İthalat 2025 ~30 ton (×2).",
       "outlook": "ÖZEL KLİNİK ODAKLI",
       "outlook_color": "#d29922",
-      "marketMEur": 300.0,
-      "patientsN": 150000.0,
-      "growthPct": null,
+      "marketMEur": 320.0,
+      "patientsN": 100000.0,
+      "growthPct": 100.0,
       "prices": {
-        "gacpKg": 3650,
-        "gmpKg": 4700,
-        "extractKg": 5250,
-        "retailBand": "£5.00–£5.95/g · £30 / 10ml",
-        "basis": "MedBud UK referans bandı",
+        "gacpKg": 2800,
+        "gmpKg": 3800,
+        "extractKg": 5200,
+        "retailBand": "Private clinic flower ~€5–€9/g · import landed lower",
+        "basis": "Verified Sep 2026: UK market ~£300–390M; sell-in below private retail",
         "benchmarks": [
           {
             "Ulke": "İngiltere",
@@ -226,7 +288,8 @@
             "Kaynak Turu": "Statik benchmark",
             "Not": "Curaleaf T10:C10 full spectrum oil"
           }
-        ]
+        ],
+        "verified": true
       },
       "facility": {
         "preset": "yuksek",
@@ -236,7 +299,18 @@
         "label": "UK GOV · CBPM",
         "url": "https://www.gov.uk/government/calls-for-evidence/cannabis-based-products-for-medicinal-use"
       },
-      "intelligence": {}
+      "intelligence": {},
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "patients ~150k high vs active ~70–100k (2025–26 mid)"
+        ],
+        "sources": [
+          "https://cannabishealthnews.co.uk/2026/06/24/uk-medical-cannabis-patient-numbers-set-to-reach-140000-in-2026-industry-report-finds/",
+          "https://plantz.io/how-we-estimated-the-number-of-medical-cannabis-patients-in-the-uk-full-methodology/",
+          "https://businessofcannabis.com/uk-medical-cannabis-prescriptions-hit-1-7-million-in-2025-as-acmd-review-approaches/"
+        ]
+      }
     },
     "Hollanda": {
       "status": "Reçeteli Tıbbi Erişim",
@@ -256,11 +330,11 @@
       "patientsN": 30000.0,
       "growthPct": 12.0,
       "prices": {
-        "gacpKg": 4350,
-        "gmpKg": 5600,
-        "extractKg": 6300,
-        "retailBand": "€7.00/g",
-        "basis": "€35 / 5g (Şubat 2026, KDV hariç)",
+        "gacpKg": 4000,
+        "gmpKg": 5200,
+        "extractKg": 6000,
+        "retailBand": "OMC pharmacy packs · Bedrocan reference",
+        "basis": "Verified Sep 2026: OMC monopoly medical channel; slight trim from seed €4.35/g",
         "benchmarks": [
           {
             "Ulke": "Hollanda",
@@ -272,7 +346,8 @@
             "Kaynak Turu": "Statik benchmark",
             "Not": "€35 / 5g (Şubat 2026, KDV hariç)"
           }
-        ]
+        ],
+        "verified": true
       },
       "facility": {
         "preset": "dengeli",
@@ -281,6 +356,13 @@
       "officialSource": {
         "label": "Dutch OMC",
         "url": "https://english.cannabisbureau.nl/"
+      },
+      "verification": {
+        "status": "ok",
+        "issues": [],
+        "sources": [
+          "https://english.cannabisbureau.nl/"
+        ]
       }
     },
     "İtalya": {
@@ -301,12 +383,13 @@
       "patientsN": 35000.0,
       "growthPct": 20.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
+        "gacpKg": 3800,
+        "gmpKg": 5000,
         "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "retailBand": "FM2 / regional pharmacy · limited supply premium",
+        "basis": "Verified Sep 2026: replaced identical Cannastream fallback cluster",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "yuksek",
@@ -315,6 +398,13 @@
       "officialSource": {
         "label": "Ministero della Salute",
         "url": "https://www.salute.gov.it/"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "shared fallback prices 4000/5150/5800"
+        ],
+        "sources": []
       }
     },
     "Portekiz": {
@@ -328,18 +418,18 @@
       "products": "Çiçek, ekstrakt, API, ihracat ürünleri",
       "import_export": "Güçlü ihracat",
       "key_players": "Tilray, SOMAÍ, Clever Leaves, RPK",
-      "notes": "Avrupa için üretim ve işleme üssü olarak öne çıkıyor.",
+      "notes": "Küçük yerli hasta tabanı; asıl rol EU-GMP işleme / re-export (DE, UK, PL). Tesis senaryosu ihracat merkezine göre yüksek fiyat bandı kullanır.",
       "outlook": "İHRACAT MERKEZİ",
       "outlook_color": "#3fb950",
       "marketMEur": 25.0,
       "patientsN": 8000.0,
       "growthPct": 15.0,
       "prices": {
-        "gacpKg": 6200,
-        "gmpKg": 8000,
-        "extractKg": 9000,
-        "retailBand": "~€10/g",
-        "basis": "Avrupa tedarik zinciri referansı",
+        "gacpKg": 2800,
+        "gmpKg": 4200,
+        "extractKg": 6500,
+        "retailBand": "Export EU-GMP processing hub · not domestic retail",
+        "basis": "Verified Sep 2026: domestic patients small; export processing premium on GMP/extract",
         "benchmarks": [
           {
             "Ulke": "Portekiz",
@@ -351,7 +441,8 @@
             "Kaynak Turu": "Statik benchmark",
             "Not": "Avrupa tedarik zinciri referansı"
           }
-        ]
+        ],
+        "verified": true
       },
       "facility": {
         "preset": "pilot",
@@ -361,13 +452,22 @@
         "label": "INFARMED",
         "url": "https://www.infarmed.pt/web/infarmed/substancias-controladas/canabis-para-fins-medicinais"
       },
-      "intelligence": {}
+      "intelligence": {},
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "GACP €6200 too high for flower export commodity; kept GMP/extract premium"
+        ],
+        "sources": [
+          "https://groweriq.ca/2026/04/22/portugal-cannabis-exports-triple-42-tonnes-germany-2025/"
+        ]
+      }
     },
     "Polonya": {
       "status": "Reçeteli Erişim",
       "status_color": "#3fb950",
       "year": 2017,
-      "patients": "~90.000",
+      "patients": "~105.000",
       "market": "€220M",
       "growth": "+35%",
       "authority": "Chief Pharmaceutical Inspectorate",
@@ -378,15 +478,16 @@
       "outlook": "HIZLI GENİŞLEME",
       "outlook_color": "#3fb950",
       "marketMEur": 220.0,
-      "patientsN": 90000.0,
+      "patientsN": 105000.0,
       "growthPct": 35.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 3400,
+        "gmpKg": 4500,
+        "extractKg": 5600,
+        "retailBand": "Pharmacy / telemedicine · import-led",
+        "basis": "Verified Sep 2026: ~105k patients (GrowerIQ); replaced fallback prices",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "yuksek",
@@ -395,6 +496,16 @@
       "officialSource": {
         "label": "GIF",
         "url": "https://www.gov.pl/web/gif"
+      },
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "patients ~90k slightly low",
+          "fallback prices"
+        ],
+        "sources": [
+          "https://groweriq.ca/2026/06/30/global-medical-cannabis-market-159b-2033/"
+        ]
       }
     },
     "Fransa": {
@@ -415,12 +526,13 @@
       "patientsN": 3000.0,
       "growthPct": null,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 4500,
+        "gmpKg": 5800,
+        "extractKg": 7000,
+        "retailBand": "Pilot / transition · scarce supply",
+        "basis": "Verified Sep 2026: early commercialisation; scarce-supply premium",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "pilot",
@@ -429,32 +541,43 @@
       "officialSource": {
         "label": "ANSM",
         "url": "https://ansm.sante.fr/dossiers-thematiques/cannabis-a-usage-medical"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "fallback prices",
+          "market size still unknown"
+        ],
+        "sources": [
+          "https://ansm.sante.fr/dossiers-thematiques/cannabis-a-usage-medical"
+        ]
       }
     },
     "Avustralya": {
       "status": "Reçeteli Erişim",
       "status_color": "#3fb950",
       "year": 2016,
-      "patients": "~500.000",
-      "market": "€550M",
+      "patients": "~800.000",
+      "market": "€650M",
       "growth": "+20%",
       "authority": "TGA · ODC",
       "products": "Çiçek, yağ, kapsül, compounded ürünler",
       "import_export": "İthalat + yerli üretim",
       "key_players": "Cannatrek, Montu, Alternaleaf, ECS",
-      "notes": "SAS-B ve Authorized Prescriber modeliyle erişim hızlı büyüdü.",
+      "notes": "TGA SAS/AP teleclinic büyüdü; aktif hasta tahminleri 700–900k. 2025 H2 satış baskısı ve TGA enforcement ile büyüme yumuşadı.",
       "outlook": "YÜKSEK HACİM",
       "outlook_color": "#3fb950",
-      "marketMEur": 550.0,
-      "patientsN": 500000.0,
+      "marketMEur": 650.0,
+      "patientsN": 800000.0,
       "growthPct": 20.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 3200,
+        "gmpKg": 4500,
+        "extractKg": 6000,
+        "retailBand": "SAS flower competitive · import + domestic",
+        "basis": "Verified Sep 2026: AUD ~$1B trajectory; sell-in below clinic retail",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "faz2",
@@ -463,32 +586,43 @@
       "officialSource": {
         "label": "TGA",
         "url": "https://www.tga.gov.au/resources/explore-topic/medicinal-cannabis-hub"
+      },
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "patients ~500k undercounted vs 700–900k"
+        ],
+        "sources": [
+          "https://groweriq.ca/2026/06/30/global-medical-cannabis-market-159b-2033/",
+          "https://groweriq.ca/2026/04/18/australia-cannabis-market-billion-dollar-2025/"
+        ]
       }
     },
     "Kanada": {
       "status": "Tam Legal",
       "status_color": "#3fb950",
       "year": 2001,
-      "patients": "~300.000",
-      "market": "€450M",
-      "growth": "+10%",
+      "patients": "~161.000",
+      "market": "€300M",
+      "growth": "+0% medical domestic",
       "authority": "Health Canada",
       "products": "Çiçek, yağ, kapsül, ekstrakt",
       "import_export": "Üretim + ihracat",
       "key_players": "Tilray, Aurora, Canopy, Organigram",
-      "notes": "Tıbbi pazar olgun, ancak yetişkin kullanım pazarı ile iç içe ilerliyor.",
+      "notes": "Health Canada medical clients ~161k (Mar 2025). Domestic medical ~C$0.4–0.5B; total cannabis ~C$9B is adult-use. Export powerhouse (~276 t medical 2025).",
       "outlook": "OLGUN VE İHRACATÇI",
       "outlook_color": "#3fb950",
-      "marketMEur": 450.0,
-      "patientsN": 300000.0,
-      "growthPct": 10.0,
+      "marketMEur": 300.0,
+      "patientsN": 161000.0,
+      "growthPct": 0.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 1500,
+        "gmpKg": 2500,
+        "extractKg": 4000,
+        "retailBand": "Export commodity wholesale · not Canadian retail",
+        "basis": "Verified Sep 2026: medical clients 161k; export wholesale compressed",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "yuksek",
@@ -497,6 +631,17 @@
       "officialSource": {
         "label": "Health Canada",
         "url": "https://www.canada.ca/en/health-canada/services/drugs-medication/cannabis.html"
+      },
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "patients ~300k overcounted medical",
+          "€450M likely mixed with adult-use"
+        ],
+        "sources": [
+          "https://stratcann.com/news/medical-cannabis-registrations-stabilize-in-early-2025-while-personal-production-licenses-decline/",
+          "https://cannamonitor.com/canada-medical-cannabis-exports-2025-data/"
+        ]
       }
     },
     "İsrail": {
@@ -517,12 +662,13 @@
       "patientsN": 140000.0,
       "growthPct": 15.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 3000,
+        "gmpKg": 4200,
+        "extractKg": 5500,
+        "retailBand": "IMCA pharmacies · strong extract / R&D mix",
+        "basis": "Verified Sep 2026: replaced fallback; 2025 imports record ~30 t",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "yuksek",
@@ -531,6 +677,15 @@
       "officialSource": {
         "label": "IMCA",
         "url": "https://www.gov.il/en/departments/units/cannabis_unit/govil-landing-page"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "fallback prices"
+        ],
+        "sources": [
+          "https://groweriq.ca/2026/06/30/global-medical-cannabis-market-159b-2033/"
+        ]
       }
     },
     "İsviçre": {
@@ -551,12 +706,13 @@
       "patientsN": 10000.0,
       "growthPct": 18.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 5000,
+        "gmpKg": 6500,
+        "extractKg": 8000,
+        "retailBand": "High-cost Swiss medical + pilot adult-use",
+        "basis": "Verified Sep 2026: small high-price market; replaced fallback",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "dengeli",
@@ -565,6 +721,13 @@
       "officialSource": {
         "label": "Swissmedic",
         "url": "https://www.swissmedic.ch/"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "fallback prices"
+        ],
+        "sources": []
       }
     },
     "ABD": {
@@ -572,25 +735,26 @@
       "status_color": "#9b7cff",
       "year": 1996,
       "patients": "~3.000.000",
-      "market": "€12B",
+      "market": "€2.800M",
       "growth": "+8%",
       "authority": "FDA · DEA · eyalet kurumları",
       "products": "Çiçek, yağ, edibles, ekstrakt, reçeteli ve eyalet bazlı ürünler",
       "import_export": "Eyalet bazlı üretim",
       "key_players": "Curaleaf, Trulieve, Green Thumb, Verano",
-      "notes": "Federal statü ve eyalet bazlı lisanslama birlikte çok parçalı bir yapı oluşturuyor.",
+      "notes": "Eyalet bazlı tıbbi programlar. €12B rakamı adult-use dahil; simülatör tıbbi odaklı ~USD 3B / ~€2.8B bandını kullanır. Federal Schedule III (2026) vergi etkisini değiştiriyor.",
       "outlook": "BÜYÜK AMA PARÇALI",
       "outlook_color": "#9b7cff",
-      "marketMEur": 12000.0,
+      "marketMEur": 2800.0,
       "patientsN": 3000000.0,
       "growthPct": 8.0,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 1800,
+        "gmpKg": 2800,
+        "extractKg": 4200,
+        "retailBand": "State wholesale wide band · multi-state operators",
+        "basis": "Verified Sep 2026: medical-only market sizing; wholesale not dispensary retail",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "faz2",
@@ -599,6 +763,16 @@
       "officialSource": {
         "label": "FDA",
         "url": "https://www.fda.gov/news-events/public-health-focus/fda-regulation-cannabis-and-cannabis-derived-products-including-cannabidiol-cbd"
+      },
+      "verification": {
+        "status": "corrected",
+        "issues": [
+          "€12B conflated medical+adult-use → medical ~€2.8B"
+        ],
+        "sources": [
+          "https://straitsresearch.com/report/medical-cannabis-market",
+          "https://www.emergenresearch.com/industry-report/medical-cannabis-market"
+        ]
       }
     },
     "Fas": {
@@ -619,12 +793,13 @@
       "patientsN": null,
       "growthPct": null,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 2200,
+        "gmpKg": 3200,
+        "extractKg": 4500,
+        "retailBand": "Export-oriented industrial/medical supply",
+        "basis": "Verified Sep 2026: early supplier; replaced fallback",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "pilot",
@@ -633,6 +808,14 @@
       "officialSource": {
         "label": "ANRAC",
         "url": "https://www.anrac.ma/"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "fallback prices",
+          "no patient metrics"
+        ],
+        "sources": []
       }
     },
     "Ürdün": {
@@ -653,12 +836,13 @@
       "patientsN": null,
       "growthPct": null,
       "prices": {
-        "gacpKg": 4000,
-        "gmpKg": 5150,
-        "extractKg": 5800,
-        "retailBand": "—",
-        "basis": "Cannastream benchmark",
-        "benchmarks": []
+        "gacpKg": 2500,
+        "gmpKg": 3500,
+        "extractKg": 4800,
+        "retailBand": "Early / limited medical framework",
+        "basis": "Verified Sep 2026: early stage; replaced fallback",
+        "benchmarks": [],
+        "verified": true
       },
       "facility": {
         "preset": "pilot",
@@ -667,6 +851,13 @@
       "officialSource": {
         "label": "JFDA",
         "url": "https://www.jfda.jo/"
+      },
+      "verification": {
+        "status": "price-fixed",
+        "issues": [
+          "fallback prices"
+        ],
+        "sources": []
       }
     },
     "BAE": {
@@ -697,6 +888,13 @@
       "facility": {
         "preset": "pilot",
         "label": "Pilot — kapalı veya yüksek riskli pazar"
+      },
+      "verification": {
+        "status": "ok-closed",
+        "issues": [
+          "closed/high-risk — metrics N/A by design"
+        ],
+        "sources": []
       }
     },
     "Suudi Arabistan": {
@@ -727,6 +925,13 @@
       "facility": {
         "preset": "pilot",
         "label": "Pilot — kapalı veya yüksek riskli pazar"
+      },
+      "verification": {
+        "status": "ok-closed",
+        "issues": [
+          "closed market — metrics N/A by design"
+        ],
+        "sources": []
       }
     },
     "Katar": {
@@ -757,6 +962,13 @@
       "facility": {
         "preset": "pilot",
         "label": "Pilot — kapalı veya yüksek riskli pazar"
+      },
+      "verification": {
+        "status": "ok-closed",
+        "issues": [
+          "closed market — metrics N/A by design"
+        ],
+        "sources": []
       }
     }
   },
@@ -884,5 +1096,30 @@
     "hasLinkup": false,
     "hasFirecrawl": false,
     "at": "2026-09-02T20:08:33+00:00"
+  },
+  "verification": {
+    "at": "2026-09-03",
+    "note": "External Linkup verification vs Cannastream seed. Patient counts and wholesale prices refreshed; identical fallback prices replaced.",
+    "applied": [
+      "Almanya",
+      "İngiltere",
+      "Hollanda",
+      "İtalya",
+      "Portekiz",
+      "Polonya",
+      "Fransa",
+      "Avustralya",
+      "Kanada",
+      "İsrail",
+      "İsviçre",
+      "ABD",
+      "Türkiye",
+      "Fas",
+      "Ürdün",
+      "BAE",
+      "Suudi Arabistan",
+      "Katar"
+    ],
+    "missing": []
   }
 }
