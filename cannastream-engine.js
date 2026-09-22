@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "tkts-market-country";
-  const CACHE_VERSION = 64;
+  const CACHE_VERSION = 65;
   const GENERAL_KEY = "Genel";
   const FEED_URLS = [
     "data/market-feed.json",

@@ -901,6 +901,16 @@ html.unlocked .gate { display: none; }
   font-size: 14px;
   line-height: 1.45;
 }
+.gate-privacy {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .gate-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
