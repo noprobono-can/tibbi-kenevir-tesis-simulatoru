@@ -965,6 +965,20 @@ html.unlocked .gate { display: none; }
 }
 .gate-card button[type="submit"]:hover { filter: brightness(1.06); }
 .gate-card button[type="submit"]:disabled { opacity: 0.6; cursor: wait; }
+.gate-back {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: center;
+}
+.gate-back:hover { color: var(--gold); }
+.gate-field input[readonly] {
+  opacity: 0.85;
+}
 .chip-user {
   max-width: 220px;
   overflow: hidden;

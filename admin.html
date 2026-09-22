@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>TKTS Admin · Kullanıcılar</title>
+  <link rel="stylesheet" href="styles.css?v=63" />
+  <style>
+    body.admin-body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(700px 320px at 50% 0%, rgba(196, 165, 106, 0.12), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body, "Instrument Sans", system-ui, sans-serif);
+    }
+    .admin-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+    .admin-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .admin-card h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-family: var(--font);
+    }
+    .admin-card .lead {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .admin-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .admin-row input {
+      flex: 1 1 160px;
+      min-width: 140px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #070b09;
+      color: var(--ink);
+      font: inherit;
+    }
+    .admin-row button,
+    .admin-actions button {
+      border: 1px solid var(--line);
+      background: var(--gold-2);
+      color: #16120a;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .admin-actions button.secondary,
+    .admin-list button {
+      background: transparent;
+      color: var(--gold);
+    }
+    .admin-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .admin-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .admin-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .admin-list strong { display: block; font-size: 14px; }
+    .admin-list small { color: var(--muted); font-size: 12px; }
+    .admin-list .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .admin-list button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .admin-msg {
+      margin: 12px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .admin-msg.err { color: var(--danger); }
+    .admin-msg.ok { color: var(--ok); }
+    .admin-note {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(196, 165, 106, 0.06);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    a.admin-home {
+      display: inline-block;
+      margin-bottom: 14px;
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="admin-wrap">
+    <a class="admin-home" href="index.html">← Simülatör</a>
+
+    <section id="adminLogin" class="admin-card">
+      <h1>Admin girişi</h1>
+      <p class="lead">Yalnızca yönetici şifresi ile kullanıcı adları eklenir / silinir.</p>
+      <form id="adminLoginForm" class="admin-row">
+        <input id="adminPass" type="password" autocomplete="current-password" placeholder="Admin şifresi" required />
+        <button type="submit">Giriş</button>
+      </form>
+      <p id="adminLoginMsg" class="admin-msg" hidden></p>
+    </section>
+
+    <section id="adminPanel" class="admin-card" hidden>
+      <h1>Kullanıcı yönetimi</h1>
+      <p class="lead">Yeni üyeye kullanıcı adı verin. İlk girişte kendi şifresini belirler (şifre bu tarayıcıda saklanır).</p>
+
+      <form id="adminAddForm" class="admin-row">
+        <input id="newUserId" type="text" placeholder="kullanici-adi" autocomplete="off" required />
+        <input id="newUserLabel" type="text" placeholder="Görünen ad (opsiyonel)" autocomplete="off" />
+        <button type="submit">Ekle</button>
+      </form>
+
+      <ul id="adminUserList" class="admin-list"></ul>
+      <p id="adminPanelMsg" class="admin-msg" hidden></p>
+
+      <div class="admin-actions">
+        <button type="button" id="adminExportBtn">gate-config.js indir</button>
+        <button type="button" id="adminLogoutBtn" class="secondary">Admin çıkış</button>
+      </div>
+
+      <p class="admin-note">
+        Yerel eklemeler bu tarayıcıda hemen çalışır. Herkesin aynı listeyi görmesi için
+        <strong>gate-config.js indir</strong> → repoya koy → commit/push yapın.
+        Admin URL’sini paylaşmayın: <code>admin.html</code>
+      </p>
+    </section>
+  </div>
+
+  <script src="gate-config.js?v=63"></script>
+  <script src="password-auth.js?v=63"></script>
+  <script src="admin.js?v=63"></script>
+</body>
+</html>
