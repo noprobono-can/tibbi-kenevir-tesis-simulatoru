@@ -2,13 +2,14 @@ Tıbbi kenevir simülatörü
 
 Statik web uygulaması. GitHub Pages ile canlı yayın.
 
-## Erişim kodu ile giriş
+## Giriş (kullanıcı adı + şifre)
 
-E-posta / Supabase / domain gerekmez.
+Strategic Road Map ile aynı model:
 
-1. `gate-config.js` içinde `accessCodes` listesine kod ekleyin.
-2. Kodu özel olarak paylaşın (WhatsApp, mail, vs.).
-3. Kişi sitede kodu yazar → simülatör açılır.
-4. Kod değiştirmek veya iptal etmek için listeden çıkarın ve yeniden yayınlayın.
+1. Admin `admin.html` adresine girer (`gate-config.js` → `adminPassword`).
+2. Üyelere kullanıcı adı ekler.
+3. Herkesin görmesi için **gate-config.js indir** → repoya koy → commit/push.
+4. Kullanıcı sitede kullanıcı adını yazar; ilk girişte kendi şifresini oluşturur (PBKDF2, yalnızca o tarayıcıda).
+5. Sonraki girişlerde kullanıcı adı + şifre.
 
-Bu tarayıcı tarafı bir kilittir; kaynak kodda kodlar görünür. Gerçek güvenlik için sunucu auth gerekir.
+Admin URL’sini paylaşmayın. Bu tarayıcı tarafı bir kilittir; kaynak kodda kullanıcı listesi görünür.

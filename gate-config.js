@@ -1,6 +1,8 @@
 window.TKTS_GATE_CONFIG = {
-  // Share these codes privately. Anyone with a code can open the simulator.
-  accessCodes: [
-    "chronos"
+  // Admin panel password (admin.html). Keep private.
+  adminPassword: "chronos",
+  // Allowed usernames. Admin panel can also add local overrides; export & commit to share with everyone.
+  users: [
+    { id: "okan", label: "Okan" }
   ]
 };

@@ -1,6 +1,8 @@
 window.TKTS_GATE_CONFIG = {
-  // Share these codes privately. Anyone with a code can open the simulator.
-  accessCodes: [
-    "your-invite-code"
+  // Admin panel password (admin.html). Keep private.
+  adminPassword: "your-admin-password",
+  // Allowed usernames. First login: user sets their own password (stored in browser via PBKDF2).
+  users: [
+    { id: "okan", label: "Okan" }
   ]
 };
